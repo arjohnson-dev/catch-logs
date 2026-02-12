@@ -160,16 +160,6 @@ export default function Stats() {
     ? entriesWithWeight.filter(entry => entry.weight === maxWeight).slice(0, 3)
     : [];
 
-  // Debug logging
-  console.log('Stats debug:', {
-    totalEntries: entries.length,
-    entriesWithLength: entriesWithLength.length,
-    entriesWithWeight: entriesWithWeight.length,
-    maxLength,
-    maxWeight,
-    recentEntriesCount: recentEntries.length
-  });
-
   return (
     <div className="page-scroll">
       <div className="page-content stats-page-content-main">

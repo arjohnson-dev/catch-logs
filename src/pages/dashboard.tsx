@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import MapInterface from "@/components/map-interface";
 import PinSummary from "@/components/pin-summary";
 import BottomNavigation from "@/components/bottom-navigation";
-import { FaArrowRightFromBracket, FaGear, FaUser, FaXmark } from "react-icons/fa6";
+import OptionsModal from "@/components/options-modal";
+import { FaUser } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -177,50 +178,18 @@ export default function Dashboard() {
         />
       )}
 
-      {showOptionsModal && (
-        <div className="overlay-backdrop overlay-backdrop-dashboard overlay-backdrop-center">
-          <div className="dialog-panel options-modal-panel">
-            <div className="dialog-header dialog-header-corner">
-              <h2 className="dialog-title">Options</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowOptionsModal(false)}
-                className="btn-ghost-muted dialog-close-corner"
-                aria-label="Close options"
-              >
-                <FaXmark className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="dialog-body options-modal-actions">
-              <div className="settings-meta">
-                {user.firstName} {user.lastName}
-                <br />
-                {user.email}
-              </div>
-              <Button
-                variant="outline"
-                className="btn-outline-muted btn-full options-modal-button"
-                onClick={() => {
-                  setShowOptionsModal(false);
-                  navigate("/settings");
-                }}
-              >
-                <FaGear size={16} />
-                Profile Settings
-              </Button>
-              <Button
-                variant="outline"
-                className="btn-outline-muted btn-full options-modal-button"
-                onClick={handleLogout}
-                disabled={logout.isPending}
-              >
-                <FaArrowRightFromBracket size={16} />
-                {logout.isPending ? "Logging out..." : "Log Out"}
-              </Button>
-            </div>
-          </div>
-        </div>
+      {showOptionsModal && user && (
+        <OptionsModal
+          user={user}
+          isOpen={showOptionsModal}
+          isLoggingOut={logout.isPending}
+          onClose={() => setShowOptionsModal(false)}
+          onOpenSettings={() => {
+            setShowOptionsModal(false);
+            navigate("/settings");
+          }}
+          onLogout={handleLogout}
+        />
       )}
     </div>
   );

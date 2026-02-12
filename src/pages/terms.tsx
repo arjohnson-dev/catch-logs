@@ -1,49 +1,12 @@
-import { useRef } from "react";
-import { FaArrowLeft } from "react-icons/fa6";
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { FaDownload } from "react-icons/fa6";
+import MarkupPage from "@/components/markup-page";
 
 export default function Terms() {
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const handleDownload = () => {
-    const text = contentRef.current?.innerText?.trim();
-    if (!text) return;
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "catchlogs-terms-of-service.txt";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
-
   return (
-    <div className="page-scroll">
-      <div className="page-content page-content-prose">
-        <div className="page-header">
-          <Link to="/auth">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <h1 className="page-title">Terms of Service</h1>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="btn-outline-muted ml-auto"
-            onClick={handleDownload}
-          >
-            <FaDownload className="w-4 h-4 mr-2" />
-            Download
-          </Button>
-        </div>
-
-        <div ref={contentRef} className="terms-privacy-prose">
+    <MarkupPage
+      title="Terms of Service"
+      downloadFileName="catchlogs-terms-of-service.txt"
+    >
           <p>
             Welcome to <strong>Catch Logs</strong>! By accessing or using our app, you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please do not use the app.
           </p>
@@ -109,8 +72,6 @@ export default function Terms() {
             If you have questions or concerns about these Terms, you can contact us at:<br />
             <strong>Email:</strong> arjohnson.dev@gmail.com
           </p>
-        </div>
-      </div>
-    </div>
+    </MarkupPage>
   );
 }
