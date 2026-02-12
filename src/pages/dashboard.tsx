@@ -7,7 +7,7 @@ import { FaUser } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
-import catchLogsIcon from "@assets/CatchLogs Icon_1750292637902.png";
+import catchLogsIcon from "@assets/catchlogs-icon.png";
 import { moveEntryToNewCoordinates } from "@/lib/supabase-data";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";

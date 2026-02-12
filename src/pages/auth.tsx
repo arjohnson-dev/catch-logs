@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import LoginForm from "@/components/auth/login-form";
 import RegisterForm from "@/components/auth/register-form";
-import catchLogsIcon from "@assets/CatchLogs Icon_1750292637902.png";
+import catchLogsIcon from "@assets/catchlogs-icon.png";
 import { FaCircleCheck, FaCircleXmark } from "react-icons/fa6";
 
 interface AuthPageProps {
