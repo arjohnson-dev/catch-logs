@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { deleteCurrentAccount } from "@/lib/account";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { sendSupportEmail } from "@/lib/support";
@@ -198,8 +199,16 @@ export default function Settings() {
 
     setIsDeletingAccount(true);
     try {
-      const { error } = await supabase.rpc("delete_my_account");
-      if (error) throw error;
+      try {
+        await deleteCurrentAccount();
+      } catch (edgeError) {
+        const { error } = await supabase.rpc("delete_my_account");
+        if (error) {
+          const edgeMessage =
+            edgeError instanceof Error ? edgeError.message : "unknown edge function error";
+          throw new Error(`${error.message} (edge fallback: ${edgeMessage})`);
+        }
+      }
 
       await supabase.auth.signOut();
       queryClient.clear();

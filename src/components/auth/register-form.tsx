@@ -31,7 +31,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterUser) => {
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -48,6 +48,13 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       if (error) {
         throw error;
       }
+
+      // Supabase may not return an error for duplicate emails depending on auth settings.
+      // In that case it returns a user object with no identities; treat that as a failed registration.
+      const identities = signUpData.user?.identities;
+      if (Array.isArray(identities) && identities.length === 0) {
+        throw new Error("An account with this email already exists.");
+      }
     },
     onSuccess: () => {
       form.reset();
@@ -61,7 +68,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     onError: (error: unknown) => {
       // Check for duplicate email error
       const message = error instanceof Error ? error.message : "Please try again";
-      const isDuplicateEmail = message.includes("already exists");
+      const normalizedMessage = message.toLowerCase();
+      const isDuplicateEmail =
+        normalizedMessage.includes("already exists") ||
+        normalizedMessage.includes("already registered");
       toast({
         title: isDuplicateEmail ? "Account Already Exists" : "Registration Failed",
         description: message,

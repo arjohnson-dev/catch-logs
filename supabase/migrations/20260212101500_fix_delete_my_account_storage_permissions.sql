@@ -1,5 +1,5 @@
--- Keep delete_my_account() compatible with current Supabase permissions.
--- Storage cleanup should happen via the Storage API (Edge Function), not direct table deletes.
+-- Fix delete_my_account(): direct deletes from storage.objects are not allowed.
+-- Deleting auth.users will cascade to app tables; storage object cleanup should use Storage API.
 
 create or replace function public.delete_my_account()
 returns void
