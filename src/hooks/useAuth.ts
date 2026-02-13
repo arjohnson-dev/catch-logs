@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { type User } from "@/types/domain";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
+import { clearSessionTackleStorage } from "@/lib/session-tackle";
 
 const AUTH_USER_QUERY_KEY = ["supabase", "auth", "user"] as const;
 
@@ -42,7 +43,10 @@ export function useAuth() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        clearSessionTackleStorage();
+      }
       queryClient.invalidateQueries({ queryKey: AUTH_USER_QUERY_KEY });
     });
 

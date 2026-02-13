@@ -11,6 +11,10 @@ import catchLogsIcon from "@assets/catchlogs-icon.png";
 import { moveEntryToNewCoordinates } from "@/lib/supabase-data";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import {
+  loadSessionTackle,
+  saveSessionTackle,
+} from "@/lib/session-tackle";
 
 export default function Dashboard() {
   const initialPinIdFromUrl = (() => {
@@ -35,6 +39,7 @@ export default function Dashboard() {
   const [showPinSummary, setShowPinSummary] = useState(Boolean(initialPinIdFromUrl));
   const [moveEntryId, setMoveEntryId] = useState<number | null>(initialMoveEntryIdFromUrl);
   const [sessionTackle, setSessionTackle] = useState("");
+  const [hasLoadedSessionTackle, setHasLoadedSessionTackle] = useState(false);
   const [isPinDropMode, setIsPinDropMode] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
@@ -44,6 +49,22 @@ export default function Dashboard() {
       window.history.replaceState({}, "", "/");
     }
   }, [initialPinIdFromUrl, initialMoveEntryIdFromUrl]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setSessionTackle("");
+      setHasLoadedSessionTackle(false);
+      return;
+    }
+
+    setSessionTackle(loadSessionTackle(user.id));
+    setHasLoadedSessionTackle(true);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !hasLoadedSessionTackle) return;
+    saveSessionTackle(user.id, sessionTackle);
+  }, [user?.id, sessionTackle, hasLoadedSessionTackle]);
 
   const handlePinSelect = (pinId: number, isNew = false) => {
     setSelectedPinId(pinId);

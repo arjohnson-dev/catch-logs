@@ -10,79 +10,9 @@ import {
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatTimeAgo } from "@/lib/utils";
+import JournalEntryCard from "@/components/journal-entry-card";
 import type { JournalEntry } from "@/types/domain";
 import { getEntries } from "@/lib/supabase-data";
-
-interface JournalEntryCardProps {
-  entry: JournalEntry;
-  showPin?: boolean;
-}
-
-function JournalEntryCard({ entry, showPin = false }: JournalEntryCardProps) {
-  const [, navigate] = useLocation();
-
-  const handleTakeMeThere = () => {
-    // Navigate to home page with pinId in URL to center on that pin
-    navigate(`/?pinId=${entry.pinId}`);
-  };
-
-  return (
-    <Card className="stats-card">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          {entry.photoUrl && (
-            <img
-              src={entry.photoUrl}
-              alt={entry.fishType}
-              className="w-16 h-16 rounded-lg object-cover"
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-semibold text-white truncate capitalize">
-                {entry.fishType}
-              </h3>
-              <span className="text-xs text-gray-400">
-                {formatTimeAgo(new Date(entry.dateTime))}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-4 text-sm text-gray-300 mb-2">
-              {entry.length && (
-                <span className="flex items-center gap-1">
-                  <FaRuler className="w-3 h-3" />
-                  {entry.length}"
-                </span>
-              )}
-              {entry.weight && (
-                <span className="flex items-center gap-1">
-                  <FaWeightScale className="w-3 h-3" />
-                  {entry.weight} lbs
-                </span>
-              )}
-              {entry.tackle && (
-                <span className="text-gray-400">Tackle: {entry.tackle}</span>
-              )}
-            </div>
-
-            {showPin && (
-              <Button
-                onClick={handleTakeMeThere}
-                size="sm"
-                variant="outline"
-                className="text-xs mt-2 btn-outline-info"
-              >
-                <FaMapLocationDot className="w-3 h-3 mr-1" />
-                Take me there
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function PlaceholderCard({ type }: { type: 'longest' | 'heaviest' }) {
   return (
@@ -114,6 +44,7 @@ function PlaceholderCard({ type }: { type: 'longest' | 'heaviest' }) {
 }
 
 export default function Stats() {
+  const [, navigate] = useLocation();
   const { data: entries = [], isLoading } = useQuery<JournalEntry[]>({
     queryKey: ["entries"],
     queryFn: getEntries,
@@ -214,7 +145,18 @@ export default function Stats() {
                 <div className="space-y-3">
                   {longestFishEntries.length > 0 ? (
                     longestFishEntries.map((entry) => (
-                      <JournalEntryCard key={entry.id} entry={entry} showPin />
+                      <JournalEntryCard
+                        key={entry.id}
+                        entry={entry}
+                        actions={[
+                          {
+                            id: "take-me-there",
+                            label: "Take me there",
+                            icon: FaMapLocationDot,
+                            onClick: () => navigate(`/?pinId=${entry.pinId}`),
+                          },
+                        ]}
+                      />
                     ))
                   ) : (
                     <PlaceholderCard type="longest" />
@@ -230,7 +172,18 @@ export default function Stats() {
                 <div className="space-y-3">
                   {heaviestFishEntries.length > 0 ? (
                     heaviestFishEntries.map((entry) => (
-                      <JournalEntryCard key={entry.id} entry={entry} showPin />
+                      <JournalEntryCard
+                        key={entry.id}
+                        entry={entry}
+                        actions={[
+                          {
+                            id: "take-me-there",
+                            label: "Take me there",
+                            icon: FaMapLocationDot,
+                            onClick: () => navigate(`/?pinId=${entry.pinId}`),
+                          },
+                        ]}
+                      />
                     ))
                   ) : (
                     <PlaceholderCard type="heaviest" />

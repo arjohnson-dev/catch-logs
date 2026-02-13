@@ -131,7 +131,11 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
     onSuccess: (entry) => {
       queryClient.invalidateQueries({ queryKey: ["pins"] });
       queryClient.invalidateQueries({ queryKey: ["entries"] });
-      if (!entry.weatherCondition && !entry.temperature && !entry.windSpeed) {
+      if (
+        !entry.weatherCondition &&
+        !entry.temperature &&
+        !entry.windSpeed
+      ) {
         toast({
           title: "Saved without weather",
           description: "Could not fetch weather right now, but your catch was saved.",

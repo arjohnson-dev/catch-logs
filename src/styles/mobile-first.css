@@ -314,7 +314,7 @@ a {
 
 .map-mode-indicator {
   position: absolute;
-  top: 16px;
+  top: calc(112px + env(safe-area-inset-top, 0px));
   left: 16px;
   z-index: 1000;
   background: var(--danger);
@@ -327,7 +327,7 @@ a {
 
 .map-tackle-panel {
   position: absolute;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  top: calc(16px + env(safe-area-inset-top, 0px));
   left: 16px;
   z-index: 1000;
   width: min(280px, calc(100% - 96px));
@@ -574,6 +574,28 @@ a {
   color: #000 !important;
 }
 
+.btn-outline-danger {
+  color: #fca5a5 !important;
+  border-color: #ef4444 !important;
+  background: transparent !important;
+}
+
+.btn-outline-danger:hover {
+  background: #ef4444 !important;
+  color: #fff !important;
+}
+
+.btn-danger-solid {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #fff !important;
+}
+
+.btn-danger-solid:hover {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
 .btn-full {
   width: 100%;
 }
@@ -624,7 +646,7 @@ a {
 }
 
 .btn-map-action-pin-active {
-  background: rgba(239, 68, 68, 0.92) !important;
+  background: var(--danger) !important;
 }
 
 .btn-map-action-current {

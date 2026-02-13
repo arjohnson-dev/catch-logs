@@ -52,7 +52,7 @@ export default function OptionsModal({
           </Button>
           <Button
             variant="outline"
-            className="btn-outline-muted btn-full options-modal-button"
+            className="btn-outline-danger btn-full options-modal-button"
             onClick={onLogout}
             disabled={isLoggingOut}
           >
@@ -64,4 +64,3 @@ export default function OptionsModal({
     </div>
   );
 }
-

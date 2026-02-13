@@ -2,10 +2,16 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   FaArrowLeft,
+  FaAndroid,
+  FaApple,
   FaEnvelope,
+  FaEllipsisVertical,
   FaHeadset,
+  FaHouse,
   FaLock,
+  FaPlus,
   FaPencil,
+  FaShareFromSquare,
   FaTrashCan,
   FaUser,
   FaXmark,
@@ -21,11 +27,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { sendSupportEmail } from "@/lib/support";
 
+const ACCOUNT_DELETE_PASSPHRASE = "DELETE EVERYTHING";
+
 export default function Settings() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [installPlatform, setInstallPlatform] = useState<"ios" | "android">(
+    "ios",
+  );
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,6 +49,8 @@ export default function Settings() {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isPreparingSupport, setIsPreparingSupport] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const isDeletePassphraseValid =
+    deleteConfirmation.trim() === ACCOUNT_DELETE_PASSPHRASE;
 
   useEffect(() => {
     if (!user) return;
@@ -183,10 +196,10 @@ export default function Settings() {
   const handleDeleteAccount = async () => {
     if (!user) return;
 
-    if (deleteConfirmation !== "DELETE EVERYTHING") {
+    if (!isDeletePassphraseValid) {
       toast({
         title: "Confirmation required",
-        description: 'Type "DELETE EVERYTHING" to confirm account deletion.',
+        description: `Type "${ACCOUNT_DELETE_PASSPHRASE}" to confirm account deletion.`,
         variant: "destructive",
       });
       return;
@@ -205,7 +218,9 @@ export default function Settings() {
         const { error } = await supabase.rpc("delete_my_account");
         if (error) {
           const edgeMessage =
-            edgeError instanceof Error ? edgeError.message : "unknown edge function error";
+            edgeError instanceof Error
+              ? edgeError.message
+              : "unknown edge function error";
           throw new Error(`${error.message} (edge fallback: ${edgeMessage})`);
         }
       }
@@ -248,6 +263,115 @@ export default function Settings() {
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">
+                  How to Install CatchLogs
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="settings-meta">
+                Save CatchLogs to your home screen for quick and easy access!
+              </p>
+              <div className="settings-actions mb-8">
+                <Button
+                  type="button"
+                  className={
+                    installPlatform === "ios"
+                      ? "btn-primary"
+                      : "btn-outline-muted"
+                  }
+                  variant={installPlatform === "ios" ? "default" : "outline"}
+                  onClick={() => setInstallPlatform("ios")}
+                >
+                  <FaApple size={16} />
+                  iOS
+                </Button>
+                <Button
+                  type="button"
+                  className={
+                    installPlatform === "android"
+                      ? "btn-primary"
+                      : "btn-outline-muted"
+                  }
+                  variant={
+                    installPlatform === "android" ? "default" : "outline"
+                  }
+                  onClick={() => setInstallPlatform("android")}
+                >
+                  <FaAndroid size={16} />
+                  Android
+                </Button>
+              </div>
+              {installPlatform === "ios" ? (
+                <div className="settings-form settings-meta">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      1. Tap the{" "}
+                      <span className="inline-flex items-center gap-1">
+                        Share <FaShareFromSquare size={12} />
+                      </span>{" "}
+                      button.
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span>
+                      2. Tap{" "}
+                      <span className="inline-flex items-center gap-1">
+                        <FaPlus size={12} /> "Add to Home Screen"
+                      </span>
+                      .
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>3. Tap "Add".</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="settings-form settings-meta">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      1. Tap the{" "}
+                      <span className="inline-flex items-center gap-1">
+                        menu <FaEllipsisVertical size={12} />
+                      </span>{" "}
+                      (three dots).
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>
+                      2. Tap{" "}
+                      <span className="inline-flex items-center gap-1">
+                        <FaHouse size={12} /> "Install app"
+                      </span>{" "}
+                      or{" "}
+                      <span className="inline-flex items-center gap-1">
+                        <FaHouse size={12} /> "Add to Home screen"
+                      </span>
+                      .
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>
+                      3. Confirm by tapping{" "}
+                      <span className="inline-flex items-center gap-1">
+                        <FaPlus size={12} /> "Install"
+                      </span>{" "}
+                      or{" "}
+                      <span className="inline-flex items-center gap-1">
+                        <FaPlus size={12} /> "Add"
+                      </span>
+                      .
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="settings-card">
+            <CardHeader>
+              <div className="settings-card-header">
+                <CardTitle className="settings-card-title">
                   <FaEnvelope size={18} />
                   Email
                 </CardTitle>
@@ -272,7 +396,11 @@ export default function Settings() {
                   className="settings-edit-button"
                   onClick={() => setIsEditingName((prev) => !prev)}
                 >
-                  {isEditingName ? <FaXmark size={16} /> : <FaPencil size={16} />}
+                  {isEditingName ? (
+                    <FaXmark size={16} />
+                  ) : (
+                    <FaPencil size={16} />
+                  )}
                 </Button>
               </div>
             </CardHeader>
@@ -362,9 +490,9 @@ export default function Settings() {
                 <Button
                   type="button"
                   variant="destructive"
-                  className="settings-delete-button"
+                  className="settings-delete-button btn-danger-solid"
                   onClick={handleDeleteAccount}
-                  disabled={isDeletingAccount}
+                  disabled={isDeletingAccount || !isDeletePassphraseValid}
                 >
                   {isDeletingAccount ? "Deleting..." : "Delete My Account"}
                 </Button>

@@ -6,21 +6,11 @@ import {
   FaCalendarDays,
   FaChevronDown,
   FaChevronUp,
-  FaClock,
-  FaCloud,
-  FaCloudRain,
-  FaEye,
   FaFilter,
   FaFish,
-  FaRuler,
   FaMapLocationDot,
   FaPenToSquare,
-  FaSnowflake,
-  FaSun,
-  FaTemperatureHalf,
   FaTrashCan,
-  FaWeightScale,
-  FaWind,
   FaArrowLeft,
   FaXmark,
 } from "react-icons/fa6";
@@ -38,55 +28,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import JournalEntryCard from "@/components/journal-entry-card";
 import { type JournalEntry } from "@/types/domain";
 import { deleteEntryWithPhoto, getEntries } from "@/lib/supabase-data";
 import JournalEntryEditor from "@/components/journal-entry-editor";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-
-// Helper function to get appropriate weather icon
-function getWeatherIcon(condition: string) {
-  const lowerCondition = condition.toLowerCase();
-  if (lowerCondition.includes("rain")) return FaCloudRain;
-  if (lowerCondition.includes("drizzle")) return FaCloudRain;
-  if (lowerCondition.includes("snow")) return FaSnowflake;
-  if (lowerCondition.includes("cloud")) return FaCloud;
-  if (lowerCondition.includes("clear")) return FaSun;
-  return FaCloud; // default
-}
-
-// Helper function to convert wind direction degrees to compass direction
-function getWindDirection(degrees: number | null): string {
-  if (degrees === null || degrees === undefined) return "";
-  const directions = [
-    "N",
-    "NNE",
-    "NE",
-    "ENE",
-    "E",
-    "ESE",
-    "SE",
-    "SSE",
-    "S",
-    "SSW",
-    "SW",
-    "WSW",
-    "W",
-    "WNW",
-    "NW",
-    "NNW",
-  ];
-  const index = Math.round(degrees / 22.5) % 16;
-  return directions[index];
-}
-
-// Helper function to format visibility
-function formatVisibility(meters: number | null): string {
-  if (meters === null || meters === undefined) return "";
-  if (meters >= 10000) return "10+ km";
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
-  return `${meters} m`;
-}
 
 interface JournalListProps {
   onClose?: () => void;
@@ -120,7 +67,27 @@ export default function JournalList({
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [fishTypeFilter, setFishTypeFilter] = useState("");
+  const [tackleFilter, setTackleFilter] = useState("");
+  const [weatherFilter, setWeatherFilter] = useState("");
+  const [minLength, setMinLength] = useState("");
+  const [maxLength, setMaxLength] = useState("");
+  const [minWeight, setMinWeight] = useState("");
+  const [maxWeight, setMaxWeight] = useState("");
+  const [pendingSortOrder, setPendingSortOrder] = useState<"newest" | "oldest">("newest");
+  const [pendingStartDate, setPendingStartDate] = useState("");
+  const [pendingEndDate, setPendingEndDate] = useState("");
+  const [pendingFishTypeFilter, setPendingFishTypeFilter] = useState("");
+  const [pendingTackleFilter, setPendingTackleFilter] = useState("");
+  const [pendingWeatherFilter, setPendingWeatherFilter] = useState("");
+  const [pendingMinLength, setPendingMinLength] = useState("");
+  const [pendingMaxLength, setPendingMaxLength] = useState("");
+  const [pendingMinWeight, setPendingMinWeight] = useState("");
+  const [pendingMaxWeight, setPendingMaxWeight] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [timeSortOpen, setTimeSortOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [sizeOpen, setSizeOpen] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: async (entryId: number) => {
@@ -161,6 +128,73 @@ export default function JournalList({
       filtered = filtered.filter((entry) => new Date(entry.dateTime) <= end);
     }
 
+    const typeTerm = fishTypeFilter.trim().toLowerCase();
+    if (typeTerm) {
+      filtered = filtered.filter((entry) =>
+        entry.fishType.toLowerCase().includes(typeTerm),
+      );
+    }
+
+    const tackleTerm = tackleFilter.trim().toLowerCase();
+    if (tackleTerm) {
+      filtered = filtered.filter((entry) =>
+        (entry.tackle ?? "").toLowerCase().includes(tackleTerm),
+      );
+    }
+
+    const weatherTerm = weatherFilter.trim().toLowerCase();
+    if (weatherTerm) {
+      filtered = filtered.filter((entry) =>
+        (
+          entry.weatherDescription ??
+          entry.weatherCondition ??
+          ""
+        )
+          .toLowerCase()
+          .includes(weatherTerm),
+      );
+    }
+
+    const minLengthValue = minLength.trim() === "" ? null : Number(minLength);
+    if (minLengthValue !== null && !Number.isNaN(minLengthValue)) {
+      filtered = filtered.filter(
+        (entry) =>
+          entry.length !== null &&
+          entry.length !== undefined &&
+          entry.length >= minLengthValue,
+      );
+    }
+
+    const maxLengthValue = maxLength.trim() === "" ? null : Number(maxLength);
+    if (maxLengthValue !== null && !Number.isNaN(maxLengthValue)) {
+      filtered = filtered.filter(
+        (entry) =>
+          entry.length !== null &&
+          entry.length !== undefined &&
+          entry.length <= maxLengthValue,
+      );
+    }
+
+    const minWeightValue = minWeight.trim() === "" ? null : Number(minWeight);
+    if (minWeightValue !== null && !Number.isNaN(minWeightValue)) {
+      filtered = filtered.filter(
+        (entry) =>
+          entry.weight !== null &&
+          entry.weight !== undefined &&
+          entry.weight >= minWeightValue,
+      );
+    }
+
+    const maxWeightValue = maxWeight.trim() === "" ? null : Number(maxWeight);
+    if (maxWeightValue !== null && !Number.isNaN(maxWeightValue)) {
+      filtered = filtered.filter(
+        (entry) =>
+          entry.weight !== null &&
+          entry.weight !== undefined &&
+          entry.weight <= maxWeightValue,
+      );
+    }
+
     // Apply sorting
     filtered.sort((a, b) => {
       const dateA = new Date(a.dateTime).getTime();
@@ -169,7 +203,79 @@ export default function JournalList({
     });
 
     return filtered;
-  }, [entries, sortOrder, startDate, endDate]);
+  }, [
+    entries,
+    sortOrder,
+    startDate,
+    endDate,
+    fishTypeFilter,
+    tackleFilter,
+    weatherFilter,
+    minLength,
+    maxLength,
+    minWeight,
+    maxWeight,
+  ]);
+
+  const hasActiveFilters =
+    sortOrder !== "newest" ||
+    startDate !== "" ||
+    endDate !== "" ||
+    fishTypeFilter !== "" ||
+    tackleFilter !== "" ||
+    weatherFilter !== "" ||
+    minLength !== "" ||
+    maxLength !== "" ||
+    minWeight !== "" ||
+    maxWeight !== "";
+
+  const hasPendingChanges =
+    pendingSortOrder !== sortOrder ||
+    pendingStartDate !== startDate ||
+    pendingEndDate !== endDate ||
+    pendingFishTypeFilter !== fishTypeFilter ||
+    pendingTackleFilter !== tackleFilter ||
+    pendingWeatherFilter !== weatherFilter ||
+    pendingMinLength !== minLength ||
+    pendingMaxLength !== maxLength ||
+    pendingMinWeight !== minWeight ||
+    pendingMaxWeight !== maxWeight;
+
+  const applyPendingFilters = () => {
+    setSortOrder(pendingSortOrder);
+    setStartDate(pendingStartDate);
+    setEndDate(pendingEndDate);
+    setFishTypeFilter(pendingFishTypeFilter);
+    setTackleFilter(pendingTackleFilter);
+    setWeatherFilter(pendingWeatherFilter);
+    setMinLength(pendingMinLength);
+    setMaxLength(pendingMaxLength);
+    setMinWeight(pendingMinWeight);
+    setMaxWeight(pendingMaxWeight);
+  };
+
+  const clearAllFilters = () => {
+    setSortOrder("newest");
+    setStartDate("");
+    setEndDate("");
+    setFishTypeFilter("");
+    setTackleFilter("");
+    setWeatherFilter("");
+    setMinLength("");
+    setMaxLength("");
+    setMinWeight("");
+    setMaxWeight("");
+    setPendingSortOrder("newest");
+    setPendingStartDate("");
+    setPendingEndDate("");
+    setPendingFishTypeFilter("");
+    setPendingTackleFilter("");
+    setPendingWeatherFilter("");
+    setPendingMinLength("");
+    setPendingMaxLength("");
+    setPendingMinWeight("");
+    setPendingMaxWeight("");
+  };
 
   if (isLoading) {
     if (fullScreen) {
@@ -228,7 +334,7 @@ export default function JournalList({
                 <div className="flex items-center space-x-2">
                   <FaFilter className="h-4 w-4" />
                   <span>Filters</span>
-                  {(sortOrder !== "newest" || startDate || endDate) && (
+                  {hasActiveFilters && (
                     <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
                       Active
                     </span>
@@ -244,95 +350,216 @@ export default function JournalList({
 
             <CollapsibleContent>
               <div className="p-4 pt-0">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Sort Order */}
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Sort Order
-                    </label>
-                    <Select
-                      value={sortOrder}
-                      onValueChange={(value: "newest" | "oldest") =>
-                        setSortOrder(value)
-                      }
-                    >
-                      <SelectTrigger className="field-dark">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="field-dark z-[10000]">
-                        <SelectItem
-                          value="newest"
-                          className="text-white hover:bg-[#333333]"
-                        >
-                          Newest First
-                        </SelectItem>
-                        <SelectItem
-                          value="oldest"
-                          className="text-white hover:bg-[#333333]"
-                        >
-                          Oldest First
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Start Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      From Date
-                    </label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="field-dark"
-                    />
-                  </div>
-
-                  {/* End Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      To Date
-                    </label>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="field-dark"
-                    />
-                  </div>
+                <div className="mb-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="btn-outline-muted"
+                    onClick={clearAllFilters}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="btn-primary"
+                    onClick={applyPendingFilters}
+                    disabled={!hasPendingChanges}
+                  >
+                    Apply
+                  </Button>
                 </div>
 
-                {/* Clear Filters */}
-                {(startDate || endDate || sortOrder !== "newest") && (
-                  <div className="mt-4 flex gap-2">
-                    {(startDate || endDate) && (
+                <div className="space-y-3">
+                  <Collapsible open={timeSortOpen} onOpenChange={setTimeSortOpen}>
+                    <CollapsibleTrigger asChild>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setStartDate("");
-                          setEndDate("");
-                        }}
-                        className="btn-outline-muted"
+                        variant="ghost"
+                        className="w-full flex items-center justify-between px-3 py-2 text-white hover:bg-[#222222]"
                       >
-                        Clear Date Filter
+                        <span className="text-sm">Time & Sort</span>
+                        {timeSortOpen ? (
+                          <FaChevronUp className="h-4 w-4" />
+                        ) : (
+                          <FaChevronDown className="h-4 w-4" />
+                        )}
                       </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSortOrder("newest");
-                        setStartDate("");
-                        setEndDate("");
-                      }}
-                      className="btn-outline-muted"
-                    >
-                      Reset All Filters
-                    </Button>
-                  </div>
-                )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Sort Order
+                          </label>
+                          <Select
+                            value={pendingSortOrder}
+                            onValueChange={(value: "newest" | "oldest") =>
+                              setPendingSortOrder(value)
+                            }
+                          >
+                            <SelectTrigger className="field-dark">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="field-dark z-[10000]">
+                              <SelectItem
+                                value="newest"
+                                className="text-white hover:bg-[#333333]"
+                              >
+                                Newest First
+                              </SelectItem>
+                              <SelectItem
+                                value="oldest"
+                                className="text-white hover:bg-[#333333]"
+                              >
+                                Oldest First
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            From Date
+                          </label>
+                          <Input
+                            type="date"
+                            value={pendingStartDate}
+                            onChange={(e) => setPendingStartDate(e.target.value)}
+                            className="field-dark"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            To Date
+                          </label>
+                          <Input
+                            type="date"
+                            value={pendingEndDate}
+                            onChange={(e) => setPendingEndDate(e.target.value)}
+                            className="field-dark"
+                          />
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-between px-3 py-2 text-white hover:bg-[#222222]"
+                      >
+                        <span className="text-sm">Catch Details</span>
+                        {detailsOpen ? (
+                          <FaChevronUp className="h-4 w-4" />
+                        ) : (
+                          <FaChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Fish Type
+                          </label>
+                          <Input
+                            placeholder="e.g. Bass"
+                            value={pendingFishTypeFilter}
+                            onChange={(e) => setPendingFishTypeFilter(e.target.value)}
+                            className="field-dark"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Tackle
+                          </label>
+                          <Input
+                            placeholder="e.g. Jig"
+                            value={pendingTackleFilter}
+                            onChange={(e) => setPendingTackleFilter(e.target.value)}
+                            className="field-dark"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Weather Condition
+                          </label>
+                          <Input
+                            placeholder="e.g. Clear, rain, overcast"
+                            value={pendingWeatherFilter}
+                            onChange={(e) => setPendingWeatherFilter(e.target.value)}
+                            className="field-dark"
+                          />
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Collapsible open={sizeOpen} onOpenChange={setSizeOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="w-full flex items-center justify-between px-3 py-2 text-white hover:bg-[#222222]"
+                      >
+                        <span className="text-sm">Size</span>
+                        {sizeOpen ? (
+                          <FaChevronUp className="h-4 w-4" />
+                        ) : (
+                          <FaChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Length Range (in)
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              type="number"
+                              step="0.1"
+                              placeholder="Min"
+                              value={pendingMinLength}
+                              onChange={(e) => setPendingMinLength(e.target.value)}
+                              className="field-dark"
+                            />
+                            <Input
+                              type="number"
+                              step="0.1"
+                              placeholder="Max"
+                              value={pendingMaxLength}
+                              onChange={(e) => setPendingMaxLength(e.target.value)}
+                              className="field-dark"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Weight Range (lbs)
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Min"
+                              value={pendingMinWeight}
+                              onChange={(e) => setPendingMinWeight(e.target.value)}
+                              className="field-dark"
+                            />
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Max"
+                              value={pendingMaxWeight}
+                              onChange={(e) => setPendingMaxWeight(e.target.value)}
+                              className="field-dark"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </div>
             </CollapsibleContent>
           </div>
@@ -357,205 +584,59 @@ export default function JournalList({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredAndSortedEntries.map((entry: JournalEntry) => (
-                <div
+                <JournalEntryCard
                   key={entry.id}
-                  className="surface-card surface-card-hover p-4"
-                >
-                  <div className="flex items-start space-x-3">
-                    {/* Fish Photo */}
-                    {entry.photoUrl ? (
-                      <img
-                        src={entry.photoUrl}
-                        alt={`Caught ${entry.fishType}`}
-                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-lg bg-[#222222] flex items-center justify-center flex-shrink-0">
-                        <FaFish className="h-8 w-8 text-[#666666]" />
-                      </div>
-                    )}
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-white">
-                          {entry.fishType}
-                        </h3>
-                        <span className="text-xs text-[#999999]">
-                          {format(new Date(entry.dateTime), "MMM dd")}
-                        </span>
-                      </div>
-
-                      <div className="text-sm text-[#cccccc] mt-1">
-                        {entry.length && (
-                          <div className="flex items-center space-x-1">
-                            <FaRuler className="h-3 w-3" />
-                            <span>{entry.length}"</span>
-                          </div>
-                        )}
-                        {entry.weight && (
-                          <div className="flex items-center space-x-1">
-                            <FaWeightScale className="h-3 w-3" />
-                            <span>{entry.weight} lbs</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Enhanced Weather Information */}
-                      {entry.temperature ||
-                      entry.windSpeed ||
-                      entry.weatherCondition ||
-                      entry.cloudCoverage ||
-                      entry.visibility ? (
-                        <div className="mt-2">
-                          {/* Primary weather row */}
-                          <div className="flex items-center space-x-3 text-xs text-[#999999]">
-                            {entry.temperature && (
-                              <div className="flex items-center space-x-1">
-                                <FaTemperatureHalf className="h-3 w-3 text-orange-400" />
-                                <span>{entry.temperature}°F</span>
-                              </div>
-                            )}
-                            {entry.windSpeed && (
-                              <div className="flex items-center space-x-1">
-                                <FaWind className="h-3 w-3 text-blue-400" />
-                                <span>{entry.windSpeed} mph</span>
-                                {entry.windDirection && (
-                                  <span className="text-[#777777]">
-                                    ({getWindDirection(entry.windDirection)})
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {entry.weatherCondition && (
-                              <div className="flex items-center space-x-1">
-                                {(() => {
-                                  const WeatherIcon = getWeatherIcon(
-                                    entry.weatherCondition,
-                                  );
-                                  return (
-                                    <WeatherIcon className="h-3 w-3 text-gray-400" />
-                                  );
-                                })()}
-                                <span className="capitalize">
-                                  {entry.weatherDescription ||
-                                    entry.weatherCondition}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Secondary weather details */}
-                          {(entry.cloudCoverage !== null ||
-                            entry.visibility !== null) && (
-                            <div className="flex items-center space-x-3 mt-1 text-xs text-[#777777]">
-                              {entry.cloudCoverage !== null && (
-                                <div className="flex items-center space-x-1">
-                                  <FaCloud className="h-3 w-3" />
-                                  <span>{entry.cloudCoverage}% clouds</span>
-                                </div>
-                              )}
-                              {entry.visibility !== null &&
-                                entry.visibility < 10000 && (
-                                  <div className="flex items-center space-x-1">
-                                    <FaEye className="h-3 w-3" />
-                                    <span>
-                                      {formatVisibility(entry.visibility)} vis
-                                    </span>
-                                  </div>
-                                )}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-2 text-xs text-[#777777]">
-                          Weather data unavailable
-                        </div>
-                      )}
-
-                      <div className="flex items-center space-x-2 mt-2">
-                        <div className="flex items-center space-x-1">
-                          <FaClock className="h-3 w-3 text-[#666666]" />
-                          <span className="text-xs text-[#999999]">
-                            {format(new Date(entry.dateTime), "h:mm a")}
-                          </span>
-                        </div>
-                        {entry.tackle && (
-                          <div className="flex items-center space-x-1">
-                            <span className="text-xs text-[#999999]">
-                              Tackle: {entry.tackle}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {entry.notes && (
-                        <p className="text-sm text-[#cccccc] mt-2 line-clamp-2">
-                          {entry.notes}
-                        </p>
-                      )}
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="btn-outline-info"
-                          onClick={() => {
-                            handleClose();
-                            if (onTakeMeThere) {
-                              onTakeMeThere(entry.pinId);
-                            } else {
-                              navigate(`/?pinId=${entry.pinId}`);
-                            }
-                          }}
-                        >
-                          <FaMapLocationDot className="h-3 w-3 mr-1" />
-                          Take me there
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="btn-outline-muted"
-                          onClick={() => setEditingEntry(entry)}
-                        >
-                          <FaPenToSquare className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="btn-outline-muted"
-                          onClick={() => {
-                            handleClose();
-                            if (onMoveEntryRequest) {
-                              onMoveEntryRequest(entry.id);
-                            } else {
-                              navigate(`/?moveEntryId=${entry.id}`);
-                            }
-                          }}
-                        >
-                          <FaArrowsUpDownLeftRight className="h-3 w-3 mr-1" />
-                          Move on map
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            const accepted = window.confirm(
-                              "Delete this entry and its image permanently?",
-                            );
-                            if (accepted) {
-                              deleteMutation.mutate(entry.id);
-                            }
-                          }}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <FaTrashCan className="h-3 w-3 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  entry={entry}
+                  actions={[
+                    {
+                      id: "take-me-there",
+                      label: "Take me there",
+                      icon: FaMapLocationDot,
+                      onClick: () => {
+                        handleClose();
+                        if (onTakeMeThere) {
+                          onTakeMeThere(entry.pinId);
+                        } else {
+                          navigate(`/?pinId=${entry.pinId}`);
+                        }
+                      },
+                    },
+                    {
+                      id: "edit",
+                      label: "Edit",
+                      icon: FaPenToSquare,
+                      onClick: () => setEditingEntry(entry),
+                    },
+                    {
+                      id: "move-on-map",
+                      label: "Move on map",
+                      icon: FaArrowsUpDownLeftRight,
+                      onClick: () => {
+                        handleClose();
+                        if (onMoveEntryRequest) {
+                          onMoveEntryRequest(entry.id);
+                        } else {
+                          navigate(`/?moveEntryId=${entry.id}`);
+                        }
+                      },
+                    },
+                    {
+                      id: "delete",
+                      label: "Delete",
+                      icon: FaTrashCan,
+                      tone: "danger",
+                      disabled: deleteMutation.isPending,
+                      onClick: () => {
+                        const accepted = window.confirm(
+                          "Delete this entry and its image permanently?",
+                        );
+                        if (accepted) {
+                          deleteMutation.mutate(entry.id);
+                        }
+                      },
+                    },
+                  ]}
+                />
               ))}
             </div>
           )}
