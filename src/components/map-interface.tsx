@@ -143,8 +143,14 @@ function UserLocationCenterer({
 
   useEffect(() => {
     if (!userLocation) return;
-    if (selectedPinId !== null) return;
     if (hasCenteredOnInitialLocationRef.current) return;
+
+    if (selectedPinId !== null) {
+      // Consume the one-time auto-center when a pin is already selected
+      // so clearing selection later does not unexpectedly jump to user location.
+      hasCenteredOnInitialLocationRef.current = true;
+      return;
+    }
 
     map.setView(userLocation, 15, { animate: false });
     hasCenteredOnInitialLocationRef.current = true;

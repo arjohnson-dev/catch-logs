@@ -38,10 +38,13 @@ export default function Dashboard() {
   const [selectedPinId, setSelectedPinId] = useState<number | null>(initialPinIdFromUrl);
   const [showPinSummary, setShowPinSummary] = useState(Boolean(initialPinIdFromUrl));
   const [moveEntryId, setMoveEntryId] = useState<number | null>(initialMoveEntryIdFromUrl);
-  const [sessionTackle, setSessionTackle] = useState("");
-  const [hasLoadedSessionTackle, setHasLoadedSessionTackle] = useState(false);
+  const [sessionTackleByUser, setSessionTackleByUser] = useState<Record<string, string>>({});
   const [isPinDropMode, setIsPinDropMode] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const userId = user?.id ?? null;
+  const sessionTackle = userId
+    ? (sessionTackleByUser[userId] ?? loadSessionTackle(userId))
+    : "";
 
   // Handle URL parameter for centering on a specific pin
   useEffect(() => {
@@ -50,21 +53,14 @@ export default function Dashboard() {
     }
   }, [initialPinIdFromUrl, initialMoveEntryIdFromUrl]);
 
-  useEffect(() => {
-    if (!user?.id) {
-      setSessionTackle("");
-      setHasLoadedSessionTackle(false);
-      return;
-    }
-
-    setSessionTackle(loadSessionTackle(user.id));
-    setHasLoadedSessionTackle(true);
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!user?.id || !hasLoadedSessionTackle) return;
-    saveSessionTackle(user.id, sessionTackle);
-  }, [user?.id, sessionTackle, hasLoadedSessionTackle]);
+  const handleSessionTackleChange = (value: string) => {
+    if (!userId) return;
+    setSessionTackleByUser((prev) => ({
+      ...prev,
+      [userId]: value,
+    }));
+    saveSessionTackle(userId, value);
+  };
 
   const handlePinSelect = (pinId: number, isNew = false) => {
     setSelectedPinId(pinId);
@@ -177,7 +173,7 @@ export default function Dashboard() {
             moveEntryId={moveEntryId}
             onEntryMove={handleEntryMove}
             sessionTackle={sessionTackle}
-            onSessionTackleChange={setSessionTackle}
+            onSessionTackleChange={handleSessionTackleChange}
           />
         </div>
       </div>
