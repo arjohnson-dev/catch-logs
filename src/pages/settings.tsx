@@ -7,15 +7,15 @@ import {
   FaEnvelope,
   FaEllipsisVertical,
   FaHeadset,
-  FaHouse,
   FaLock,
   FaPlus,
   FaPencil,
-  FaShareFromSquare,
   FaTrashCan,
   FaUser,
   FaXmark,
 } from "react-icons/fa6";
+import { IoShareOutline } from "react-icons/io5";
+import { VscDiffAdded } from "react-icons/vsc";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -266,11 +266,11 @@ export default function Settings() {
                   How to Install CatchLogs
                 </CardTitle>
               </div>
-            </CardHeader>
-            <CardContent>
               <p className="settings-meta">
                 Save CatchLogs to your home screen for quick and easy access!
               </p>
+            </CardHeader>
+            <CardContent>
               <div className="settings-actions mb-8">
                 <Button
                   type="button"
@@ -303,66 +303,62 @@ export default function Settings() {
               </div>
               {installPlatform === "ios" ? (
                 <div className="settings-form settings-meta">
-                  <div className="flex items-center gap-2">
-                    <span>
-                      1. Tap the{" "}
-                      <span className="inline-flex items-center gap-1">
-                        Share <FaShareFromSquare size={12} />
-                      </span>{" "}
-                      button.
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span>
-                      2. Tap{" "}
-                      <span className="inline-flex items-center gap-1">
-                        <FaPlus size={12} /> "Add to Home Screen"
-                      </span>
+                  <ol className="list-decimal space-y-2 pl-5">
+                    <li>
+                      Open CatchLogs in <strong>Safari</strong>.
+                    </li>
+                    <li>
+                      Tap{" "}
+                      <strong className="inline-flex items-center gap-1">
+                        <IoShareOutline size={12} /> Share
+                      </strong>{" "}
+                      at the bottom of the screen.
+                    </li>
+                    <li>
+                      Scroll down and tap{" "}
+                      <strong className="inline-flex items-center gap-1">
+                        <VscDiffAdded size={12} /> Add to Home Screen
+                      </strong>
                       .
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>3. Tap "Add".</span>
-                  </div>
+                    </li>
+                    <li>
+                      Make sure <strong>Open as Web App</strong> is enabled.
+                    </li>
+                    <li>
+                      Tap <strong>Add</strong>.
+                    </li>
+                  </ol>
+                  <p className="settings-meta">
+                    Having trouble? Make sure you're using the latest version of
+                    iOS and Safari. If issues persist, contact support at the
+                    bottom of this page.
+                  </p>
                 </div>
               ) : (
                 <div className="settings-form settings-meta">
-                  <div className="flex items-center gap-2">
-                    <span>
-                      1. Tap the{" "}
-                      <span className="inline-flex items-center gap-1">
-                        menu <FaEllipsisVertical size={12} />
-                      </span>{" "}
-                      (three dots).
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>
-                      2. Tap{" "}
-                      <span className="inline-flex items-center gap-1">
-                        <FaHouse size={12} /> "Install app"
-                      </span>{" "}
-                      or{" "}
-                      <span className="inline-flex items-center gap-1">
-                        <FaHouse size={12} /> "Add to Home screen"
-                      </span>
-                      .
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>
-                      3. Confirm by tapping{" "}
-                      <span className="inline-flex items-center gap-1">
-                        <FaPlus size={12} /> "Install"
-                      </span>{" "}
-                      or{" "}
-                      <span className="inline-flex items-center gap-1">
-                        <FaPlus size={12} /> "Add"
-                      </span>
-                      .
-                    </span>
-                  </div>
+                  <ol className="list-decimal space-y-2 pl-5">
+                    <li>
+                      Open CatchLogs in <strong>Chrome</strong>.
+                    </li>
+                    <li>
+                      Tap{" "}
+                      <strong className="inline-flex items-center gap-1">
+                        <FaEllipsisVertical size={12} /> Three dots menu
+                      </strong>{" "}
+                      in the top-right corner.
+                    </li>
+                    <li>
+                      Tap <strong>Add to Home screen</strong>.
+                    </li>
+                    <li>
+                      Tap <strong>Add</strong>.
+                    </li>
+                  </ol>
+                  <p className="settings-meta">
+                    Having trouble? Make sure you're using the latest version of
+                    Android and Chrome. If issues persist, contact support at
+                    the bottom of this page.
+                  </p>
                 </div>
               )}
             </CardContent>

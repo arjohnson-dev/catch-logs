@@ -468,15 +468,17 @@ export default function MapInterface({
       <div className="map-actions">
         {showPinMenu && (
           <div className="map-pin-menu">
-            <button
-              type="button"
-              className="map-pin-menu-close"
-              onClick={() => setShowPinMenu(false)}
-              aria-label="Close new entry menu"
-            >
-              <FaXmark size={16} />
-            </button>
-            <p className="map-pin-menu-title">Add Journal Entry</p>
+            <div className="map-pin-menu-header">
+              <p className="map-pin-menu-title">Add Journal Entry</p>
+              <button
+                type="button"
+                className="map-pin-menu-close"
+                onClick={() => setShowPinMenu(false)}
+                aria-label="Close new entry menu"
+              >
+                <FaXmark size={16} />
+              </button>
+            </div>
             <Button
               className="map-pin-option map-pin-option-current"
               onClick={handleAddPinAtLocation}

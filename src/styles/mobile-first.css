@@ -256,17 +256,20 @@ a {
   gap: 8px;
   width: min(220px, calc(100vw - 48px));
   padding: 10px;
-  padding-top: 36px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.86);
   backdrop-filter: blur(8px);
 }
 
+.map-pin-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .map-pin-menu-close {
-  position: absolute;
-  top: 6px;
-  right: 6px;
   width: 28px;
   height: 28px;
   border: 0;
