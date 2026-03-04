@@ -8,7 +8,6 @@ import {
   FaEllipsisVertical,
   FaHeadset,
   FaLock,
-  FaPlus,
   FaPencil,
   FaTrashCan,
   FaUser,
