@@ -52,6 +52,15 @@ import { supabase } from "@/lib/supabase";
 import { sendSupportEmail } from "@/lib/support";
 
 const ACCOUNT_DELETE_PASSPHRASE = "DELETE EVERYTHING";
+const SUPPORT_SUBJECT_OPTIONS = [
+  "Support Request",
+  "Bug Report",
+  "Feedback",
+  "Suggestion",
+  "Other (please type)",
+] as const;
+
+type SupportSubjectOption = (typeof SUPPORT_SUBJECT_OPTIONS)[number] | "";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -65,7 +74,9 @@ export default function Settings() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [supportSubject, setSupportSubject] = useState("");
+  const [supportSubjectOption, setSupportSubjectOption] =
+    useState<SupportSubjectOption>("");
+  const [supportCustomSubject, setSupportCustomSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -180,12 +191,25 @@ export default function Settings() {
 
   const handleContactSupport = async () => {
     if (!user) return;
-    const subject = supportSubject.trim();
+    const selectedSubject = supportSubjectOption.trim();
+    const customSubject = supportCustomSubject.trim();
+    const subject =
+      supportSubjectOption === "Other (please type)"
+        ? customSubject
+        : selectedSubject;
     const message = supportMessage.trim();
-    if (!subject) {
+    if (!selectedSubject) {
       toast({
         title: "Subject required",
-        description: "Please enter a support subject.",
+        description: "Please choose a support subject.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (supportSubjectOption === "Other (please type)" && !customSubject) {
+      toast({
+        title: "Subject required",
+        description: "Please enter a custom subject for Other.",
         variant: "destructive",
       });
       return;
@@ -207,7 +231,8 @@ export default function Settings() {
         subject,
         message,
       });
-      setSupportSubject("");
+      setSupportSubjectOption("");
+      setSupportCustomSubject("");
       setSupportMessage("");
       toast({
         title: "Message sent",
@@ -441,7 +466,9 @@ export default function Settings() {
               {!isEditingName ? (
                 <p className="settings-static-value">
                   {[user?.firstName, user?.lastName]
-                    .filter((value) => Boolean(value && value.trim().length > 0))
+                    .filter((value) =>
+                      Boolean(value && value.trim().length > 0),
+                    )
                     .join(" ") || "Not set"}
                 </p>
               ) : (
@@ -501,82 +528,6 @@ export default function Settings() {
               >
                 {isSendingReset ? "Sending..." : "Send Password Reset Link"}
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="settings-card settings-card-danger">
-            <CardHeader>
-              <div className="settings-card-header">
-                <CardTitle className="settings-card-title settings-card-title-danger">
-                  <FaTrashCan size={18} />
-                  Delete Account
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="settings-danger-copy">
-                This permanently deletes your profile, pins, entries, and
-                photos. If you wish to continue, type{" "}
-                <strong className="settings-danger-strong">
-                  "DELETE EVERYTHING"
-                </strong>
-              </div>
-              <div className="settings-form">
-                <Input
-                  className="field-dark"
-                  value={deleteConfirmation}
-                  onChange={(e) => setDeleteConfirmation(e.target.value)}
-                  placeholder="type here"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="settings-delete-button btn-danger-solid"
-                  onClick={handleDeleteAccount}
-                  disabled={isDeletingAccount || !isDeletePassphraseValid}
-                >
-                  {isDeletingAccount ? "Deleting..." : "Delete My Account"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="settings-card">
-            <CardHeader>
-              <div className="settings-card-header">
-                <CardTitle className="settings-card-title">
-                  <FaHeadset size={18} />
-                  Contact Support
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="settings-form">
-                <Input
-                  className="field-dark"
-                  value={supportSubject}
-                  onChange={(e) => setSupportSubject(e.target.value)}
-                  placeholder="Subject"
-                />
-                <Textarea
-                  className="field-dark settings-textarea"
-                  rows={5}
-                  value={supportMessage}
-                  onChange={(e) => setSupportMessage(e.target.value)}
-                  placeholder="Describe your issue (account transfer, email update, etc.)"
-                />
-                <Button
-                  type="button"
-                  className="btn-primary btn-full"
-                  onClick={handleContactSupport}
-                  disabled={isPreparingSupport}
-                >
-                  {isPreparingSupport ? "Sending..." : "Send to Support Inbox"}
-                </Button>
-                <p className="settings-meta">
-                  This submits your request to CatchLogs support.
-                </p>
-              </div>
             </CardContent>
           </Card>
 
@@ -673,7 +624,9 @@ export default function Settings() {
                                     {provider.url}
                                   </a>
                                 </td>
-                                <td className="py-2 pr-3">{provider.details}</td>
+                                <td className="py-2 pr-3">
+                                  {provider.details}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -687,6 +640,108 @@ export default function Settings() {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="settings-card settings-card-danger">
+            <CardHeader>
+              <div className="settings-card-header">
+                <CardTitle className="settings-card-title settings-card-title-danger">
+                  <FaTrashCan size={18} />
+                  Delete Account
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="settings-danger-copy">
+                This permanently deletes your profile, pins, entries, and
+                photos. If you wish to continue, type{" "}
+                <strong className="settings-danger-strong">
+                  "DELETE EVERYTHING"
+                </strong>
+              </div>
+              <div className="settings-form">
+                <Input
+                  className="field-dark"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="type here"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="settings-delete-button btn-danger-solid"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount || !isDeletePassphraseValid}
+                >
+                  {isDeletingAccount ? "Deleting..." : "Delete My Account"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="settings-card">
+            <CardHeader>
+              <div className="settings-card-header">
+                <CardTitle className="settings-card-title">
+                  <FaHeadset size={18} />
+                  Contact Support
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="settings-form">
+                <select
+                  className="field-dark settings-support-subject-select"
+                  value={supportSubjectOption}
+                  onChange={(e) =>
+                    setSupportSubjectOption(
+                      e.target.value as SupportSubjectOption,
+                    )
+                  }
+                >
+                  <option value="">Choose a subject</option>
+                  {SUPPORT_SUBJECT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                {supportSubjectOption === "Other (please type)" && (
+                  <Input
+                    className="field-dark"
+                    value={supportCustomSubject}
+                    onChange={(e) => setSupportCustomSubject(e.target.value)}
+                    placeholder="Type custom subject"
+                  />
+                )}
+                <Textarea
+                  className="field-dark settings-textarea"
+                  rows={5}
+                  value={supportMessage}
+                  onChange={(e) => setSupportMessage(e.target.value)}
+                  placeholder="Suggestions and feedback help shape future updates."
+                />
+                <Button
+                  type="button"
+                  className="btn-primary btn-full"
+                  onClick={handleContactSupport}
+                  disabled={
+                    isPreparingSupport ||
+                    !supportSubjectOption ||
+                    (supportSubjectOption === "Other (please type)" &&
+                      !supportCustomSubject.trim())
+                  }
+                >
+                  {isPreparingSupport ? "Sending..." : "Send"}
+                </Button>
+                <p className="settings-meta">
+                  While we make every effort to review and respond to support
+                  requests as quickly as possible, response times may vary
+                  depending on message volume and availability. We appreciate
+                  your patience.
+                </p>
               </div>
             </CardContent>
           </Card>

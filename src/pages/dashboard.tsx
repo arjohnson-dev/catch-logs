@@ -17,7 +17,7 @@ import MapInterface from "@/components/map-interface";
 import PinSummary from "@/components/pin-summary";
 import BottomNavigation from "@/components/bottom-navigation";
 import OptionsModal from "@/components/options-modal";
-import { FaUser } from "react-icons/fa6";
+import { FaGear } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -205,9 +205,10 @@ export default function Dashboard() {
                 variant="ghost"
                 className="touch-target dashboard-user-trigger"
                 onClick={() => setShowOptionsModal(true)}
-                aria-label="Open options"
+                aria-label="Open settings"
+                title="Settings"
               >
-                <FaUser size={20} />
+                <FaGear size={20} />
               </Button>
             )}
           </div>

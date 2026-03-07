@@ -45,6 +45,7 @@ export default function OptionsModal({
   onOpenSettings,
   onLogout,
 }: OptionsModalProps) {
+  const currentYear = new Date().getFullYear();
   const [mapBaseLayer, setMapBaseLayer] = useState<MapBaseLayerId>(() =>
     loadMapBaseLayerPreference(user.id),
   );
@@ -151,6 +152,9 @@ export default function OptionsModal({
             <FaArrowRightFromBracket size={16} />
             {isLoggingOut ? "Logging out..." : "Log Out"}
           </Button>
+          <p className="options-modal-copyright">
+            Copyright &copy; {currentYear} CatchLogs LLC. All rights reserved.
+          </p>
         </div>
       </div>
     </div>
