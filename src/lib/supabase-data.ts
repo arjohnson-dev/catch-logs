@@ -409,3 +409,167 @@ export async function replaceEntryPhoto(input: {
     await deleteCatchPhoto(currentPhoto);
   }
 }
+
+export interface StatsOverviewData {
+  totalCaught: number;
+  personalBest: {
+    species: string | null;
+    weight: number | null;
+    length: number | null;
+    dateTime: string | null;
+  } | null;
+  bestLocation: {
+    id: number | null;
+    name: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    catches: number;
+  } | null;
+  speciesBreakdown: Array<{
+    species: string;
+    count: number;
+  }>;
+  topTackle: Array<{
+    tackle: string;
+    count: number;
+  }>;
+}
+
+export interface StatsSpeciesDetailData {
+  species: string;
+  totalCatches: number;
+  topTackle: Array<{
+    tackle: string;
+    count: number;
+  }>;
+  conditions: {
+    avgTemp: number | null;
+    avgWind: number | null;
+    commonCondition: string | null;
+  } | null;
+  monthly: Array<{
+    month: string;
+    monthIndex: number;
+    catches: number;
+  }>;
+  points: Array<{
+    hour: number;
+    length: number | null;
+    weight: number | null;
+    label: string;
+  }>;
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const next = Number(value);
+  return Number.isFinite(next) ? next : null;
+}
+
+function toSafeNumber(value: unknown): number {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : 0;
+}
+
+export async function getStatsOverview(): Promise<StatsOverviewData> {
+  const { data, error } = await supabase.rpc("get_stats_overview");
+
+  if (error) {
+    throw error;
+  }
+
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const personalBestRaw = (payload.personalBest ?? null) as Record<string, unknown> | null;
+  const bestLocationRaw = (payload.bestLocation ?? null) as Record<string, unknown> | null;
+  const speciesRaw = Array.isArray(payload.speciesBreakdown) ? payload.speciesBreakdown : [];
+  const tackleRaw = Array.isArray(payload.topTackle) ? payload.topTackle : [];
+
+  return {
+    totalCaught: toSafeNumber(payload.totalCaught),
+    personalBest: personalBestRaw
+      ? {
+          species: typeof personalBestRaw.species === "string" ? personalBestRaw.species : null,
+          weight: toNumberOrNull(personalBestRaw.weight),
+          length: toNumberOrNull(personalBestRaw.length),
+          dateTime:
+            typeof personalBestRaw.dateTime === "string" ? personalBestRaw.dateTime : null,
+        }
+      : null,
+    bestLocation: bestLocationRaw
+      ? {
+          id: toNumberOrNull(bestLocationRaw.id),
+          name: typeof bestLocationRaw.name === "string" ? bestLocationRaw.name : null,
+          latitude: toNumberOrNull(bestLocationRaw.latitude),
+          longitude: toNumberOrNull(bestLocationRaw.longitude),
+          catches: toSafeNumber(bestLocationRaw.catches),
+        }
+      : null,
+    speciesBreakdown: speciesRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        species: typeof item.species === "string" ? item.species : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count >= 0),
+    topTackle: tackleRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        tackle: typeof item.tackle === "string" ? item.tackle : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+  };
+}
+
+export async function getStatsSpeciesDetail(species: string): Promise<StatsSpeciesDetailData> {
+  const { data, error } = await supabase.rpc("get_species_stats", { p_species: species });
+
+  if (error) {
+    throw error;
+  }
+
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const conditionsRaw = (payload.conditions ?? null) as Record<string, unknown> | null;
+  const tackleRaw = Array.isArray(payload.topTackle) ? payload.topTackle : [];
+  const monthlyRaw = Array.isArray(payload.monthly) ? payload.monthly : [];
+  const pointsRaw = Array.isArray(payload.points) ? payload.points : [];
+
+  return {
+    species: typeof payload.species === "string" ? payload.species : species,
+    totalCatches: toSafeNumber(payload.totalCatches),
+    topTackle: tackleRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        tackle: typeof item.tackle === "string" ? item.tackle : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+    conditions: conditionsRaw
+      ? {
+          avgTemp: toNumberOrNull(conditionsRaw.avgTemp),
+          avgWind: toNumberOrNull(conditionsRaw.avgWind),
+          commonCondition:
+            typeof conditionsRaw.commonCondition === "string"
+              ? conditionsRaw.commonCondition
+              : null,
+        }
+      : null,
+    monthly: monthlyRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        month: typeof item.month === "string" ? item.month : "Jan",
+        monthIndex: toSafeNumber(item.monthIndex),
+        catches: toSafeNumber(item.catches),
+      }))
+      .sort((a, b) => a.monthIndex - b.monthIndex),
+    points: pointsRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        hour: toSafeNumber(item.hour),
+        length: toNumberOrNull(item.length),
+        weight: toNumberOrNull(item.weight),
+        label: typeof item.label === "string" ? item.label : "",
+      }))
+      .filter((item) => item.hour >= 0 && item.hour <= 23),
+  };
+}

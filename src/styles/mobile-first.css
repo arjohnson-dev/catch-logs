@@ -1012,7 +1012,9 @@ a {
 
 .stats-page-content-main {
   max-width: 640px;
-  padding-bottom: 80px;
+  --stats-gap: 16px;
+  padding-top: 24px;
+  padding-bottom: 72px;
 }
 
 .stats-stack {
@@ -1022,7 +1024,7 @@ a {
 
 .stats-stack-lg {
   display: grid;
-  gap: 24px;
+  gap: var(--stats-gap);
 }
 
 .stats-loading-block {
@@ -1039,6 +1041,223 @@ a {
 
 .stats-card-dashed {
   border-style: dashed;
+}
+
+.stats-grid-summary {
+  display: grid;
+  margin: 0;
+  row-gap: var(--stats-gap);
+  column-gap: var(--stats-gap);
+}
+
+.stats-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 1.05rem;
+}
+
+.stats-summary-location {
+  grid-column: 1 / -1;
+}
+
+.stats-metric-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.stats-metric-primary {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.stats-metric-subtle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.stats-metric-stack {
+  display: grid;
+  gap: 4px;
+}
+
+.stats-wrap {
+  overflow-wrap: anywhere;
+}
+
+.stats-species-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.stats-species-chart {
+  min-height: 220px;
+}
+
+.stats-species-list {
+  display: grid;
+  border-top: 1px solid #2a2a2a;
+}
+
+.stats-species-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #2a2a2a;
+  background: transparent;
+  color: inherit;
+  padding: 10px 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.stats-species-row:last-child {
+  border-bottom: 0;
+}
+
+.stats-species-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.stats-species-name {
+  color: #e2e8f0;
+  font-size: 0.86rem;
+}
+
+.stats-species-count {
+  color: #dbeafe;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.stats-species-pct {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.stats-empty-inline {
+  margin: 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.stats-beta-card {
+  border-color: rgba(47, 128, 237, 0.45);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.stats-beta-copy {
+  margin: 0;
+  color: #dbeafe;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.stats-tooltip {
+  border: 1px solid #333333;
+  background: #111111;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  color: #d1d5db;
+}
+
+.stats-tooltip p {
+  margin: 0;
+}
+
+.stats-tooltip-value {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.stats-species-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.stats-species-header-copy {
+  min-width: 0;
+}
+
+.stats-species-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stats-species-header-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.stats-conditions-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.stats-condition-item {
+  border: 1px solid #2f2f2f;
+  background: #151515;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.stats-condition-label {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+}
+
+.stats-condition-value {
+  margin: 0;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.stats-scatter-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stats-toggle-group {
+  display: inline-flex;
+  border: 1px solid #2f2f2f;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stats-toggle-button {
+  border: 0;
+  background: #1a1a1a;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.stats-toggle-button-active {
+  background: var(--primary);
+  color: #fff;
 }
 
 .video-preview {
@@ -1185,6 +1404,19 @@ a {
 @media (min-width: 768px) {
   .page-content {
     padding: 24px;
+  }
+
+  .stats-grid-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-species-layout {
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    align-items: center;
+  }
+
+  .stats-conditions-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .overlay-backdrop-sheet {
