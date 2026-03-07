@@ -1,3 +1,17 @@
+/*
+ * File:        src/lib/session-tackle.ts
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 const SESSION_TACKLE_KEY_PREFIX = "catchlogs:session-tackle:";
 const SESSION_TACKLE_VISIBLE_KEY_PREFIX = "catchlogs:session-tackle-visible:";
 
@@ -5,7 +19,11 @@ function getStorage() {
   if (typeof window === "undefined") {
     return null;
   }
-  return window.localStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function tackleKeyForUser(userId: string) {

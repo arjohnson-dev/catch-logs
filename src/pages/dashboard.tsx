@@ -1,3 +1,17 @@
+/*
+ * File:        src/pages/dashboard.tsx
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 import { useState, useEffect } from "react";
 import MapInterface from "@/components/map-interface";
 import PinSummary from "@/components/pin-summary";
@@ -15,6 +29,14 @@ import {
   loadSessionTackle,
   saveSessionTackle,
 } from "@/lib/session-tackle";
+import JournalPage from "@/pages/journal";
+import NewEntryPage from "@/pages/new-entry";
+import Settings from "@/pages/settings";
+import Stats from "@/pages/stats";
+import Support from "@/pages/support";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
+import NotFound from "@/pages/not-found";
 
 export default function Dashboard() {
   const initialPinIdFromUrl = (() => {
@@ -31,7 +53,7 @@ export default function Dashboard() {
   })();
 
   const { user } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
   const logout = useLogout();
   const queryClient = useQueryClient();
@@ -45,6 +67,12 @@ export default function Dashboard() {
   const sessionTackle = userId
     ? (sessionTackleByUser[userId] ?? loadSessionTackle(userId))
     : "";
+  const normalizedPath = (() => {
+    if (location === "/auth") return "/";
+    const withoutTrailingSlash = location.replace(/\/+$/, "");
+    return withoutTrailingSlash.length > 0 ? withoutTrailingSlash : "/";
+  })();
+  const isOverlayOpen = normalizedPath !== "/";
 
   // Handle URL parameter for centering on a specific pin
   useEffect(() => {
@@ -132,6 +160,31 @@ export default function Dashboard() {
     }
   };
 
+  const renderOverlayView = () => {
+    switch (normalizedPath) {
+      case "/":
+        return null;
+      case "/journal":
+        return <JournalPage />;
+      case "/entries/new":
+        return <NewEntryPage />;
+      case "/settings":
+        return <Settings />;
+      case "/stats":
+        return <Stats />;
+      case "/support":
+        return <Support />;
+      case "/terms":
+        return <Terms />;
+      case "/privacy":
+        return <Privacy />;
+      default:
+        return <NotFound />;
+    }
+  };
+
+  const overlayView = renderOverlayView();
+
   return (
     <div className="dashboard-shell">
       {/* Top Navigation */}
@@ -207,6 +260,14 @@ export default function Dashboard() {
           }}
           onLogout={handleLogout}
         />
+      )}
+
+      {isOverlayOpen && overlayView && (
+        <div className="app-overlay-layer" role="dialog" aria-modal="true">
+          <div className="app-overlay-panel">
+            {overlayView}
+          </div>
+        </div>
       )}
     </div>
   );

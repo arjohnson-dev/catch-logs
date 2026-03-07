@@ -1,3 +1,17 @@
+/*
+ * File:        src/styles/mobile-first.css
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 :root {
   --bg: #050505;
   --surface: #121212;
@@ -210,6 +224,25 @@ a {
   position: relative;
   min-height: 0;
   padding-bottom: 64px;
+}
+
+.app-overlay-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(2px);
+}
+
+.app-overlay-panel {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  background: rgba(5, 5, 5, 0.78);
+  --bg: rgba(5, 5, 5, 0.78);
+  --surface: rgba(18, 18, 18, 0.82);
+  --surface-2: rgba(26, 26, 26, 0.84);
+  --surface-3: rgba(34, 34, 34, 0.86);
 }
 
 .map-shell {
@@ -443,7 +476,7 @@ a {
 .modal-card {
   background: #000;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   box-shadow: var(--shadow-lg);
 }
 
@@ -476,7 +509,7 @@ a {
 .dialog-panel {
   background: #000;
   border: 1px solid #333333;
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   box-shadow: var(--shadow-lg);
 }
 
@@ -488,7 +521,7 @@ a {
   width: min(100%, 420px);
   max-height: 90vh;
   overflow-y: auto;
-  border-radius: 12px 12px 0 0;
+  border-radius: 0;
 }
 
 .dialog-header {
@@ -807,6 +840,70 @@ a {
   gap: 10px;
 }
 
+.options-modal-profile-section {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #333333;
+  border-radius: 0;
+  padding: 10px;
+}
+
+.options-modal-profile-title {
+  margin: 0;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.options-modal-profile-row {
+  display: block;
+}
+
+.options-modal-profile-label {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.options-modal-profile-value {
+  margin: 0;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.options-modal-profile-line {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.options-modal-map-section {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #333333;
+  border-radius: 0;
+  padding: 10px;
+}
+
+.options-modal-map-title {
+  margin: 0;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.options-modal-map-list {
+  display: grid;
+  gap: 6px;
+}
+
+.options-modal-map-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
 .options-modal-button {
   justify-content: flex-start !important;
 }
@@ -825,7 +922,7 @@ a {
   overflow-y: auto;
   background: #000;
   border: 1px solid #333333;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   box-shadow: var(--shadow-lg);
 }
 
@@ -878,7 +975,7 @@ a {
 }
 
 .journal-page-content {
-  max-width: 1200px;
+  max-width: 640px;
   padding-bottom: 80px;
 }
 
@@ -1095,7 +1192,7 @@ a {
   }
 
   .dialog-panel-sheet {
-    border-radius: var(--radius-lg);
+    border-radius: 0;
   }
 }
 

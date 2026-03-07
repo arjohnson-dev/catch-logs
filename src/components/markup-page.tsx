@@ -1,3 +1,17 @@
+/*
+ * File:        src/components/markup-page.tsx
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 import { type ReactNode, useRef } from "react";
 import { FaArrowLeft, FaDownload } from "react-icons/fa6";
 import { Link } from "wouter";
@@ -40,20 +54,23 @@ export default function MarkupPage({
             </Button>
           </Link>
           <h1 className="page-title">{title}</h1>
+        </div>
+
+        <div ref={contentRef} className="terms-privacy-prose">
+          {children}
+        </div>
+
+        <div className="mt-6 flex justify-center">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="btn-outline-muted ml-auto"
+            className="btn-outline-muted"
             onClick={handleDownload}
           >
             <FaDownload className="w-4 h-4 mr-2" />
             Download
           </Button>
-        </div>
-
-        <div ref={contentRef} className="terms-privacy-prose">
-          {children}
         </div>
       </div>
     </div>

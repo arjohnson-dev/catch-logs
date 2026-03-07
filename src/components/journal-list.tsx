@@ -1,3 +1,17 @@
+/*
+ * File:        src/components/journal-list.tsx
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -302,7 +316,11 @@ export default function JournalList({
   const content = (
     <>
       <div
-        className={`dialog-panel ${fullScreen ? "journal-list-page-panel journal-list-page-panel-plain" : "journal-list-panel"}`}
+        className={
+          fullScreen
+            ? "journal-list-page-panel journal-list-page-panel-plain"
+            : "dialog-panel journal-list-panel"
+        }
       >
         {/* Header */}
         {!fullScreen && (
@@ -324,7 +342,9 @@ export default function JournalList({
 
         {/* Filters */}
         <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <div className="border-b border-[#333333] bg-black">
+          <div
+            className={`border-b ${fullScreen ? "border-border/60 bg-transparent" : "border-[#333333] bg-black"}`}
+          >
             <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"
@@ -565,7 +585,9 @@ export default function JournalList({
         </Collapsible>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 bg-black">
+        <div
+          className={`flex-1 overflow-y-auto p-4 ${fullScreen ? "bg-transparent" : "bg-black"}`}
+        >
           {filteredAndSortedEntries.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center">
               <FaFish className="h-16 w-16 text-[#666666] mb-4" />
@@ -581,7 +603,7 @@ export default function JournalList({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {filteredAndSortedEntries.map((entry: JournalEntry) => (
                 <JournalEntryCard
                   key={entry.id}
@@ -642,7 +664,9 @@ export default function JournalList({
         </div>
 
         {/* Results Summary */}
-        <div className="p-4 border-t border-[#333333] bg-black">
+        <div
+          className={`p-4 border-t ${fullScreen ? "border-border/60 bg-transparent" : "border-[#333333] bg-black"}`}
+        >
           <div className="flex items-center justify-between text-sm text-[#999999]">
             <span>
               Showing {filteredAndSortedEntries.length} of {entries.length}{" "}

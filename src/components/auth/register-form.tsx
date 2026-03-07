@@ -1,3 +1,17 @@
+/*
+ * File:        src/components/auth/register-form.tsx
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -20,7 +34,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const form = useForm<RegisterUser>({
     resolver: zodResolver(registerUserSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -36,8 +51,13 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         password: data.password,
         options: {
           data: {
-            first_name: data.name,
-            last_name: "",
+            username: data.firstName,
+            display_name: data.firstName,
+            name: data.firstName,
+            first_name: data.firstName,
+            firstName: data.firstName,
+            last_name: data.lastName,
+            lastName: data.lastName,
             age_verified: data.ageVerified,
             terms_accepted: data.termsAccepted,
           },
@@ -89,17 +109,40 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="firstName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name *</FormLabel>
+              <FormLabel>First Name *</FormLabel>
               <FormControl>
                 <div className="icon-field">
                   <FaUser className="icon-field-icon" />
                   <Input
-                    placeholder="John Doe"
+                    placeholder="John"
                     className="icon-field-input"
-                    autoComplete="name"
+                    autoComplete="given-name"
+                    required
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="lastName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Last Name *</FormLabel>
+              <FormControl>
+                <div className="icon-field">
+                  <FaUser className="icon-field-icon" />
+                  <Input
+                    placeholder="Doe"
+                    className="icon-field-input"
+                    autoComplete="family-name"
                     required
                     {...field}
                   />

@@ -1,3 +1,17 @@
+/*
+ * File:        src/components/map-interface.tsx
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -25,6 +39,14 @@ import { useToast } from "@/hooks/use-toast";
 import { createPin, getPinsWithEntries } from "@/lib/supabase-data";
 import { getEntries } from "@/lib/supabase-data";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  DEFAULT_MAP_BASE_LAYER,
+  MAP_BASE_LAYERS,
+} from "@/lib/map-layers";
+import {
+  loadMapBaseLayerPreference,
+  loadMapLabelsVisiblePreference,
+} from "@/lib/map-preferences";
 import "leaflet/dist/leaflet.css";
 
 // Fix for default markers in React Leaflet
@@ -333,6 +355,18 @@ export default function MapInterface({
     requestLocation();
   }, [requestLocation]);
 
+  const mapBaseLayer = user?.id
+    ? loadMapBaseLayerPreference(user.id)
+    : DEFAULT_MAP_BASE_LAYER;
+  const showMapLabels = user?.id
+    ? loadMapLabelsVisiblePreference(user.id)
+    : true;
+
+  const selectedBaseLayer =
+    MAP_BASE_LAYERS.find((layer) => layer.id === mapBaseLayer) ??
+    MAP_BASE_LAYERS.find((layer) => layer.id === DEFAULT_MAP_BASE_LAYER) ??
+    MAP_BASE_LAYERS[0];
+
   if (isLoading) {
     return (
       <div className="map-loading">
@@ -355,10 +389,21 @@ export default function MapInterface({
         attributionControl={false}
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          maxZoom={19}
+          url={selectedBaseLayer.url}
+          attribution={selectedBaseLayer.attribution}
+          maxZoom={selectedBaseLayer.maxZoom}
+          {...(selectedBaseLayer.subdomains
+            ? { subdomains: selectedBaseLayer.subdomains }
+            : {})}
         />
+
+        {showMapLabels && (
+          <TileLayer
+            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+            attribution="Labels &copy; Esri"
+            maxZoom={19}
+          />
+        )}
 
         <MapClickHandler
           isPinDropMode={isPinDropMode}

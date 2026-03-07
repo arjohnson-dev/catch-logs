@@ -1,3 +1,17 @@
+/*
+ * File:        supabase/migrations/20260211173000_ensure_tackle_column.sql
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 -- Ensure journal_entries uses a non-null tackle column across environments.
 -- Handles older schemas that still use `lure` and mixed states safely.
 

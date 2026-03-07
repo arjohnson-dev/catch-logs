@@ -1,9 +1,25 @@
+/*
+ * File:        src/pages/settings.tsx
+ * Description: <brief description of the purpose of this file>
+ *
+ * Author:      Andrew Johnson
+ * Company:     CatchLogs LLC
+ *
+ * Copyright (c) 2026 CatchLogs LLC. All rights reserved.
+ *
+ * This source code and all associated files are the property of CatchLogs LLC.
+ * Unauthorized copying, modification, distribution, or use of this file,
+ * via any medium, is strictly prohibited without explicit written permission
+ * from CatchLogs LLC.
+ */
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   FaArrowLeft,
   FaAndroid,
   FaApple,
+  FaChevronDown,
+  FaChevronUp,
   FaEnvelope,
   FaEllipsisVertical,
   FaHeadset,
@@ -20,9 +36,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { deleteCurrentAccount } from "@/lib/account";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  THIRD_PARTY_DISCLAIMER_PARAGRAPHS,
+  THIRD_PARTY_PROVIDERS,
+} from "@/lib/legal/third-party-disclaimer";
 import { supabase } from "@/lib/supabase";
 import { sendSupportEmail } from "@/lib/support";
 
@@ -37,7 +62,8 @@ export default function Settings() {
     "ios",
   );
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
@@ -48,12 +74,17 @@ export default function Settings() {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [isPreparingSupport, setIsPreparingSupport] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isThirdPartyDisclaimerOpen, setIsThirdPartyDisclaimerOpen] =
+    useState(false);
+  const [isThirdPartyProvidersOpen, setIsThirdPartyProvidersOpen] =
+    useState(false);
   const isDeletePassphraseValid =
     deleteConfirmation.trim() === ACCOUNT_DELETE_PASSPHRASE;
 
   useEffect(() => {
     if (!user) return;
-    setName(user.firstName || "");
+    setFirstName(user.firstName || "");
+    setLastName(user.lastName || "");
     setEmail(user.email || "");
   }, [user]);
 
@@ -61,11 +92,12 @@ export default function Settings() {
     e.preventDefault();
     if (!user) return;
 
-    const trimmedName = name.trim();
-    if (!trimmedName) {
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    if (!trimmedFirstName) {
       toast({
-        title: "Name required",
-        description: "Please enter your name.",
+        title: "First name required",
+        description: "Please enter your first name.",
         variant: "destructive",
       });
       return;
@@ -75,9 +107,13 @@ export default function Settings() {
     try {
       const { error: authError } = await supabase.auth.updateUser({
         data: {
-          username: trimmedName,
-          first_name: trimmedName,
-          firstName: trimmedName,
+          username: trimmedFirstName,
+          display_name: trimmedFirstName,
+          name: trimmedFirstName,
+          first_name: trimmedFirstName,
+          firstName: trimmedFirstName,
+          last_name: trimmedLastName,
+          lastName: trimmedLastName,
         },
       });
       if (authError) throw authError;
@@ -85,7 +121,8 @@ export default function Settings() {
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
-          first_name: trimmedName,
+          first_name: trimmedFirstName,
+          last_name: trimmedLastName,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
@@ -96,7 +133,7 @@ export default function Settings() {
       });
       setIsEditingName(false);
       toast({
-        title: "Name updated",
+        title: "Profile updated",
         description: "Your name has been updated.",
         variant: "success",
       });
@@ -241,7 +278,8 @@ export default function Settings() {
   };
 
   const cancelNameEdit = () => {
-    setName(user?.firstName || "");
+    setFirstName(user?.firstName || "");
+    setLastName(user?.lastName || "");
     setIsEditingName(false);
   };
 
@@ -402,15 +440,23 @@ export default function Settings() {
             <CardContent>
               {!isEditingName ? (
                 <p className="settings-static-value">
-                  {user?.firstName || "Not set"}
+                  {[user?.firstName, user?.lastName]
+                    .filter((value) => Boolean(value && value.trim().length > 0))
+                    .join(" ") || "Not set"}
                 </p>
               ) : (
                 <form onSubmit={handleUpdateName} className="settings-form">
                   <Input
                     className="field-dark"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                  />
+                  <Input
+                    className="field-dark"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
                   />
                   <div className="settings-actions">
                     <Button
@@ -530,6 +576,117 @@ export default function Settings() {
                 <p className="settings-meta">
                   This submits your request to CatchLogs support.
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="settings-card">
+            <CardHeader>
+              <div className="settings-card-header">
+                <CardTitle className="settings-card-title">
+                  Third-Party Data and APIs
+                </CardTitle>
+              </div>
+              <p className="settings-meta">
+                Information from external providers is subject to their
+                availability and data quality.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="settings-form">
+                <Collapsible
+                  open={isThirdPartyDisclaimerOpen}
+                  onOpenChange={setIsThirdPartyDisclaimerOpen}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="btn-outline-muted w-full justify-between"
+                    >
+                      Third-Party Data and API Disclaimer
+                      {isThirdPartyDisclaimerOpen ? (
+                        <FaChevronUp size={14} />
+                      ) : (
+                        <FaChevronDown size={14} />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-3">
+                    <div className="settings-meta space-y-3">
+                      {THIRD_PARTY_DISCLAIMER_PARAGRAPHS.map((paragraph) => (
+                        <p key={paragraph}>{paragraph}</p>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible
+                  open={isThirdPartyProvidersOpen}
+                  onOpenChange={setIsThirdPartyProvidersOpen}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="btn-outline-muted w-full justify-between"
+                    >
+                      Third-Party Providers
+                      {isThirdPartyProvidersOpen ? (
+                        <FaChevronUp size={14} />
+                      ) : (
+                        <FaChevronDown size={14} />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-3">
+                    <div className="settings-meta space-y-3">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="py-2 pr-3 font-semibold">
+                                Provider
+                              </th>
+                              <th className="py-2 pr-3 font-semibold">Link</th>
+                              <th className="py-2 pr-3 font-semibold">
+                                Service
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {THIRD_PARTY_PROVIDERS.map((provider) => (
+                              <tr
+                                key={provider.name}
+                                className="border-b border-border/60 align-top"
+                              >
+                                <td className="py-2 pr-3 font-medium">
+                                  {provider.name}
+                                </td>
+                                <td className="py-2 pr-3">
+                                  <a
+                                    href={provider.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="underline"
+                                  >
+                                    {provider.url}
+                                  </a>
+                                </td>
+                                <td className="py-2 pr-3">{provider.details}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p>
+                        This list represents the third-party APIs and services
+                        currently used by the application and may be updated as
+                        integrations change.
+                      </p>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </CardContent>
           </Card>
