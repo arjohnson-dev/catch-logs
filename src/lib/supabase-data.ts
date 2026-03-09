@@ -177,6 +177,32 @@ export async function deletePin(pinId: number): Promise<void> {
   }
 }
 
+export async function deletePinIfEmpty(pinId: number): Promise<boolean> {
+  const { count, error: countError } = await supabase
+    .from("journal_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("pin_id", pinId);
+
+  if (countError) {
+    throw countError;
+  }
+
+  if ((count ?? 0) > 0) {
+    return false;
+  }
+
+  const { error: pinDeleteError } = await supabase
+    .from("fishing_pins")
+    .delete()
+    .eq("id", pinId);
+
+  if (pinDeleteError) {
+    throw pinDeleteError;
+  }
+
+  return true;
+}
+
 export async function createEntry(input: {
   pinId: number;
   userId: string;
@@ -307,25 +333,7 @@ export async function deleteEntryWithPhoto(entryId: number): Promise<void> {
   }
 
   if (pinId !== null) {
-    const { count, error: countError } = await supabase
-      .from("journal_entries")
-      .select("id", { count: "exact", head: true })
-      .eq("pin_id", pinId);
-
-    if (countError) {
-      throw countError;
-    }
-
-    if ((count ?? 0) === 0) {
-      const { error: pinDeleteError } = await supabase
-        .from("fishing_pins")
-        .delete()
-        .eq("id", pinId);
-
-      if (pinDeleteError) {
-        throw pinDeleteError;
-      }
-    }
+    await deletePinIfEmpty(pinId);
   }
 }
 
@@ -365,14 +373,7 @@ export async function moveEntryToNewCoordinates(input: {
     throw error;
   }
 
-  const { count, error: countError } = await supabase
-    .from("journal_entries")
-    .select("id", { count: "exact", head: true })
-    .eq("pin_id", oldPinId);
-
-  if (!countError && (count ?? 0) === 0) {
-    await supabase.from("fishing_pins").delete().eq("id", oldPinId);
-  }
+  await deletePinIfEmpty(oldPinId);
 
   return await mapEntry(data as EntryRow);
 }

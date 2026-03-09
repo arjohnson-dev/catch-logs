@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Pin, type PinWithEntries } from "@/types/domain";
 import { useToast } from "@/hooks/use-toast";
-import { createPin, getPinsWithEntries } from "@/lib/supabase-data";
+import { createPin, deletePinIfEmpty, getPinsWithEntries } from "@/lib/supabase-data";
 import { getEntries } from "@/lib/supabase-data";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -254,6 +254,22 @@ export default function MapInterface({
     },
   });
 
+  const cleanupEmptyPinsMutation = useMutation({
+    mutationFn: async (pinIds: number[]) => {
+      if (pinIds.length === 0) {
+        return [] as number[];
+      }
+      const deleted = await Promise.all(
+        pinIds.map(async (pinId) => (await deletePinIfEmpty(pinId) ? pinId : null)),
+      );
+      return deleted.filter((pinId): pinId is number => pinId !== null);
+    },
+    onSuccess: (deletedPinIds) => {
+      if (deletedPinIds.length === 0) return;
+      queryClient.invalidateQueries({ queryKey: ["pins"] });
+    },
+  });
+
   const handlePinCreate = (lat: number, lng: number) => {
     createPinMutation.mutate({ lat, lng });
   };
@@ -354,6 +370,33 @@ export default function MapInterface({
   useEffect(() => {
     requestLocation();
   }, [requestLocation]);
+
+  useEffect(() => {
+    if (cleanupEmptyPinsMutation.isPending || pins.length === 0) {
+      return;
+    }
+
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    const isOnNewEntryPage = path === "/entries/new";
+    const activeNewPinIdRaw = isOnNewEntryPage ? params.get("pinId") : null;
+    const parsedActiveNewPinId = activeNewPinIdRaw
+      ? Number.parseInt(activeNewPinIdRaw, 10)
+      : null;
+    const activeNewPinId =
+      parsedActiveNewPinId !== null && !Number.isNaN(parsedActiveNewPinId)
+        ? parsedActiveNewPinId
+        : null;
+
+    const emptyPinIds = pins
+      .filter((pin) => (pin.entries?.length ?? 0) === 0)
+      .map((pin) => pin.id)
+      .filter((pinId) => pinId !== activeNewPinId);
+
+    if (emptyPinIds.length > 0) {
+      cleanupEmptyPinsMutation.mutate(emptyPinIds);
+    }
+  }, [cleanupEmptyPinsMutation, pins]);
 
   const mapBaseLayer = user?.id
     ? loadMapBaseLayerPreference(user.id)

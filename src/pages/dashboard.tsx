@@ -39,13 +39,16 @@ import Privacy from "@/pages/privacy";
 import NotFound from "@/pages/not-found";
 
 export default function Dashboard() {
+  const currentPath = window.location.pathname;
   const initialPinIdFromUrl = (() => {
+    if (currentPath !== "/") return null;
     const pinIdParam = new URLSearchParams(window.location.search).get("pinId");
     if (!pinIdParam) return null;
     const parsed = Number.parseInt(pinIdParam, 10);
     return Number.isNaN(parsed) ? null : parsed;
   })();
   const initialMoveEntryIdFromUrl = (() => {
+    if (currentPath !== "/") return null;
     const entryIdParam = new URLSearchParams(window.location.search).get("moveEntryId");
     if (!entryIdParam) return null;
     const parsed = Number.parseInt(entryIdParam, 10);
@@ -68,8 +71,9 @@ export default function Dashboard() {
     ? (sessionTackleByUser[userId] ?? loadSessionTackle(userId))
     : "";
   const normalizedPath = (() => {
-    if (location === "/auth") return "/";
-    const withoutTrailingSlash = location.replace(/\/+$/, "");
+    const pathOnly = location.split("?")[0].split("#")[0];
+    if (pathOnly === "/auth") return "/";
+    const withoutTrailingSlash = pathOnly.replace(/\/+$/, "");
     return withoutTrailingSlash.length > 0 ? withoutTrailingSlash : "/";
   })();
   const isOverlayOpen = normalizedPath !== "/";
