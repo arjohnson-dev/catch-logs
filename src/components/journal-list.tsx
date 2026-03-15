@@ -62,6 +62,12 @@ export default function JournalList({
   fullScreen = false,
 }: JournalListProps) {
   const [, navigate] = useLocation();
+  const goToPin = (pinId: number) => {
+    window.location.assign(`/?pinId=${pinId}`);
+  };
+  const goToMoveEntry = (entryId: number) => {
+    window.location.assign(`/?moveEntryId=${entryId}`);
+  };
   const handleClose = () => {
     if (onClose) {
       onClose();
@@ -618,7 +624,7 @@ export default function JournalList({
                         if (onTakeMeThere) {
                           onTakeMeThere(entry.pinId);
                         } else {
-                          navigate(`/?pinId=${entry.pinId}`);
+                          goToPin(entry.pinId);
                         }
                       },
                     },
@@ -637,7 +643,7 @@ export default function JournalList({
                         if (onMoveEntryRequest) {
                           onMoveEntryRequest(entry.id);
                         } else {
-                          navigate(`/?moveEntryId=${entry.id}`);
+                          goToMoveEntry(entry.id);
                         }
                       },
                     },

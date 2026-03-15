@@ -21,7 +21,7 @@ import {
   FaTrophy,
   FaWeightScale,
 } from "react-icons/fa6";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import JournalEntryCard from "@/components/journal-entry-card";
@@ -58,7 +58,9 @@ function PlaceholderCard({ type }: { type: 'longest' | 'heaviest' }) {
 }
 
 export default function Stats() {
-  const [, navigate] = useLocation();
+  const goToPin = (pinId: number) => {
+    window.location.assign(`/?pinId=${pinId}`);
+  };
   const { data: entries = [], isLoading } = useQuery<JournalEntry[]>({
     queryKey: ["entries"],
     queryFn: getEntries,
@@ -167,7 +169,7 @@ export default function Stats() {
                             id: "take-me-there",
                             label: "Take me there",
                             icon: FaMapLocationDot,
-                            onClick: () => navigate(`/?pinId=${entry.pinId}`),
+                            onClick: () => goToPin(entry.pinId),
                           },
                         ]}
                       />
@@ -194,7 +196,7 @@ export default function Stats() {
                             id: "take-me-there",
                             label: "Take me there",
                             icon: FaMapLocationDot,
-                            onClick: () => navigate(`/?pinId=${entry.pinId}`),
+                            onClick: () => goToPin(entry.pinId),
                           },
                         ]}
                       />

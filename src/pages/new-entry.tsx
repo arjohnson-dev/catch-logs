@@ -63,7 +63,7 @@ export default function NewEntryPage() {
   };
 
   const handleComplete = () => {
-    navigate(`/?pinId=${pinId}`);
+    window.location.assign(`/?pinId=${pinId}`);
   };
 
   return (

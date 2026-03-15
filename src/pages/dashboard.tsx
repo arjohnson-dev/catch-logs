@@ -54,7 +54,6 @@ export default function Dashboard() {
     const parsed = Number.parseInt(entryIdParam, 10);
     return Number.isNaN(parsed) ? null : parsed;
   })();
-
   const { user } = useAuth();
   const [location, navigate] = useLocation();
   const { toast } = useToast();
