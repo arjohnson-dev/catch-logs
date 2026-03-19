@@ -1,13 +1,19 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FaFish } from "react-icons/fa6";
+import { FaBookOpen, FaFish } from "react-icons/fa6";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  getFieldGuideSpeciesDetail,
+} from "@/lib/field-guide";
 import { getStatsSpeciesDetail } from "@/lib/supabase-data";
 import SpeciesCatchTimeDistribution from "@/stats/SpeciesCatchTimeDistribution";
 import SpeciesConditionsCard from "@/stats/SpeciesConditionsCard";
 import SpeciesMonthlyChart from "@/stats/SpeciesMonthlyChart";
 import TopNamedCountChart from "@/stats/TopNamedCountChart";
 import { getSpeciesColor } from "@/stats/helpers";
+import type { FishSpeciesDetail } from "@/types/field-guide";
 
 type Props = {
   species: string;
@@ -19,6 +25,18 @@ export default function SpeciesDetailPage({ species }: Props) {
     queryKey: ["stats", "species", species],
     queryFn: () => getStatsSpeciesDetail(species),
     enabled: species.trim().length > 0,
+  });
+  const { data: fieldGuideSpecies } = useQuery<FishSpeciesDetail | null>({
+    queryKey: ["field-guide", "species-link", data?.fieldGuideSpecCode ?? null],
+    queryFn: async () => {
+      if (!data?.fieldGuideSpecCode) {
+        return null;
+      }
+
+      return getFieldGuideSpeciesDetail({ specCode: data.fieldGuideSpecCode });
+    },
+    enabled: Boolean(data?.fieldGuideSpecCode),
+    staleTime: 1000 * 60 * 60,
   });
 
   if (isLoading) {
@@ -48,7 +66,17 @@ export default function SpeciesDetailPage({ species }: Props) {
           <h2 className="stats-species-title">{data.species}</h2>
           <p className="stats-metric-subtle">{data.totalCatches} catches</p>
         </div>
-        <FaFish className="stats-species-header-icon" style={{ color }} />
+        <div className="flex items-center gap-3">
+          {fieldGuideSpecies?.slug && (
+            <Link to={`/resources/field-guide/${fieldGuideSpecies.slug}`}>
+              <Button variant="outline" className="btn-outline-info">
+                <FaBookOpen className="mr-2 h-4 w-4" />
+                View Field Guide
+              </Button>
+            </Link>
+          )}
+          <FaFish className="stats-species-header-icon" style={{ color }} />
+        </div>
       </div>
 
       <TopNamedCountChart rows={data.topLures} title="Top Lures" emptyLabel="No lure data available yet." />

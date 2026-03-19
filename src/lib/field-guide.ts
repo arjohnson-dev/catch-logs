@@ -78,6 +78,8 @@ const FIELD_GUIDE_LIST_COLUMNS = [
 
 const FIELD_GUIDE_DETAIL_COLUMNS = "*";
 const FIELD_GUIDE_LIST_LIMIT = 250;
+const FIELD_GUIDE_PAGE_SIZE = 1000;
+export const UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE = 1;
 const FIELD_GUIDE_PRIMARY_IMAGE_COLUMNS = [
   "id",
   "species_id",
@@ -137,6 +139,16 @@ function repairMojibake(value: string) {
 
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeSpeciesLookupText(value: string) {
+  return normalizeText(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function coerceString(value: JsonValue | undefined): string | null {
@@ -389,9 +401,17 @@ async function getApprovedPrimaryImageMap(specCodes: number[]) {
   }
 
   const { data, error } = await supabase
-    .from("species_primary_images")
+    .schema("field-guide")
+    .from("species_images")
     .select(FIELD_GUIDE_PRIMARY_IMAGE_COLUMNS)
-    .in("species_id", uniqueSpecCodes);
+    .in("species_id", uniqueSpecCodes)
+    .eq("is_active", true)
+    .eq("is_app_safe", true)
+    .eq("status", "approved")
+    .order("species_id", { ascending: true })
+    .order("is_primary", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (error) {
     if (error.code === "42501") {
@@ -405,7 +425,7 @@ async function getApprovedPrimaryImageMap(specCodes: number[]) {
 
   for (const row of (data ?? []) as unknown as FieldGuideSpeciesImageRow[]) {
     const mapped = mapSpeciesImageRow(row);
-    if (mapped) {
+    if (mapped && !imageMap.has(mapped.speciesId)) {
       imageMap.set(mapped.speciesId, mapped);
     }
   }
@@ -460,6 +480,94 @@ export async function getFieldGuideSpeciesList(input?: {
   const species = ((data ?? []) as unknown as FieldGuideSpeciesRow[]).map(mapSpeciesRow);
   const imageMap = await getApprovedPrimaryImageMap(species.map((item) => item.specCode));
   return attachPrimaryImages(species, imageMap);
+}
+
+function getFieldGuideSpeciesMatchRank(species: FishSpeciesListItem, query: string) {
+  const normalizedQuery = normalizeSpeciesLookupText(query);
+  const canonicalCommonName = normalizeSpeciesLookupText(species.canonicalCommonName ?? "");
+  const scientificName = normalizeSpeciesLookupText(species.scientificName);
+  const alternateCommonNames = species.alternateCommonNames.map(normalizeSpeciesLookupText);
+  const searchAliases = species.searchAliases.map(normalizeSpeciesLookupText);
+
+  if (canonicalCommonName === normalizedQuery) return 0;
+  if (alternateCommonNames.includes(normalizedQuery)) return 1;
+  if (searchAliases.includes(normalizedQuery)) return 2;
+  if (scientificName === normalizedQuery) return 3;
+  return null;
+}
+
+export function findFieldGuideSpeciesByName(
+  species: FishSpeciesListItem[],
+  query: string,
+): FishSpeciesListItem | null {
+  const normalizedQuery = normalizeSpeciesLookupText(query);
+  if (!normalizedQuery) {
+    return null;
+  }
+
+  const rankedMatches = species
+    .map((item) => ({
+      item,
+      rank: getFieldGuideSpeciesMatchRank(item, normalizedQuery),
+    }))
+    .filter((entry): entry is { item: FishSpeciesListItem; rank: number } => entry.rank !== null)
+    .sort((left, right) => {
+      if (left.rank !== right.rank) {
+        return left.rank - right.rank;
+      }
+
+      const leftTitle = left.item.canonicalCommonName ?? left.item.scientificName;
+      const rightTitle = right.item.canonicalCommonName ?? right.item.scientificName;
+      return leftTitle.localeCompare(rightTitle);
+    });
+
+  return rankedMatches[0]?.item ?? null;
+}
+
+export async function resolveFieldGuideSpeciesSpecCode(query: string): Promise<number> {
+  const normalizedQuery = normalizeSpeciesLookupText(query);
+  if (!normalizedQuery) {
+    return UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE;
+  }
+
+  const exactSearchMatches = await getFieldGuideSpeciesList({
+    search: query,
+    limit: 50,
+  });
+  const exactMatch =
+    findFieldGuideSpeciesByName(exactSearchMatches, normalizedQuery) ??
+    await (async () => {
+      let from = 0;
+
+      while (true) {
+        const to = from + FIELD_GUIDE_PAGE_SIZE - 1;
+        const { data, error } = await supabase
+          .schema("field-guide")
+          .from("species")
+          .select(FIELD_GUIDE_LIST_COLUMNS)
+          .eq("is_active", true)
+          .order("canonical_common_name", { ascending: true, nullsFirst: false })
+          .range(from, to);
+
+        if (error) {
+          throw error;
+        }
+
+        const speciesPage = ((data ?? []) as unknown as FieldGuideSpeciesRow[]).map(mapSpeciesRow);
+        const pageMatch = findFieldGuideSpeciesByName(speciesPage, normalizedQuery);
+        if (pageMatch) {
+          return pageMatch;
+        }
+
+        if (speciesPage.length < FIELD_GUIDE_PAGE_SIZE) {
+          return null;
+        }
+
+        from += FIELD_GUIDE_PAGE_SIZE;
+      }
+    })();
+
+  return exactMatch?.specCode ?? UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE;
 }
 
 export async function getFieldGuideSpeciesDetail(input: {
@@ -534,6 +642,55 @@ export function getSpeciesImageUrl(image: FishSpeciesImage | null | undefined): 
   }
 
   return isHttpUrl(image.externalUrl) ? image.externalUrl : null;
+}
+
+export async function getFieldGuideSpeciesPhotoUrlMap(
+  specCodes: number[],
+): Promise<Map<number, string>> {
+  const uniqueSpecCodes = [...new Set(specCodes)].filter((value) => !Number.isNaN(value));
+  if (uniqueSpecCodes.length === 0) {
+    return new Map<number, string>();
+  }
+
+  const [imageMap, speciesReferenceResponse] = await Promise.all([
+    getApprovedPrimaryImageMap(uniqueSpecCodes),
+    supabase
+      .schema("field-guide")
+      .from("species")
+      .select("spec_code,image_reference,canonical_common_name")
+      .in("spec_code", uniqueSpecCodes)
+      .eq("is_active", true),
+  ]);
+  const photoUrlMap = new Map<number, string>();
+  const speciesReferenceRows =
+    (speciesReferenceResponse.data as Array<{
+      spec_code: number | string | null;
+      image_reference: string | null;
+      canonical_common_name: string | null;
+    }> | null) ?? [];
+  const speciesBySpecCode = new Map(
+    speciesReferenceRows.map((species) => [
+      toSpecCode(species.spec_code),
+      {
+        imageReference: coerceString(species.image_reference),
+        canonicalCommonName: coerceString(species.canonical_common_name),
+      },
+    ]),
+  );
+
+  for (const specCode of uniqueSpecCodes) {
+    const image = imageMap.get(specCode);
+    const species = speciesBySpecCode.get(specCode);
+    const photoUrl =
+      getSpeciesImageUrl(image) ??
+      getFishBaseImageReferenceUrl(species?.imageReference);
+
+    if (photoUrl) {
+      photoUrlMap.set(specCode, photoUrl);
+    }
+  }
+
+  return photoUrlMap;
 }
 
 export async function favoriteSpecies(specCode: number): Promise<void> {

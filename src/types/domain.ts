@@ -33,6 +33,7 @@ export interface JournalEntry {
   pinId: number;
   userId?: string;
   fishType: string;
+  fishSpeciesSpecCode: number;
   length?: number | null;
   weight?: number | null;
   lure?: string | null;
@@ -49,6 +50,7 @@ export interface JournalEntry {
   leaderLength?: string | null;
   notes?: string | null;
   photoUrl?: string | null;
+  speciesPhotoUrl?: string | null;
   dateTime: string;
   temperature?: number | null;
   windSpeed?: number | null;

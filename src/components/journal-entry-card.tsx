@@ -12,6 +12,7 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   FaCloud,
@@ -26,6 +27,7 @@ import { GiFishingHook } from "react-icons/gi";
 import type { IconType } from "react-icons";
 import { Button } from "@/components/ui/button";
 import { formatCatchGearSummary } from "@/lib/catch-gear";
+import { getFieldGuideSpeciesPhotoUrlMap, UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE } from "@/lib/field-guide";
 import { getTemperatureIconColorClass } from "@/lib/temperature-ui";
 import { formatVisibility, getWeatherVisual, getWindDirection } from "@/lib/weather-ui";
 import { cn } from "@/lib/utils";
@@ -56,6 +58,18 @@ export default function JournalEntryCard({
   actions = [],
   className,
 }: JournalEntryCardProps) {
+  const { data: resolvedSpeciesPhotoUrl = null } = useQuery({
+    queryKey: ["journal-entry", "species-photo", entry.fishSpeciesSpecCode],
+    queryFn: async () => {
+      const photoUrlMap = await getFieldGuideSpeciesPhotoUrlMap([entry.fishSpeciesSpecCode]);
+      return photoUrlMap.get(entry.fishSpeciesSpecCode) ?? null;
+    },
+    enabled:
+      !entry.photoUrl &&
+      entry.fishSpeciesSpecCode !== UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE,
+    staleTime: 1000 * 60 * 60,
+  });
+  const displayPhotoUrl = entry.photoUrl ?? entry.speciesPhotoUrl ?? resolvedSpeciesPhotoUrl ?? null;
   const hasWeather =
     hasValue(entry.temperature) ||
     hasValue(entry.windSpeed) ||
@@ -68,11 +82,11 @@ export default function JournalEntryCard({
   return (
     <div className={cn("surface-card surface-card-hover p-3", className)}>
       <div className="flex items-start gap-2.5">
-        {entry.photoUrl ? (
+        {displayPhotoUrl ? (
           <img
-            src={entry.photoUrl}
+            src={displayPhotoUrl}
             alt={`Caught ${entry.fishType}`}
-            className="w-14 h-14 rounded-md object-cover flex-shrink-0"
+            className="w-14 h-14 rounded-md object-contain bg-[#222222] flex-shrink-0"
           />
         ) : (
           <div className="w-14 h-14 rounded-md bg-[#222222] flex items-center justify-center flex-shrink-0">

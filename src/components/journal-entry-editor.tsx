@@ -35,6 +35,7 @@ import {
   normalizeCatchGearDrag,
   normalizeCatchGearText,
 } from "@/lib/catch-gear";
+import { resolveFieldGuideSpeciesSpecCode } from "@/lib/field-guide";
 import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import { uploadCatchPhoto } from "@/lib/storage";
 import { replaceEntryPhoto, updateEntry } from "@/lib/supabase-data";
@@ -121,6 +122,7 @@ export default function JournalEntryEditor({ entry, onClose, onComplete }: Journ
       await updateEntry({
         entryId: entry.id,
         fishType: data.fishType,
+        fishSpeciesSpecCode: await resolveFieldGuideSpeciesSpecCode(data.fishType),
         length: data.length ?? null,
         weight: data.weight ?? null,
         lure: normalizeFishingGearValue(data.lure),
