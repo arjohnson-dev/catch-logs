@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import catchLogsIcon from "@assets/catchlogs-icon.png";
-import { moveEntryToNewCoordinates } from "@/lib/supabase-data";
+import { moveEntryToNewCoordinates, moveEntryToPin } from "@/lib/supabase-data";
 import { getMyFavoriteSpecCodes } from "@/lib/field-guide";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -120,6 +120,11 @@ export default function Dashboard() {
   };
 
   const handlePinSelect = (pinId: number, isNew = false) => {
+    if (moveEntryId !== null) {
+      handleMoveEntryToExistingPin(moveEntryId, pinId);
+      return;
+    }
+
     setSelectedPinId(pinId);
     if (isNew) {
       const params = new URLSearchParams({
@@ -184,6 +189,31 @@ export default function Dashboard() {
       toast({
         title: "Entry moved",
         description: "The entry location was updated.",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Could not move entry";
+      toast({
+        title: "Move failed",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMoveEntryToExistingPin = async (entryId: number, targetPinId: number) => {
+    try {
+      await moveEntryToPin({
+        entryId,
+        targetPinId,
+      });
+      queryClient.invalidateQueries({ queryKey: ["pins"] });
+      queryClient.invalidateQueries({ queryKey: ["entries"] });
+      setMoveEntryId(null);
+      setSelectedPinId(targetPinId);
+      setShowPinSummary(true);
+      toast({
+        title: "Entry moved",
+        description: "The entry was moved to the selected pin.",
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Could not move entry";

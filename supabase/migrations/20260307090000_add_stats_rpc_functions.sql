@@ -254,14 +254,19 @@ monthly as (
   ) mc on mc.month_index = m.month_index
   order by m.month_index
 ),
-points as (
+catch_times as (
   select
-    extract(hour from f.date_time)::int as hour,
-    f.length,
-    f.weight,
-    to_char(f.date_time, 'Mon DD') as label
-  from filtered f
-  where f.length is not null or f.weight is not null
+    h.hour,
+    coalesce(c.catches, 0)::int as catches
+  from generate_series(0, 23) as h(hour)
+  left join (
+    select
+      extract(hour from f.date_time)::int as hour,
+      count(*)::int as catches
+    from filtered f
+    group by extract(hour from f.date_time)
+  ) c on c.hour = h.hour
+  order by h.hour
 )
 select jsonb_build_object(
   'species',
@@ -325,19 +330,17 @@ select jsonb_build_object(
     ),
     '[]'::jsonb
   ),
-  'points',
+  'catchTimes',
   coalesce(
     (
       select jsonb_agg(
         jsonb_build_object(
-          'hour', p.hour,
-          'length', p.length,
-          'weight', p.weight,
-          'label', p.label
+          'hour', ct.hour,
+          'catches', ct.catches
         )
-        order by p.hour asc
+        order by ct.hour
       )
-      from points p
+      from catch_times ct
     ),
     '[]'::jsonb
   )

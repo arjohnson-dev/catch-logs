@@ -711,9 +711,12 @@ export default function FieldGuide() {
     enabled: Boolean(user?.id) && isFavoritesRoute,
   });
 
-  const favoriteSpecCodes = favoriteSpecCodesQuery.data ?? [];
+  const favoriteSpecCodes = useMemo(
+    () => favoriteSpecCodesQuery.data ?? [],
+    [favoriteSpecCodesQuery.data],
+  );
   const favoriteSet = useMemo(() => new Set(favoriteSpecCodes), [favoriteSpecCodes]);
-  const species = speciesListQuery.data ?? [];
+  const species = useMemo(() => speciesListQuery.data ?? [], [speciesListQuery.data]);
 
   const toggleBookmarkMutation = useMutation({
     mutationFn: async (input: { specCode: number; isBookmarked: boolean }) => {

@@ -37,6 +37,16 @@ export interface JournalEntry {
   weight?: number | null;
   lure?: string | null;
   bait?: string | null;
+  drag?: number | null;
+  rodLength?: string | null;
+  rodPower?: string | null;
+  rodAction?: string | null;
+  lineType?: string | null;
+  lineTest?: string | null;
+  bobberFloat?: string | null;
+  weightOz?: string | null;
+  leaderMaterial?: string | null;
+  leaderLength?: string | null;
   notes?: string | null;
   photoUrl?: string | null;
   dateTime: string;

@@ -1,8 +1,33 @@
 const SESSION_LURE_KEY_PREFIX = "catchlogs:session-lure:";
 const SESSION_BAIT_KEY_PREFIX = "catchlogs:session-bait:";
 const SESSION_GEAR_VISIBLE_KEY_PREFIX = "catchlogs:session-gear-visible:";
+const SESSION_TACKLE_DEFAULTS_KEY_PREFIX = "catchlogs:session-tackle-defaults:";
 const LEGACY_SESSION_TACKLE_KEY_PREFIX = "catchlogs:session-tackle:";
 const LEGACY_SESSION_TACKLE_VISIBLE_KEY_PREFIX = "catchlogs:session-tackle-visible:";
+
+export type TackleDefaults = {
+  rodLength: string;
+  rodPower: string;
+  rodAction: string;
+  lineType: string;
+  lineTest: string;
+  bobberFloat: string;
+  weight: string;
+  leaderMaterial: string;
+  leaderLength: string;
+};
+
+const EMPTY_TACKLE_DEFAULTS: TackleDefaults = {
+  rodLength: "",
+  rodPower: "",
+  rodAction: "",
+  lineType: "",
+  lineTest: "",
+  bobberFloat: "",
+  weight: "",
+  leaderMaterial: "",
+  leaderLength: "",
+};
 
 function getStorage() {
   if (typeof window === "undefined") {
@@ -25,6 +50,10 @@ function baitKeyForUser(userId: string) {
 
 function visibilityKeyForUser(userId: string) {
   return `${SESSION_GEAR_VISIBLE_KEY_PREFIX}${userId}`;
+}
+
+function tackleDefaultsKeyForUser(userId: string) {
+  return `${SESSION_TACKLE_DEFAULTS_KEY_PREFIX}${userId}`;
 }
 
 export function loadSessionLure(userId: string): string {
@@ -74,6 +103,37 @@ export function saveSessionGearVisibility(userId: string, visible: boolean) {
   storage.setItem(visibilityKeyForUser(userId), visible ? "1" : "0");
 }
 
+export function loadTackleDefaults(userId: string): TackleDefaults {
+  const storage = getStorage();
+  if (!storage) return { ...EMPTY_TACKLE_DEFAULTS };
+
+  const raw = storage.getItem(tackleDefaultsKeyForUser(userId));
+  if (!raw) return { ...EMPTY_TACKLE_DEFAULTS };
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<TackleDefaults>;
+    return {
+      rodLength: typeof parsed.rodLength === "string" ? parsed.rodLength : "",
+      rodPower: typeof parsed.rodPower === "string" ? parsed.rodPower : "",
+      rodAction: typeof parsed.rodAction === "string" ? parsed.rodAction : "",
+      lineType: typeof parsed.lineType === "string" ? parsed.lineType : "",
+      lineTest: typeof parsed.lineTest === "string" ? parsed.lineTest : "",
+      bobberFloat: typeof parsed.bobberFloat === "string" ? parsed.bobberFloat : "",
+      weight: typeof parsed.weight === "string" ? parsed.weight : "",
+      leaderMaterial: typeof parsed.leaderMaterial === "string" ? parsed.leaderMaterial : "",
+      leaderLength: typeof parsed.leaderLength === "string" ? parsed.leaderLength : "",
+    };
+  } catch {
+    return { ...EMPTY_TACKLE_DEFAULTS };
+  }
+}
+
+export function saveTackleDefaults(userId: string, value: TackleDefaults) {
+  const storage = getStorage();
+  if (!storage) return;
+  storage.setItem(tackleDefaultsKeyForUser(userId), JSON.stringify(value));
+}
+
 export function clearSessionGearStorage() {
   const storage = getStorage();
   if (!storage) return;
@@ -86,6 +146,7 @@ export function clearSessionGearStorage() {
       key.startsWith(SESSION_LURE_KEY_PREFIX) ||
       key.startsWith(SESSION_BAIT_KEY_PREFIX) ||
       key.startsWith(SESSION_GEAR_VISIBLE_KEY_PREFIX) ||
+      key.startsWith(SESSION_TACKLE_DEFAULTS_KEY_PREFIX) ||
       key.startsWith(LEGACY_SESSION_TACKLE_KEY_PREFIX) ||
       key.startsWith(LEGACY_SESSION_TACKLE_VISIBLE_KEY_PREFIX)
     ) {

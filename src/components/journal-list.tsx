@@ -12,7 +12,7 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FaArrowsUpDownLeftRight,
@@ -47,6 +47,7 @@ import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import { deleteEntryWithPhoto, getEntries } from "@/lib/supabase-data";
 import JournalEntryEditor from "@/components/journal-entry-editor";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 
 interface JournalListProps {
@@ -62,7 +63,9 @@ export default function JournalList({
   onTakeMeThere,
   fullScreen = false,
 }: JournalListProps) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const entryRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const clearHighlightTimeoutRef = useRef<number | null>(null);
   const goToPin = (pinId: number) => {
     window.location.assign(`/?pinId=${pinId}`);
   };
@@ -83,6 +86,7 @@ export default function JournalList({
     queryFn: getEntries,
   });
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [highlightedEntryId, setHighlightedEntryId] = useState<number | null>(null);
 
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [startDate, setStartDate] = useState("");
@@ -110,6 +114,14 @@ export default function JournalList({
   const [timeSortOpen, setTimeSortOpen] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [sizeOpen, setSizeOpen] = useState(false);
+  const focusedEntryId = useMemo(() => {
+    const queryStart = location.indexOf("?");
+    const search = queryStart >= 0 ? location.slice(queryStart) : window.location.search;
+    const entryIdParam = new URLSearchParams(search).get("entryId");
+    if (!entryIdParam) return null;
+    const parsed = Number.parseInt(entryIdParam, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }, [location]);
 
   const deleteMutation = useMutation({
     mutationFn: async (entryId: number) => {
@@ -311,6 +323,58 @@ export default function JournalList({
     setPendingMinWeight("");
     setPendingMaxWeight("");
   };
+
+  useEffect(() => {
+    if (clearHighlightTimeoutRef.current !== null) {
+      window.clearTimeout(clearHighlightTimeoutRef.current);
+      clearHighlightTimeoutRef.current = null;
+    }
+
+    if (!focusedEntryId) {
+      clearHighlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedEntryId(null);
+        clearHighlightTimeoutRef.current = null;
+      }, 0);
+      return;
+    }
+
+    const targetEntryExists = filteredAndSortedEntries.some(
+      (entry) => entry.id === focusedEntryId,
+    );
+
+    if (!targetEntryExists) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const target = entryRefs.current[focusedEntryId];
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedEntryId(focusedEntryId);
+    }, 80);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (clearHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(clearHighlightTimeoutRef.current);
+        clearHighlightTimeoutRef.current = null;
+      }
+    };
+  }, [focusedEntryId, filteredAndSortedEntries]);
+
+  useEffect(() => {
+    if (highlightedEntryId === null) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setHighlightedEntryId((current) =>
+        current === highlightedEntryId ? null : current,
+      );
+    }, 2500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [highlightedEntryId]);
 
   if (isLoading) {
     if (fullScreen) {
@@ -638,59 +702,69 @@ export default function JournalList({
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {filteredAndSortedEntries.map((entry: JournalEntry) => (
-                <JournalEntryCard
+                <div
                   key={entry.id}
-                  entry={entry}
-                  actions={[
-                    {
-                      id: "take-me-there",
-                      label: "Take me there",
-                      icon: FaMapLocationDot,
-                      onClick: () => {
-                        handleClose();
-                        if (onTakeMeThere) {
-                          onTakeMeThere(entry.pinId);
-                        } else {
-                          goToPin(entry.pinId);
-                        }
+                  ref={(node) => {
+                    entryRefs.current[entry.id] = node;
+                  }}
+                  id={`journal-entry-${entry.id}`}
+                  className={cn(
+                    highlightedEntryId === entry.id && "journal-entry-focus",
+                  )}
+                >
+                  <JournalEntryCard
+                    entry={entry}
+                    actions={[
+                      {
+                        id: "take-me-there",
+                        label: "Take me there",
+                        icon: FaMapLocationDot,
+                        onClick: () => {
+                          handleClose();
+                          if (onTakeMeThere) {
+                            onTakeMeThere(entry.pinId);
+                          } else {
+                            goToPin(entry.pinId);
+                          }
+                        },
                       },
-                    },
-                    {
-                      id: "edit",
-                      label: "Edit",
-                      icon: FaPenToSquare,
-                      onClick: () => setEditingEntry(entry),
-                    },
-                    {
-                      id: "move-on-map",
-                      label: "Move on map",
-                      icon: FaArrowsUpDownLeftRight,
-                      onClick: () => {
-                        handleClose();
-                        if (onMoveEntryRequest) {
-                          onMoveEntryRequest(entry.id);
-                        } else {
-                          goToMoveEntry(entry.id);
-                        }
+                      {
+                        id: "edit",
+                        label: "Edit",
+                        icon: FaPenToSquare,
+                        onClick: () => setEditingEntry(entry),
                       },
-                    },
-                    {
-                      id: "delete",
-                      label: "Delete",
-                      icon: FaTrashCan,
-                      tone: "danger",
-                      disabled: deleteMutation.isPending,
-                      onClick: () => {
-                        const accepted = window.confirm(
-                          "Delete this entry and its image permanently?",
-                        );
-                        if (accepted) {
-                          deleteMutation.mutate(entry.id);
-                        }
+                      {
+                        id: "move-on-map",
+                        label: "Move on map",
+                        icon: FaArrowsUpDownLeftRight,
+                        onClick: () => {
+                          handleClose();
+                          if (onMoveEntryRequest) {
+                            onMoveEntryRequest(entry.id);
+                          } else {
+                            goToMoveEntry(entry.id);
+                          }
+                        },
                       },
-                    },
-                  ]}
-                />
+                      {
+                        id: "delete",
+                        label: "Delete",
+                        icon: FaTrashCan,
+                        tone: "danger",
+                        disabled: deleteMutation.isPending,
+                        onClick: () => {
+                          const accepted = window.confirm(
+                            "Delete this entry and its image permanently?",
+                          );
+                          if (accepted) {
+                            deleteMutation.mutate(entry.id);
+                          }
+                        },
+                      },
+                    ]}
+                  />
+                </div>
               ))}
             </div>
           )}

@@ -14,9 +14,11 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import {
+  FaBookOpen,
   FaPlus,
   FaXmark,
 } from "react-icons/fa6";
+import { useLocation } from "wouter";
 import JournalEntryCard from "@/components/journal-entry-card";
 import { Button } from "@/components/ui/button";
 import { type PinWithEntries } from "@/types/domain";
@@ -29,6 +31,7 @@ interface PinSummaryProps {
 }
 
 export default function PinSummary({ pinId, onClose, onAddEntry }: PinSummaryProps) {
+  const [, navigate] = useLocation();
   const { data: pins, isLoading } = useQuery<PinWithEntries[]>({
     queryKey: ["pins"],
     queryFn: getPinsWithEntries,
@@ -57,7 +60,7 @@ export default function PinSummary({ pinId, onClose, onAddEntry }: PinSummaryPro
 
   return (
     <div className="summary-panel">
-      <div className="dialog-header dialog-header-corner">
+      <div className="dialog-header dialog-header-corner dialog-header-sticky">
         <h3 className="font-medium text-white">{pin.name}</h3>
         <Button
           variant="ghost"
@@ -69,32 +72,47 @@ export default function PinSummary({ pinId, onClose, onAddEntry }: PinSummaryPro
           <FaXmark className="h-4 w-4" />
         </Button>
       </div>
-      <div className="dialog-body">
-        {/* Recent Entries */}
-        {sortedEntries.length > 0 && (
-          <div className="mb-4">
-            {sortedEntries.map((entry) => (
-              <JournalEntryCard
-                key={entry.id}
-                entry={entry}
-                className="summary-entry"
-              />
-            ))}
-            {(pin.entries && Array.isArray(pin.entries) ? pin.entries : []).length > 3 && (
-              <p className="summary-more">
-                And {(pin.entries && Array.isArray(pin.entries) ? pin.entries : []).length - 3} more...
-              </p>
-            )}
-          </div>
-        )}
+      <div className="dialog-body summary-body">
+        <div className="summary-scroll-content">
+          {/* Recent Entries */}
+          {sortedEntries.length > 0 && (
+            <div className="mb-4">
+              {sortedEntries.map((entry) => (
+                <JournalEntryCard
+                  key={entry.id}
+                  entry={entry}
+                  className="summary-entry"
+                  actions={[
+                    {
+                      id: "open-in-journal",
+                      label: "Open in journal",
+                      icon: FaBookOpen,
+                      onClick: () => {
+                        onClose();
+                        navigate(`/journal?entryId=${entry.id}`);
+                      },
+                    },
+                  ]}
+                />
+              ))}
+              {(pin.entries && Array.isArray(pin.entries) ? pin.entries : []).length > 3 && (
+                <p className="summary-more">
+                  And {(pin.entries && Array.isArray(pin.entries) ? pin.entries : []).length - 3} more...
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
-        <Button 
-          onClick={onAddEntry}
-          className="btn-full btn-primary"
-        >
-          <FaPlus className="h-4 w-4 mr-2" />
-          Add New Catch
-        </Button>
+        <div className="summary-footer">
+          <Button 
+            onClick={onAddEntry}
+            className="btn-full btn-primary"
+          >
+            <FaPlus className="h-4 w-4 mr-2" />
+            Add New Catch
+          </Button>
+        </div>
       </div>
     </div>
   );

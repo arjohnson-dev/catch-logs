@@ -208,7 +208,9 @@ export default function MapInterface({
   );
   const hasCenteredOnInitialLocation = useRef(false);
   const [showPinMenu, setShowPinMenu] = useState(false);
-  const [isGearPanelVisible, setIsGearPanelVisible] = useState(true);
+  const [isGearPanelVisible, setIsGearPanelVisible] = useState(() =>
+    user?.id ? loadSessionGearVisibility(user.id) : true,
+  );
   const initialCenter: [number, number] = [46.8772, -96.7898];
 
   const { data: pins = [], isLoading } = useQuery<PinWithEntries[]>({
@@ -427,12 +429,13 @@ export default function MapInterface({
     MAP_BASE_LAYERS[0];
 
   useEffect(() => {
-    if (!user?.id) {
-      setIsGearPanelVisible(true);
-      return;
-    }
+    const timeoutId = window.setTimeout(() => {
+      setIsGearPanelVisible(user?.id ? loadSessionGearVisibility(user.id) : true);
+    }, 0);
 
-    setIsGearPanelVisible(loadSessionGearVisibility(user.id));
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [user?.id]);
 
   const handleGearPanelVisibilityChange = (visible: boolean) => {
@@ -569,7 +572,7 @@ export default function MapInterface({
       >
         <div className="map-tackle-header">
           <div>
-            <p className="map-tackle-title">Gear</p>
+            <p className="map-tackle-title">Tackle</p>
             {isGearPanelVisible && (
               <p className="map-tackle-subtitle">
                 Set quick defaults for your next entry
@@ -582,8 +585,8 @@ export default function MapInterface({
             onClick={() => handleGearPanelVisibilityChange(!isGearPanelVisible)}
             aria-expanded={isGearPanelVisible}
             aria-controls="map-gear-panel-body"
+            aria-label={isGearPanelVisible ? "Collapse tackle panel" : "Expand tackle panel"}
           >
-            <span>{isGearPanelVisible ? "Hide" : "Gear"}</span>
             {isGearPanelVisible ? (
               <FaChevronUp size={12} />
             ) : (
@@ -686,7 +689,7 @@ export default function MapInterface({
         <div className="map-mode-indicator">
           <p>
             {moveEntryId
-              ? "Touch the map to move this entry"
+              ? "Touch the map for a new pin or tap an existing pin to move this entry"
               : "Touch the map to create an entry"}
           </p>
         </div>

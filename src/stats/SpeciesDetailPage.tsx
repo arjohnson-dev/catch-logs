@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { FaFish } from "react-icons/fa6";
 import { Card, CardContent } from "@/components/ui/card";
 import { getStatsSpeciesDetail } from "@/lib/supabase-data";
+import SpeciesCatchTimeDistribution from "@/stats/SpeciesCatchTimeDistribution";
 import SpeciesConditionsCard from "@/stats/SpeciesConditionsCard";
 import SpeciesMonthlyChart from "@/stats/SpeciesMonthlyChart";
-import SpeciesTimeScatter from "@/stats/SpeciesTimeScatter";
 import TopNamedCountChart from "@/stats/TopNamedCountChart";
 import { getSpeciesColor } from "@/stats/helpers";
 
@@ -55,7 +55,7 @@ export default function SpeciesDetailPage({ species }: Props) {
       <TopNamedCountChart rows={data.topBaits} title="Top Baits" emptyLabel="No bait data available yet." />
       <SpeciesConditionsCard conditions={data.conditions} />
       <SpeciesMonthlyChart monthly={data.monthly} color={color} />
-      <SpeciesTimeScatter points={data.points} color={color} />
+      <SpeciesCatchTimeDistribution catchTimes={data.catchTimes} color={color} />
     </div>
   );
 }
