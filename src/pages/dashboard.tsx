@@ -17,12 +17,13 @@ import MapInterface from "@/components/map-interface";
 import PinSummary from "@/components/pin-summary";
 import BottomNavigation from "@/components/bottom-navigation";
 import OptionsModal from "@/components/options-modal";
-import { FaUser } from "react-icons/fa6";
+import { FaGear } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import catchLogsIcon from "@assets/catchlogs-icon.png";
 import { moveEntryToNewCoordinates } from "@/lib/supabase-data";
+import { getMyFavoriteSpecCodes } from "@/lib/field-guide";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,21 +40,27 @@ import Support from "@/pages/support";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import NotFound from "@/pages/not-found";
+import ResourcesHub from "@/pages/resources";
+import FieldGuide from "@/pages/field-guide";
+import ResourcesPlaceholder from "@/pages/resources-placeholder";
+import TrustedSourcesPage from "@/pages/trusted-sources";
 
 export default function Dashboard() {
+  const currentPath = window.location.pathname;
   const initialPinIdFromUrl = (() => {
+    if (currentPath !== "/") return null;
     const pinIdParam = new URLSearchParams(window.location.search).get("pinId");
     if (!pinIdParam) return null;
     const parsed = Number.parseInt(pinIdParam, 10);
     return Number.isNaN(parsed) ? null : parsed;
   })();
   const initialMoveEntryIdFromUrl = (() => {
+    if (currentPath !== "/") return null;
     const entryIdParam = new URLSearchParams(window.location.search).get("moveEntryId");
     if (!entryIdParam) return null;
     const parsed = Number.parseInt(entryIdParam, 10);
     return Number.isNaN(parsed) ? null : parsed;
   })();
-
   const { user } = useAuth();
   const [location, navigate] = useLocation();
   const { toast } = useToast();
@@ -73,9 +80,16 @@ export default function Dashboard() {
   const sessionBait = userId
     ? (sessionBaitByUser[userId] ?? loadSessionBait(userId))
     : "";
+  useQuery({
+    queryKey: ["field-guide", "favorite-spec-codes", userId],
+    queryFn: getMyFavoriteSpecCodes,
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60 * 5,
+  });
   const normalizedPath = (() => {
-    if (location === "/auth") return "/";
-    const withoutTrailingSlash = location.replace(/\/+$/, "");
+    const pathOnly = location.split("?")[0].split("#")[0];
+    if (pathOnly === "/auth") return "/";
+    const withoutTrailingSlash = pathOnly.replace(/\/+$/, "");
     return withoutTrailingSlash.length > 0 ? withoutTrailingSlash : "/";
   })();
   const isOverlayOpen = normalizedPath !== "/";
@@ -182,6 +196,45 @@ export default function Dashboard() {
   };
 
   const renderOverlayView = () => {
+    if (normalizedPath === "/resources") {
+      return <ResourcesHub />;
+    }
+
+    if (normalizedPath === "/resources/field-guide" || normalizedPath.startsWith("/resources/field-guide/")) {
+      return <FieldGuide />;
+    }
+
+    if (normalizedPath === "/resources/trusted-sources") {
+      return <TrustedSourcesPage />;
+    }
+
+    if (normalizedPath === "/resources/fishing-reports") {
+      return (
+        <ResourcesPlaceholder
+          title="Fishing Reports"
+          description="Check current local fishing activity and conditions."
+        />
+      );
+    }
+
+    if (normalizedPath === "/resources/weather") {
+      return (
+        <ResourcesPlaceholder
+          title="Weather & Conditions"
+          description="View weather-related context relevant to fishing."
+        />
+      );
+    }
+
+    if (normalizedPath === "/resources/regulations") {
+      return (
+        <ResourcesPlaceholder
+          title="Regulations"
+          description="Access fishing rules and regulatory information."
+        />
+      );
+    }
+
     switch (normalizedPath) {
       case "/":
         return null;
@@ -226,9 +279,10 @@ export default function Dashboard() {
                 variant="ghost"
                 className="touch-target dashboard-user-trigger"
                 onClick={() => setShowOptionsModal(true)}
-                aria-label="Open options"
+                aria-label="Open settings"
+                title="Settings"
               >
-                <FaUser size={20} />
+                <FaGear size={20} />
               </Button>
             )}
           </div>

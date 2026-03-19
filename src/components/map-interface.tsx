@@ -43,13 +43,14 @@ import {
   loadSessionGearVisibility,
   saveSessionGearVisibility,
 } from "@/lib/session-gear";
-import { createPin, getPinsWithEntries } from "@/lib/supabase-data";
+import {
+  createPin,
+  deletePinIfEmpty,
+  getPinsWithEntries,
+} from "@/lib/supabase-data";
 import { getEntries } from "@/lib/supabase-data";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  DEFAULT_MAP_BASE_LAYER,
-  MAP_BASE_LAYERS,
-} from "@/lib/map-layers";
+import { DEFAULT_MAP_BASE_LAYER, MAP_BASE_LAYERS } from "@/lib/map-layers";
 import {
   loadMapBaseLayerPreference,
   loadMapLabelsVisiblePreference,
@@ -142,11 +143,7 @@ function MapCenterer({
   return null;
 }
 
-function MapRefBridge({
-  mapRef,
-}: {
-  mapRef: { current: L.Map | null };
-}) {
+function MapRefBridge({ mapRef }: { mapRef: { current: L.Map | null } }) {
   const map = useMap();
 
   useEffect(() => {
@@ -227,27 +224,19 @@ export default function MapInterface({
     new Set(
       entries
         .map((entry) => normalizeFishingGearValue(entry.lure))
-        .filter((lure): lure is string =>
-          Boolean(lure && lure.length > 0),
-        ),
+        .filter((lure): lure is string => Boolean(lure && lure.length > 0)),
     ),
   )
-    .filter((lure) =>
-      lure.toLowerCase().includes(sessionLure.toLowerCase()),
-    )
+    .filter((lure) => lure.toLowerCase().includes(sessionLure.toLowerCase()))
     .slice(0, 8);
   const baitSuggestions = Array.from(
     new Set(
       entries
         .map((entry) => normalizeFishingGearValue(entry.bait))
-        .filter((bait): bait is string =>
-          Boolean(bait && bait.length > 0),
-        ),
+        .filter((bait): bait is string => Boolean(bait && bait.length > 0)),
     ),
   )
-    .filter((bait) =>
-      bait.toLowerCase().includes(sessionBait.toLowerCase()),
-    )
+    .filter((bait) => bait.toLowerCase().includes(sessionBait.toLowerCase()))
     .slice(0, 8);
 
   const createPinMutation = useMutation({
@@ -276,6 +265,24 @@ export default function MapInterface({
         description: "Failed to create fishing location",
         variant: "destructive",
       });
+    },
+  });
+
+  const cleanupEmptyPinsMutation = useMutation({
+    mutationFn: async (pinIds: number[]) => {
+      if (pinIds.length === 0) {
+        return [] as number[];
+      }
+      const deleted = await Promise.all(
+        pinIds.map(async (pinId) =>
+          (await deletePinIfEmpty(pinId)) ? pinId : null,
+        ),
+      );
+      return deleted.filter((pinId): pinId is number => pinId !== null);
+    },
+    onSuccess: (deletedPinIds) => {
+      if (deletedPinIds.length === 0) return;
+      queryClient.invalidateQueries({ queryKey: ["pins"] });
     },
   });
 
@@ -379,6 +386,33 @@ export default function MapInterface({
   useEffect(() => {
     requestLocation();
   }, [requestLocation]);
+
+  useEffect(() => {
+    if (cleanupEmptyPinsMutation.isPending || pins.length === 0) {
+      return;
+    }
+
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    const isOnNewEntryPage = path === "/entries/new";
+    const activeNewPinIdRaw = isOnNewEntryPage ? params.get("pinId") : null;
+    const parsedActiveNewPinId = activeNewPinIdRaw
+      ? Number.parseInt(activeNewPinIdRaw, 10)
+      : null;
+    const activeNewPinId =
+      parsedActiveNewPinId !== null && !Number.isNaN(parsedActiveNewPinId)
+        ? parsedActiveNewPinId
+        : null;
+
+    const emptyPinIds = pins
+      .filter((pin) => (pin.entries?.length ?? 0) === 0)
+      .map((pin) => pin.id)
+      .filter((pinId) => pinId !== activeNewPinId);
+
+    if (emptyPinIds.length > 0) {
+      cleanupEmptyPinsMutation.mutate(emptyPinIds);
+    }
+  }, [cleanupEmptyPinsMutation, pins]);
 
   const mapBaseLayer = user?.id
     ? loadMapBaseLayerPreference(user.id)
@@ -530,12 +564,16 @@ export default function MapInterface({
         </Button>
       </div>
 
-      <div className={`map-tackle-panel ${isGearPanelVisible ? "" : "map-tackle-panel-collapsed"}`}>
+      <div
+        className={`map-tackle-panel ${isGearPanelVisible ? "" : "map-tackle-panel-collapsed"}`}
+      >
         <div className="map-tackle-header">
           <div>
             <p className="map-tackle-title">Gear</p>
             {isGearPanelVisible && (
-              <p className="map-tackle-subtitle">Set quick defaults for your next entry</p>
+              <p className="map-tackle-subtitle">
+                Set quick defaults for your next entry
+              </p>
             )}
           </div>
           <button
@@ -546,7 +584,11 @@ export default function MapInterface({
             aria-controls="map-gear-panel-body"
           >
             <span>{isGearPanelVisible ? "Hide" : "Gear"}</span>
-            {isGearPanelVisible ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
+            {isGearPanelVisible ? (
+              <FaChevronUp size={12} />
+            ) : (
+              <FaChevronDown size={12} />
+            )}
           </button>
         </div>
 
@@ -568,7 +610,10 @@ export default function MapInterface({
                 <option key={suggestion} value={suggestion} />
               ))}
             </datalist>
-            <label className="map-tackle-label map-tackle-label-secondary" htmlFor="session-bait-input">
+            <label
+              className="map-tackle-label map-tackle-label-secondary"
+              htmlFor="session-bait-input"
+            >
               Bait
             </label>
             <Input
@@ -639,7 +684,11 @@ export default function MapInterface({
       {/* Pin Drop Mode Indicator - positioned for mobile viewport */}
       {(isPinDropMode || moveEntryId) && (
         <div className="map-mode-indicator">
-          <p>{moveEntryId ? "Touch the map to move this entry" : "Touch the map to create an entry"}</p>
+          <p>
+            {moveEntryId
+              ? "Touch the map to move this entry"
+              : "Touch the map to create an entry"}
+          </p>
         </div>
       )}
     </div>

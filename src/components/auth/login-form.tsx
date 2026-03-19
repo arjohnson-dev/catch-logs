@@ -18,7 +18,7 @@ import { useMutation } from "@tanstack/react-query";
 import { FaEnvelope, FaLock } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { loginSchema, type LoginUser } from "@/lib/auth-schemas";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -71,9 +71,25 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
     loginMutation.mutate(data);
   };
 
+  const onInvalid = () => {
+    const messages = Array.from(
+      new Set(
+        Object.values(form.formState.errors)
+          .map((error) => error?.message)
+          .filter((message): message is string => Boolean(message)),
+      ),
+    );
+
+    toast({
+      title: "Login failed",
+      description: messages[0] ?? "Please review the form and try again.",
+      variant: "destructive",
+    });
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"
@@ -92,7 +108,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -115,7 +130,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />

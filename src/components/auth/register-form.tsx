@@ -19,7 +19,7 @@ import { FaEnvelope, FaLock, FaUser } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { registerUserSchema, type RegisterUser } from "@/lib/auth-schemas";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -104,9 +104,25 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     registerMutation.mutate(data);
   };
 
+  const onInvalid = () => {
+    const messages = Array.from(
+      new Set(
+        Object.values(form.formState.errors)
+          .map((error) => error?.message)
+          .filter((message): message is string => Boolean(message)),
+      ),
+    );
+
+    toast({
+      title: "Registration failed",
+      description: messages.join(" "),
+      variant: "destructive",
+    });
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
         <FormField
           control={form.control}
           name="firstName"
@@ -125,7 +141,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -148,7 +163,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -171,7 +185,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -196,7 +209,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -219,7 +231,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -240,7 +251,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   I verify that I am at least 16 years of age *
                 </FormLabel>
-                <FormMessage />
               </div>
             </FormItem>
           )}
@@ -270,7 +280,6 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   </a>{" "}
                   *
                 </FormLabel>
-                <FormMessage />
               </div>
             </FormItem>
           )}

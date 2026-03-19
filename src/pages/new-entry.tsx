@@ -12,7 +12,6 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import JournalEntryForm from "@/components/journal-entry-form";
@@ -29,7 +28,7 @@ function parsePinId(raw: string | null): number | null {
 export default function NewEntryPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  const params = new URLSearchParams(window.location.search);
   const pinId = parsePinId(params.get("pinId"));
   const isNewPin = params.get("newPin") === "1";
   const defaultLure = (params.get("lure") ?? "").trim();
@@ -65,7 +64,7 @@ export default function NewEntryPage() {
   };
 
   const handleComplete = () => {
-    navigate(`/?pinId=${pinId}`);
+    window.location.assign(`/?pinId=${pinId}`);
   };
 
   return (
@@ -79,4 +78,3 @@ export default function NewEntryPage() {
     />
   );
 }
-

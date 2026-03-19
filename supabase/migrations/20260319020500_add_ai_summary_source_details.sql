@@ -1,6 +1,6 @@
 /*
- * File:        src/pages/stats.tsx
- * Description: <brief description of the purpose of this file>
+ * File:        supabase/migrations/20260319020500_add_ai_summary_source_details.sql
+ * Description: Add a separate field-guide species column for the actual AI summary sources used.
  *
  * Author:      Andrew Johnson
  * Company:     CatchLogs LLC
@@ -12,6 +12,5 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import StatsPage from "@/stats/StatsPage";
-
-export default StatsPage;
+alter table "field-guide".species
+add column if not exists ai_summary_source_details jsonb null;
