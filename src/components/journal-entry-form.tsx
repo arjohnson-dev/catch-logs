@@ -12,7 +12,7 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,12 +35,19 @@ import {
   normalizeCatchGearDrag,
   normalizeCatchGearText,
 } from "@/lib/catch-gear";
+import {
+  findFieldGuideSpeciesByName,
+  getFieldGuideSpeciesList,
+  resolveFieldGuideSpeciesSpecCode,
+  UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE,
+} from "@/lib/field-guide";
 import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import { getProfileGearDefaults } from "@/lib/profile-gear";
 import { uploadCatchPhoto } from "@/lib/storage";
 import { useAuth } from "@/hooks/useAuth";
 import { createEntry, getEntries, getPinById } from "@/lib/supabase-data";
 import { getWeatherForLocationAndTime } from "@/lib/weather";
+import type { FishSpeciesListItem } from "@/types/field-guide";
 
 const entrySchema = z.object({
   fishType: z.string().min(1, "Fish type is required"),
@@ -73,6 +80,125 @@ interface JournalEntryFormProps {
   fullScreen?: boolean;
 }
 
+function normalizeSpeciesSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getLevenshteinDistance(left: string, right: string) {
+  if (left === right) return 0;
+  if (!left.length) return right.length;
+  if (!right.length) return left.length;
+
+  const previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
+    let previousDiagonal = previousRow[0];
+    previousRow[0] = leftIndex + 1;
+
+    for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
+      const temp = previousRow[rightIndex + 1];
+      const substitutionCost = left[leftIndex] === right[rightIndex] ? 0 : 1;
+
+      previousRow[rightIndex + 1] = Math.min(
+        previousRow[rightIndex + 1] + 1,
+        previousRow[rightIndex] + 1,
+        previousDiagonal + substitutionCost,
+      );
+
+      previousDiagonal = temp;
+    }
+  }
+
+  return previousRow[right.length];
+}
+
+function getFuzzySpeciesMatchScore(candidate: string, query: string) {
+  const normalizedCandidate = normalizeSpeciesSearchText(candidate);
+  const normalizedQuery = normalizeSpeciesSearchText(query);
+
+  if (!normalizedCandidate || !normalizedQuery) {
+    return 0;
+  }
+
+  const candidatePrefix = normalizedCandidate.slice(0, normalizedQuery.length);
+  const prefixDistance = getLevenshteinDistance(normalizedQuery, candidatePrefix);
+  if (prefixDistance <= 2) {
+    return 180 - prefixDistance * 30;
+  }
+
+  const candidateWords = normalizedCandidate.split(" ").filter(Boolean);
+  for (const word of candidateWords) {
+    const wordPrefix = word.slice(0, normalizedQuery.length);
+    const wordDistance = getLevenshteinDistance(normalizedQuery, wordPrefix);
+    if (wordDistance <= 2) {
+      return 150 - wordDistance * 30;
+    }
+  }
+
+  return 0;
+}
+
+function getSpeciesSuggestionValue(species: FishSpeciesListItem) {
+  return species.canonicalCommonName ?? species.scientificName;
+}
+
+function getSpeciesSuggestionSubtitle(species: FishSpeciesListItem) {
+  if (!species.canonicalCommonName) {
+    return species.family;
+  }
+
+  const subtitleParts = [species.scientificName, species.family].filter(Boolean);
+  return subtitleParts.join(" • ");
+}
+
+function scoreSpeciesSuggestion(species: FishSpeciesListItem, query: string) {
+  const normalizedQuery = normalizeSpeciesSearchText(query);
+  if (!normalizedQuery) return 0;
+
+  const commonName = normalizeSpeciesSearchText(species.canonicalCommonName ?? "");
+  const scientificName = normalizeSpeciesSearchText(species.scientificName);
+  const aliases = species.searchAliases.map(normalizeSpeciesSearchText);
+  const alternateNames = species.alternateCommonNames.map(normalizeSpeciesSearchText);
+  const family = normalizeSpeciesSearchText(species.family ?? "");
+
+  if (commonName === normalizedQuery) return 520;
+  if (scientificName === normalizedQuery) return 500;
+  if (aliases.includes(normalizedQuery)) return 460;
+  if (alternateNames.includes(normalizedQuery)) return 440;
+  if (commonName.startsWith(normalizedQuery)) return 360;
+  if (scientificName.startsWith(normalizedQuery)) return 340;
+  if (aliases.some((value) => value.startsWith(normalizedQuery))) return 320;
+  if (alternateNames.some((value) => value.startsWith(normalizedQuery))) return 300;
+  if (commonName.includes(normalizedQuery)) return 260;
+  if (scientificName.includes(normalizedQuery)) return 240;
+  if (aliases.some((value) => value.includes(normalizedQuery))) return 220;
+  if (alternateNames.some((value) => value.includes(normalizedQuery))) return 200;
+  if (family.includes(normalizedQuery)) return 120;
+
+  const fuzzyScores = [
+    getFuzzySpeciesMatchScore(species.canonicalCommonName ?? "", normalizedQuery),
+    getFuzzySpeciesMatchScore(species.scientificName, normalizedQuery),
+    ...species.searchAliases.map((value) => getFuzzySpeciesMatchScore(value, normalizedQuery)),
+    ...species.alternateCommonNames.map((value) => getFuzzySpeciesMatchScore(value, normalizedQuery)),
+  ];
+
+  return Math.max(0, ...fuzzyScores);
+}
+
+type FishTypeSuggestion = {
+  value: string;
+  subtitle: string | null;
+  source: "field-guide" | "history";
+  score: number;
+  matchType?: "common" | "alternate-common" | "alias" | "scientific";
+  specCode?: number;
+};
 
 export default function JournalEntryForm({
   pinId,
@@ -86,6 +212,8 @@ export default function JournalEntryForm({
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [showFishTypeSuggestions, setShowFishTypeSuggestions] = useState(false);
+  const [selectedFishSpeciesSpecCode, setSelectedFishSpeciesSpecCode] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: entries = [] } = useQuery({
@@ -157,21 +285,148 @@ export default function JournalEntryForm({
     control: form.control,
     name: "fishType",
   });
-  const fishTypeSuggestions = Array.from(
-    new Set(
-      entries
-        .map((entry) => entry.fishType?.trim())
-        .filter((fishType): fishType is string => Boolean(fishType && fishType.length > 0)),
-    ),
-  )
-    .filter((fishType) => fishType.toLowerCase().includes((fishTypeInput || "").toLowerCase()))
-    .slice(0, 8);
+  const trimmedFishTypeInput = (fishTypeInput ?? "").trim();
+  const { data: allFieldGuideSpecies = [] } = useQuery({
+    queryKey: ["field-guide", "species-list", "entry-form", "all"],
+    queryFn: () => getFieldGuideSpeciesList({ limit: 1000 }),
+  });
+  const { data: fieldGuideSpecies = [], isFetching: isFetchingFieldGuideSpecies } = useQuery({
+    queryKey: ["field-guide", "species-list", "entry-form", trimmedFishTypeInput],
+    queryFn: () =>
+      getFieldGuideSpeciesList({
+        search: trimmedFishTypeInput,
+        limit: 25,
+      }),
+    enabled: trimmedFishTypeInput.length > 0,
+  });
+  const fishTypeSuggestions = useMemo(() => {
+    const normalizedInput = trimmedFishTypeInput;
+    if (!normalizedInput) {
+      return [];
+    }
+
+    const seen = new Set<string>();
+    const speciesPool = Array.from(
+      new Map(
+        [...fieldGuideSpecies, ...allFieldGuideSpecies].map((species) => [species.specCode, species]),
+      ).values(),
+    );
+
+    const speciesMatches = speciesPool
+      .map((species) => ({
+        species,
+        score: scoreSpeciesSuggestion(species, normalizedInput),
+      }))
+      .filter((item) => item.score > 0)
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+
+        return getSpeciesSuggestionValue(left.species).localeCompare(
+          getSpeciesSuggestionValue(right.species),
+        );
+      })
+      .flatMap(({ species, score }) => {
+        const subtitle = getSpeciesSuggestionSubtitle(species);
+        const candidates = [
+          { value: species.canonicalCommonName, matchType: "common" as const, boost: 220 },
+          ...species.alternateCommonNames.map((value) => ({
+            value,
+            matchType: "alternate-common" as const,
+            boost: 140,
+          })),
+          ...species.searchAliases.map((value) => ({
+            value,
+            matchType: "alias" as const,
+            boost: 60,
+          })),
+          { value: species.scientificName, matchType: "scientific" as const, boost: 20 },
+        ].filter(
+          (candidate): candidate is { value: string; matchType: "common" | "alternate-common" | "alias" | "scientific"; boost: number } =>
+            Boolean(candidate.value && candidate.value.trim().length > 0),
+        );
+
+        return candidates.map<FishTypeSuggestion>(({ value, matchType, boost }) => {
+          const normalizedValue = normalizeSpeciesSearchText(value);
+          const exactBoost = normalizedValue === normalizeSpeciesSearchText(normalizedInput) ? 80 : 0;
+          const startsWithBoost = normalizedValue.startsWith(normalizeSpeciesSearchText(normalizedInput)) ? 35 : 0;
+
+          return {
+            value,
+            subtitle,
+            source: "field-guide",
+            matchType,
+            specCode: species.specCode,
+            score: score + boost + exactBoost + startsWithBoost,
+          };
+        });
+      })
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+
+        if ((left.matchType ?? "") !== (right.matchType ?? "")) {
+          const matchTypeOrder = {
+            common: 0,
+            "alternate-common": 1,
+            alias: 2,
+            scientific: 3,
+          } as const;
+
+          return (matchTypeOrder[left.matchType ?? "scientific"] ?? 99) - (matchTypeOrder[right.matchType ?? "scientific"] ?? 99);
+        }
+
+        return left.value.localeCompare(right.value);
+      })
+      .filter((suggestion) => {
+        const key = suggestion.value.toLowerCase();
+        if (seen.has(key)) {
+          return false;
+        }
+
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 8);
+
+    const historicalMatches =
+      speciesMatches.length === 0
+        ? Array.from(
+            new Set(
+              entries
+                .map((entry) => entry.fishType?.trim())
+                .filter((fishType): fishType is string => Boolean(fishType && fishType.length > 0)),
+            ),
+          )
+            .filter((fishType) =>
+              fishType.toLowerCase().includes(normalizedInput.toLowerCase()) &&
+              !seen.has(fishType.toLowerCase()),
+            )
+            .slice(0, 8)
+            .map<FishTypeSuggestion>((fishType) => ({
+              value: fishType,
+              subtitle: "Recent entry",
+              source: "history",
+              score: 0,
+            }))
+        : [];
+
+    return [...speciesMatches, ...historicalMatches];
+  }, [allFieldGuideSpecies, entries, fieldGuideSpecies, trimmedFishTypeInput]);
 
   const createEntryMutation = useMutation({
     mutationFn: async (data: EntryFormData) => {
       if (!user?.id) {
         throw new Error("You must be logged in to save an entry.");
       }
+
+      const resolvedFishSpeciesSpecCode =
+        selectedFishSpeciesSpecCode ??
+        findFieldGuideSpeciesByName(fieldGuideSpecies, data.fishType)?.specCode ??
+        findFieldGuideSpeciesByName(allFieldGuideSpecies, data.fishType)?.specCode ??
+        (await resolveFieldGuideSpeciesSpecCode(data.fishType));
 
       const pin = await getPinById(pinId);
       if (!pin) {
@@ -194,6 +449,7 @@ export default function JournalEntryForm({
         pinId,
         userId: user.id,
         fishType: data.fishType,
+        fishSpeciesSpecCode: resolvedFishSpeciesSpecCode || UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE,
         length: data.length,
         weight: data.weight,
         lure: normalizeFishingGearValue(data.lure),
@@ -479,18 +735,70 @@ export default function JournalEntryForm({
                     <FormLabel className="text-white">Fish Type</FormLabel>
                     <FormControl>
                       <Input 
-                        list="fish-type-suggestions"
                         placeholder="Bass" 
                         className="field-dark"
+                        autoComplete="off"
                         {...field} 
+                        onChange={(event) => {
+                          setSelectedFishSpeciesSpecCode(null);
+                          field.onChange(event);
+                        }}
+                        onFocus={() => setShowFishTypeSuggestions(true)}
+                        onBlur={() => {
+                          window.setTimeout(() => {
+                            setShowFishTypeSuggestions(false);
+                          }, 120);
+                        }}
                       />
                     </FormControl>
+                    {showFishTypeSuggestions && trimmedFishTypeInput.length > 0 && (
+                      <div className="mt-2 overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#0f0f10] shadow-[0_14px_40px_rgba(0,0,0,0.45)]">
+                        {isFetchingFieldGuideSpecies && fishTypeSuggestions.length === 0 && (
+                          <div className="px-3 py-3 text-sm text-white/70">Searching field guide...</div>
+                        )}
+                        {fishTypeSuggestions.map((suggestion) => (
+                          <button
+                            key={`${suggestion.source}-${suggestion.value}`}
+                            type="button"
+                            className="block w-full border-b border-[#1f1f20] px-3 py-3 text-left transition-colors last:border-b-0 hover:bg-[#171719]"
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              form.setValue("fishType", suggestion.value, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true,
+                              });
+                              setSelectedFishSpeciesSpecCode(suggestion.specCode ?? null);
+                              setShowFishTypeSuggestions(false);
+                            }}
+                          >
+                            <span className="flex items-start justify-between gap-3">
+                              <span className="min-w-0">
+                                <span className="block text-sm font-medium text-white">{suggestion.value}</span>
+                                {suggestion.subtitle && (
+                                  <span className="block text-xs text-white/60">{suggestion.subtitle}</span>
+                                )}
+                              </span>
+                              <span
+                                className={
+                                  suggestion.source === "field-guide"
+                                    ? "rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-emerald-200"
+                                    : "rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-white/60"
+                                }
+                              >
+                                {suggestion.source === "field-guide" ? "Field Guide" : "History"}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                        {!isFetchingFieldGuideSpecies && fishTypeSuggestions.length === 0 && (
+                          <div className="px-3 py-3 text-sm text-white/55">
+                            No species matches found.
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <FormMessage />
-                    <datalist id="fish-type-suggestions">
-                      {fishTypeSuggestions.map((suggestion) => (
-                        <option key={suggestion} value={suggestion} />
-                      ))}
-                    </datalist>
                   </FormItem>
                 )}
               />

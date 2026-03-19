@@ -12,6 +12,7 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
+import { getFieldGuideSpeciesPhotoUrlMap, UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE } from "@/lib/field-guide";
 import { supabase } from "@/lib/supabase";
 import { deleteCatchPhoto, getCatchPhotoStoragePath, resolveCatchPhotoUrl } from "@/lib/storage";
 import type { JournalEntry, Pin, PinWithEntries } from "@/types/domain";
@@ -30,6 +31,7 @@ type EntryRow = {
   pin_id: number;
   user_id: string;
   fish_type: string;
+  fish_species_spec_code: number | null;
   length: number | null;
   weight: number | null;
   lure: string | null;
@@ -74,6 +76,7 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     pinId: row.pin_id,
     userId: row.user_id,
     fishType: row.fish_type,
+    fishSpeciesSpecCode: row.fish_species_spec_code ?? 1,
     length: row.length,
     weight: row.weight,
     lure: row.lure,
@@ -90,6 +93,7 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     leaderLength: row.tackle_leader_length,
     notes: row.notes,
     photoUrl: await resolveCatchPhotoUrl(row.photo_url),
+    speciesPhotoUrl: null,
     dateTime: row.date_time,
     temperature: row.temperature,
     windSpeed: row.wind_speed,
@@ -100,6 +104,34 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     weatherDescription: row.weather_description,
     createdAt: row.created_at,
   };
+}
+
+async function attachSpeciesPhotoFallbacks(entries: JournalEntry[]): Promise<JournalEntry[]> {
+  const specCodesNeedingFallback = Array.from(
+    new Set(
+      entries
+        .filter(
+          (entry) =>
+            !entry.photoUrl &&
+            entry.fishSpeciesSpecCode !== UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE,
+        )
+        .map((entry) => entry.fishSpeciesSpecCode),
+    ),
+  );
+
+  if (specCodesNeedingFallback.length === 0) {
+    return entries;
+  }
+
+  const speciesPhotoUrlMap = await getFieldGuideSpeciesPhotoUrlMap(specCodesNeedingFallback);
+
+  return entries.map((entry) => ({
+    ...entry,
+    speciesPhotoUrl:
+      entry.photoUrl || entry.fishSpeciesSpecCode === UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE
+        ? null
+        : speciesPhotoUrlMap.get(entry.fishSpeciesSpecCode) ?? null,
+  }));
 }
 
 export async function getPinsWithEntries(): Promise<PinWithEntries[]> {
@@ -122,7 +154,9 @@ export async function getPinsWithEntries(): Promise<PinWithEntries[]> {
   }
 
   const pins = (pinsRes.data as PinRow[]).map(mapPin);
-  const entries = await Promise.all((entriesRes.data as EntryRow[]).map(mapEntry));
+  const entries = await attachSpeciesPhotoFallbacks(
+    await Promise.all((entriesRes.data as EntryRow[]).map(mapEntry)),
+  );
 
   const entriesByPin = new Map<number, JournalEntry[]>();
   for (const entry of entries) {
@@ -147,7 +181,9 @@ export async function getEntries(): Promise<JournalEntry[]> {
     throw error;
   }
 
-  return Promise.all((data as EntryRow[]).map(mapEntry));
+  return attachSpeciesPhotoFallbacks(
+    await Promise.all((data as EntryRow[]).map(mapEntry)),
+  );
 }
 
 export async function createPin(input: {
@@ -229,6 +265,7 @@ export async function createEntry(input: {
   pinId: number;
   userId: string;
   fishType: string;
+  fishSpeciesSpecCode: number;
   length?: number;
   weight?: number;
   lure?: string | null;
@@ -258,6 +295,7 @@ export async function createEntry(input: {
     pin_id: input.pinId,
     user_id: input.userId,
     fish_type: input.fishType,
+    fish_species_spec_code: input.fishSpeciesSpecCode,
     length: input.length ?? null,
     weight: input.weight ?? null,
     lure: input.lure ?? null,
@@ -297,7 +335,7 @@ export async function createEntry(input: {
     throw new Error(detailParts || "Failed to create journal entry");
   }
 
-  return await mapEntry(data as EntryRow);
+  return (await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)]))[0] ?? null;
 }
 
 export async function getEntryById(entryId: number): Promise<JournalEntry | null> {
@@ -313,12 +351,13 @@ export async function getEntryById(entryId: number): Promise<JournalEntry | null
   if (!data) {
     return null;
   }
-  return await mapEntry(data as EntryRow);
+  return (await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)]))[0];
 }
 
 export async function updateEntry(input: {
   entryId: number;
   fishType: string;
+  fishSpeciesSpecCode: number;
   length?: number | null;
   weight?: number | null;
   lure?: string | null;
@@ -339,6 +378,7 @@ export async function updateEntry(input: {
 }): Promise<JournalEntry> {
   const payload = {
     fish_type: input.fishType,
+    fish_species_spec_code: input.fishSpeciesSpecCode,
     length: input.length ?? null,
     weight: input.weight ?? null,
     lure: input.lure ?? null,
@@ -368,7 +408,7 @@ export async function updateEntry(input: {
   if (error) {
     throw error;
   }
-  return await mapEntry(data as EntryRow);
+  return (await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)]))[0];
 }
 
 export async function deleteEntryWithPhoto(entryId: number): Promise<void> {
@@ -543,6 +583,7 @@ export interface StatsOverviewData {
 export interface StatsSpeciesDetailData {
   species: string;
   totalCatches: number;
+  fieldGuideSpecCode: number | null;
   topLures: Array<{
     name: string;
     count: number;
@@ -653,6 +694,7 @@ export async function getStatsSpeciesDetail(species: string): Promise<StatsSpeci
   return {
     species: typeof payload.species === "string" ? payload.species : species,
     totalCatches: toSafeNumber(payload.totalCatches),
+    fieldGuideSpecCode: toNumberOrNull(payload.fieldGuideSpecCode),
     topLures: lureRaw
       .map((item) => item as Record<string, unknown>)
       .map((item) => ({
