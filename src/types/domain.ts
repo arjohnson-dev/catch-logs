@@ -35,7 +35,8 @@ export interface JournalEntry {
   fishType: string;
   length?: number | null;
   weight?: number | null;
-  tackle: string;
+  lure?: string | null;
+  bait?: string | null;
   notes?: string | null;
   photoUrl?: string | null;
   dateTime: string;

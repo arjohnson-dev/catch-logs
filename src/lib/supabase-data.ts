@@ -32,7 +32,8 @@ type EntryRow = {
   fish_type: string;
   length: number | null;
   weight: number | null;
-  tackle: string;
+  lure: string | null;
+  bait: string | null;
   notes: string | null;
   photo_url: string | null;
   date_time: string;
@@ -65,7 +66,8 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     fishType: row.fish_type,
     length: row.length,
     weight: row.weight,
-    tackle: row.tackle,
+    lure: row.lure,
+    bait: row.bait,
     notes: row.notes,
     photoUrl: await resolveCatchPhotoUrl(row.photo_url),
     dateTime: row.date_time,
@@ -183,7 +185,8 @@ export async function createEntry(input: {
   fishType: string;
   length?: number;
   weight?: number;
-  tackle: string;
+  lure?: string | null;
+  bait?: string | null;
   notes?: string;
   photoUrl?: string | null;
   dateTime: string;
@@ -201,7 +204,8 @@ export async function createEntry(input: {
     fish_type: input.fishType,
     length: input.length ?? null,
     weight: input.weight ?? null,
-    tackle: input.tackle,
+    lure: input.lure ?? null,
+    bait: input.bait ?? null,
     notes: input.notes ?? null,
     photo_url: input.photoUrl ?? null,
     date_time: new Date(input.dateTime).toISOString(),
@@ -251,7 +255,8 @@ export async function updateEntry(input: {
   fishType: string;
   length?: number | null;
   weight?: number | null;
-  tackle: string;
+  lure?: string | null;
+  bait?: string | null;
   notes?: string | null;
   photoUrl?: string | null;
   dateTime: string;
@@ -260,7 +265,8 @@ export async function updateEntry(input: {
     fish_type: input.fishType,
     length: input.length ?? null,
     weight: input.weight ?? null,
-    tackle: input.tackle,
+    lure: input.lure ?? null,
+    bait: input.bait ?? null,
     notes: input.notes ?? null,
     photo_url: input.photoUrl ?? null,
     date_time: new Date(input.dateTime).toISOString(),
@@ -429,8 +435,12 @@ export interface StatsOverviewData {
     species: string;
     count: number;
   }>;
-  topTackle: Array<{
-    tackle: string;
+  topLures: Array<{
+    name: string;
+    count: number;
+  }>;
+  topBaits: Array<{
+    name: string;
     count: number;
   }>;
 }
@@ -438,8 +448,12 @@ export interface StatsOverviewData {
 export interface StatsSpeciesDetailData {
   species: string;
   totalCatches: number;
-  topTackle: Array<{
-    tackle: string;
+  topLures: Array<{
+    name: string;
+    count: number;
+  }>;
+  topBaits: Array<{
+    name: string;
     count: number;
   }>;
   conditions: {
@@ -482,7 +496,8 @@ export async function getStatsOverview(): Promise<StatsOverviewData> {
   const personalBestRaw = (payload.personalBest ?? null) as Record<string, unknown> | null;
   const bestLocationRaw = (payload.bestLocation ?? null) as Record<string, unknown> | null;
   const speciesRaw = Array.isArray(payload.speciesBreakdown) ? payload.speciesBreakdown : [];
-  const tackleRaw = Array.isArray(payload.topTackle) ? payload.topTackle : [];
+  const lureRaw = Array.isArray(payload.topLures) ? payload.topLures : [];
+  const baitRaw = Array.isArray(payload.topBaits) ? payload.topBaits : [];
 
   return {
     totalCaught: toSafeNumber(payload.totalCaught),
@@ -511,10 +526,17 @@ export async function getStatsOverview(): Promise<StatsOverviewData> {
         count: toSafeNumber(item.count),
       }))
       .filter((item) => item.count >= 0),
-    topTackle: tackleRaw
+    topLures: lureRaw
       .map((item) => item as Record<string, unknown>)
       .map((item) => ({
-        tackle: typeof item.tackle === "string" ? item.tackle : "Unknown",
+        name: typeof item.name === "string" ? item.name : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+    topBaits: baitRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        name: typeof item.name === "string" ? item.name : "Unknown",
         count: toSafeNumber(item.count),
       }))
       .filter((item) => item.count > 0),
@@ -530,17 +552,25 @@ export async function getStatsSpeciesDetail(species: string): Promise<StatsSpeci
 
   const payload = (data ?? {}) as Record<string, unknown>;
   const conditionsRaw = (payload.conditions ?? null) as Record<string, unknown> | null;
-  const tackleRaw = Array.isArray(payload.topTackle) ? payload.topTackle : [];
+  const lureRaw = Array.isArray(payload.topLures) ? payload.topLures : [];
+  const baitRaw = Array.isArray(payload.topBaits) ? payload.topBaits : [];
   const monthlyRaw = Array.isArray(payload.monthly) ? payload.monthly : [];
   const pointsRaw = Array.isArray(payload.points) ? payload.points : [];
 
   return {
     species: typeof payload.species === "string" ? payload.species : species,
     totalCatches: toSafeNumber(payload.totalCatches),
-    topTackle: tackleRaw
+    topLures: lureRaw
       .map((item) => item as Record<string, unknown>)
       .map((item) => ({
-        tackle: typeof item.tackle === "string" ? item.tackle : "Unknown",
+        name: typeof item.name === "string" ? item.name : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+    topBaits: baitRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        name: typeof item.name === "string" ? item.name : "Unknown",
         count: toSafeNumber(item.count),
       }))
       .filter((item) => item.count > 0),

@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import { uploadCatchPhoto } from "@/lib/storage";
 import { replaceEntryPhoto, updateEntry } from "@/lib/supabase-data";
 import { type JournalEntry } from "@/types/domain";
@@ -32,7 +33,8 @@ const editSchema = z.object({
   fishType: z.string().min(1, "Fish type is required"),
   length: z.number().positive("Length must be greater than 0").optional(),
   weight: z.number().positive("Weight must be greater than 0").optional(),
-  tackle: z.string().min(1, "Tackle is required"),
+  lure: z.string().optional(),
+  bait: z.string().optional(),
   notes: z.string().optional(),
   dateTime: z.string().min(1, "Date and time are required"),
 });
@@ -60,7 +62,8 @@ export default function JournalEntryEditor({ entry, onClose, onComplete }: Journ
       fishType: entry.fishType,
       length: entry.length ?? undefined,
       weight: entry.weight ?? undefined,
-      tackle: entry.tackle ?? "",
+      lure: entry.lure ?? "",
+      bait: entry.bait ?? "",
       notes: entry.notes ?? "",
       dateTime: (() => {
         const date = new Date(entry.dateTime);
@@ -88,7 +91,8 @@ export default function JournalEntryEditor({ entry, onClose, onComplete }: Journ
         fishType: data.fishType,
         length: data.length ?? null,
         weight: data.weight ?? null,
-        tackle: data.tackle,
+        lure: normalizeFishingGearValue(data.lure),
+        bait: normalizeFishingGearValue(data.bait),
         notes: data.notes ?? null,
         photoUrl: nextPhotoUrl,
         dateTime: data.dateTime,
@@ -236,19 +240,35 @@ export default function JournalEntryEditor({ entry, onClose, onComplete }: Journ
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="tackle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Tackle</FormLabel>
-                  <FormControl>
-                    <Input className="field-dark" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="lure"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Lure</FormLabel>
+                    <FormControl>
+                      <Input className="field-dark" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bait"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Bait</FormLabel>
+                    <FormControl>
+                      <Input className="field-dark" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

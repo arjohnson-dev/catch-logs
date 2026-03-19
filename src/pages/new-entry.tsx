@@ -32,7 +32,8 @@ export default function NewEntryPage() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const pinId = parsePinId(params.get("pinId"));
   const isNewPin = params.get("newPin") === "1";
-  const defaultTackle = (params.get("tackle") ?? "").trim();
+  const defaultLure = (params.get("lure") ?? "").trim();
+  const defaultBait = (params.get("bait") ?? "").trim();
 
   if (pinId === null) {
     return (
@@ -70,7 +71,8 @@ export default function NewEntryPage() {
   return (
     <JournalEntryForm
       pinId={pinId}
-      defaultTackle={defaultTackle}
+      defaultLure={defaultLure}
+      defaultBait={defaultBait}
       onClose={handleClose}
       onComplete={handleComplete}
       fullScreen

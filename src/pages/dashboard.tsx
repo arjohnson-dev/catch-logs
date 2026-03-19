@@ -26,9 +26,11 @@ import { moveEntryToNewCoordinates } from "@/lib/supabase-data";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
-  loadSessionTackle,
-  saveSessionTackle,
-} from "@/lib/session-tackle";
+  loadSessionBait,
+  loadSessionLure,
+  saveSessionBait,
+  saveSessionLure,
+} from "@/lib/session-gear";
 import JournalPage from "@/pages/journal";
 import NewEntryPage from "@/pages/new-entry";
 import Settings from "@/pages/settings";
@@ -60,12 +62,16 @@ export default function Dashboard() {
   const [selectedPinId, setSelectedPinId] = useState<number | null>(initialPinIdFromUrl);
   const [showPinSummary, setShowPinSummary] = useState(Boolean(initialPinIdFromUrl));
   const [moveEntryId, setMoveEntryId] = useState<number | null>(initialMoveEntryIdFromUrl);
-  const [sessionTackleByUser, setSessionTackleByUser] = useState<Record<string, string>>({});
+  const [sessionLureByUser, setSessionLureByUser] = useState<Record<string, string>>({});
+  const [sessionBaitByUser, setSessionBaitByUser] = useState<Record<string, string>>({});
   const [isPinDropMode, setIsPinDropMode] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const userId = user?.id ?? null;
-  const sessionTackle = userId
-    ? (sessionTackleByUser[userId] ?? loadSessionTackle(userId))
+  const sessionLure = userId
+    ? (sessionLureByUser[userId] ?? loadSessionLure(userId))
+    : "";
+  const sessionBait = userId
+    ? (sessionBaitByUser[userId] ?? loadSessionBait(userId))
     : "";
   const normalizedPath = (() => {
     if (location === "/auth") return "/";
@@ -81,13 +87,22 @@ export default function Dashboard() {
     }
   }, [initialPinIdFromUrl, initialMoveEntryIdFromUrl]);
 
-  const handleSessionTackleChange = (value: string) => {
+  const handleSessionLureChange = (value: string) => {
     if (!userId) return;
-    setSessionTackleByUser((prev) => ({
+    setSessionLureByUser((prev) => ({
       ...prev,
       [userId]: value,
     }));
-    saveSessionTackle(userId, value);
+    saveSessionLure(userId, value);
+  };
+
+  const handleSessionBaitChange = (value: string) => {
+    if (!userId) return;
+    setSessionBaitByUser((prev) => ({
+      ...prev,
+      [userId]: value,
+    }));
+    saveSessionBait(userId, value);
   };
 
   const handlePinSelect = (pinId: number, isNew = false) => {
@@ -97,8 +112,11 @@ export default function Dashboard() {
         pinId: String(pinId),
         newPin: "1",
       });
-      if (sessionTackle.trim()) {
-        params.set("tackle", sessionTackle.trim());
+      if (sessionLure.trim()) {
+        params.set("lure", sessionLure.trim());
+      }
+      if (sessionBait.trim()) {
+        params.set("bait", sessionBait.trim());
       }
       navigate(`/entries/new?${params.toString()}`);
     } else {
@@ -112,8 +130,11 @@ export default function Dashboard() {
     const params = new URLSearchParams({
       pinId: String(selectedPinId),
     });
-    if (sessionTackle.trim()) {
-      params.set("tackle", sessionTackle.trim());
+    if (sessionLure.trim()) {
+      params.set("lure", sessionLure.trim());
+    }
+    if (sessionBait.trim()) {
+      params.set("bait", sessionBait.trim());
     }
     navigate(`/entries/new?${params.toString()}`);
   };
@@ -225,8 +246,10 @@ export default function Dashboard() {
             onPinDropModeChange={setIsPinDropMode}
             moveEntryId={moveEntryId}
             onEntryMove={handleEntryMove}
-            sessionTackle={sessionTackle}
-            onSessionTackleChange={handleSessionTackleChange}
+            sessionLure={sessionLure}
+            sessionBait={sessionBait}
+            onSessionLureChange={handleSessionLureChange}
+            onSessionBaitChange={handleSessionBaitChange}
           />
         </div>
       </div>

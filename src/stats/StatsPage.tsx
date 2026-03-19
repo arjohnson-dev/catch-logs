@@ -8,7 +8,7 @@ import { getStatsOverview } from "@/lib/supabase-data";
 import SpeciesBreakdownChart from "@/stats/SpeciesBreakdownChart";
 import SpeciesDetailPage from "@/stats/SpeciesDetailPage";
 import StatsSummaryCards from "@/stats/StatsSummaryCards";
-import TopTackleChart from "@/stats/TopTackleChart";
+import TopNamedCountChart from "@/stats/TopNamedCountChart";
 
 export default function StatsPage() {
   const [selectedSpecies, setSelectedSpecies] = useState<string | null>(null);
@@ -88,7 +88,8 @@ export default function StatsPage() {
                       totalCaught={data.totalCaught}
                       onSelectSpecies={setSelectedSpecies}
                     />
-                    <TopTackleChart rows={data.topTackle} title="Most Successful Tackle" />
+                    <TopNamedCountChart rows={data.topLures} title="Most Successful Lures" emptyLabel="No lure data available yet." />
+                    <TopNamedCountChart rows={data.topBaits} title="Most Successful Baits" emptyLabel="No bait data available yet." />
                   </>
                 )}
               </>

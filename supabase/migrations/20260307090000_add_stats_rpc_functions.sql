@@ -24,7 +24,8 @@ with base_entries as (
     e.fish_type,
     e.length,
     e.weight,
-    e.tackle,
+    e.lure,
+    e.bait,
     e.date_time,
     e.pin_id
   from public.journal_entries e
@@ -65,14 +66,23 @@ species_breakdown as (
   group by e.fish_type
   order by count desc, species asc
 ),
-top_tackle as (
+top_lures as (
   select
-    e.tackle,
+    e.lure as name,
     count(*)::int as count
   from base_entries e
-  where nullif(trim(e.tackle), '') is not null
-  group by e.tackle
-  order by count desc, e.tackle asc
+  where nullif(trim(e.lure), '') is not null
+  group by e.lure
+  order by count desc, e.lure asc
+),
+top_baits as (
+  select
+    e.bait as name,
+    count(*)::int as count
+  from base_entries e
+  where nullif(trim(e.bait), '') is not null
+  group by e.bait
+  order by count desc, e.bait asc
 )
 select jsonb_build_object(
   'totalCaught',
@@ -124,17 +134,31 @@ select jsonb_build_object(
     ),
     '[]'::jsonb
   ),
-  'topTackle',
+  'topLures',
   coalesce(
     (
       select jsonb_agg(
         jsonb_build_object(
-          'tackle', t.tackle,
+          'name', t.name,
           'count', t.count
         )
-        order by t.count desc, t.tackle asc
+        order by t.count desc, t.name asc
       )
-      from top_tackle t
+      from top_lures t
+    ),
+    '[]'::jsonb
+  ),
+  'topBaits',
+  coalesce(
+    (
+      select jsonb_agg(
+        jsonb_build_object(
+          'name', b.name,
+          'count', b.count
+        )
+        order by b.count desc, b.name asc
+      )
+      from top_baits b
     ),
     '[]'::jsonb
   )
@@ -152,7 +176,8 @@ with target_species as (
 ),
 filtered as (
   select
-    e.tackle,
+    e.lure,
+    e.bait,
     e.length,
     e.weight,
     e.temperature,
@@ -167,14 +192,23 @@ total as (
   select count(*)::int as catches
   from filtered
 ),
-top_tackle as (
+top_lures as (
   select
-    f.tackle,
+    f.lure as name,
     count(*)::int as count
   from filtered f
-  where nullif(trim(f.tackle), '') is not null
-  group by f.tackle
-  order by count desc, f.tackle asc
+  where nullif(trim(f.lure), '') is not null
+  group by f.lure
+  order by count desc, f.lure asc
+),
+top_baits as (
+  select
+    f.bait as name,
+    count(*)::int as count
+  from filtered f
+  where nullif(trim(f.bait), '') is not null
+  group by f.bait
+  order by count desc, f.bait asc
 ),
 weather_rows as (
   select
@@ -234,17 +268,31 @@ select jsonb_build_object(
   (select s.species from target_species s),
   'totalCatches',
   coalesce((select t.catches from total t), 0),
-  'topTackle',
+  'topLures',
   coalesce(
     (
       select jsonb_agg(
         jsonb_build_object(
-          'tackle', tt.tackle,
-          'count', tt.count
+          'name', tl.name,
+          'count', tl.count
         )
-        order by tt.count desc, tt.tackle asc
+        order by tl.count desc, tl.name asc
       )
-      from top_tackle tt
+      from top_lures tl
+    ),
+    '[]'::jsonb
+  ),
+  'topBaits',
+  coalesce(
+    (
+      select jsonb_agg(
+        jsonb_build_object(
+          'name', tb.name,
+          'count', tb.count
+        )
+        order by tb.count desc, tb.name asc
+      )
+      from top_baits tb
     ),
     '[]'::jsonb
   ),

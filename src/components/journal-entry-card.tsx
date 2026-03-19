@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { getTemperatureIconColorClass } from "@/lib/temperature-ui";
 import { formatVisibility, getWeatherVisual, getWindDirection } from "@/lib/weather-ui";
 import { cn } from "@/lib/utils";
+import { formatFishingSetup } from "@/lib/fishing-gear";
 import type { JournalEntry } from "@/types/domain";
 
 export type JournalEntryCardAction = {
@@ -60,6 +61,7 @@ export default function JournalEntryCard({
     Boolean(entry.weatherCondition) ||
     hasValue(entry.cloudCoverage) ||
     hasValue(entry.visibility);
+  const fishingSetup = formatFishingSetup(entry);
 
   return (
     <div className={cn("surface-card surface-card-hover p-3", className)}>
@@ -85,7 +87,7 @@ export default function JournalEntryCard({
             </div>
             <div className="flex items-center space-x-1 min-w-0">
               <GiFishingHook className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{entry.tackle || "-"}</span>
+              <span className="truncate">{fishingSetup || "-"}</span>
             </div>
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex items-center space-x-1">

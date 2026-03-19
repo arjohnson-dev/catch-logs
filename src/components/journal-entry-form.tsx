@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import { uploadCatchPhoto } from "@/lib/storage";
 import { useAuth } from "@/hooks/useAuth";
 import { createEntry, getEntries, getPinById } from "@/lib/supabase-data";
@@ -32,7 +33,8 @@ const entrySchema = z.object({
   fishType: z.string().min(1, "Fish type is required"),
   length: z.number().positive("Length must be greater than 0").optional(),
   weight: z.number().positive("Weight must be greater than 0").optional(),
-  tackle: z.string().optional(),
+  lure: z.string().optional(),
+  bait: z.string().optional(),
   notes: z.string().optional(),
   dateTime: z.string().min(1, "Date and time are required"),
 });
@@ -41,14 +43,22 @@ type EntryFormData = z.infer<typeof entrySchema>;
 
 interface JournalEntryFormProps {
   pinId: number;
-  defaultTackle?: string;
+  defaultLure?: string;
+  defaultBait?: string;
   onClose: () => void;
   onComplete: () => void;
   fullScreen?: boolean;
 }
 
 
-export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, onComplete, fullScreen = false }: JournalEntryFormProps) {
+export default function JournalEntryForm({
+  pinId,
+  defaultLure = "",
+  defaultBait = "",
+  onClose,
+  onComplete,
+  fullScreen = false,
+}: JournalEntryFormProps) {
   const { user } = useAuth();
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -66,7 +76,8 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
       fishType: "",
       length: undefined,
       weight: undefined,
-      tackle: defaultTackle,
+      lure: defaultLure,
+      bait: defaultBait,
       notes: "",
       dateTime: (() => {
         const now = new Date();
@@ -78,8 +89,9 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
   });
 
   useEffect(() => {
-    form.setValue("tackle", defaultTackle);
-  }, [defaultTackle, form]);
+    form.setValue("lure", defaultLure);
+    form.setValue("bait", defaultBait);
+  }, [defaultBait, defaultLure, form]);
 
   const fishTypeInput = useWatch({
     control: form.control,
@@ -99,11 +111,6 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
     mutationFn: async (data: EntryFormData) => {
       if (!user?.id) {
         throw new Error("You must be logged in to save an entry.");
-      }
-
-      const chosenTackle = (data.tackle || "").trim();
-      if (!chosenTackle) {
-        throw new Error("Please enter a tackle value before saving this entry.");
       }
 
       const pin = await getPinById(pinId);
@@ -129,7 +136,8 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
         fishType: data.fishType,
         length: data.length,
         weight: data.weight,
-        tackle: chosenTackle,
+        lure: normalizeFishingGearValue(data.lure),
+        bait: normalizeFishingGearValue(data.bait),
         notes: data.notes,
         photoUrl,
         dateTime: data.dateTime,
@@ -418,24 +426,45 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="tackle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Tackle</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Wacky rig, spinnerbait, jerkbait..."
-                      className="field-dark"
-                      {...field}
-                      value={field.value || ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="lure"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Lure</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Spinnerbait, jerkbait, jig..."
+                        className="field-dark"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bait"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Bait</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Minnow, worm, craw..."
+                        className="field-dark"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

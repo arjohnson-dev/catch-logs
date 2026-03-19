@@ -1,16 +1,25 @@
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { StatsOverviewData } from "@/lib/supabase-data";
 
-type Props = {
-  rows: StatsOverviewData["topTackle"];
-  title?: string;
+type Row = {
+  name: string;
+  count: number;
 };
 
-export default function TopTackleChart({ rows, title = "Top Tackle" }: Props) {
+type Props = {
+  rows: Row[];
+  title: string;
+  emptyLabel?: string;
+};
+
+export default function TopNamedCountChart({
+  rows,
+  title,
+  emptyLabel = "No data available yet.",
+}: Props) {
   const data = rows.slice(0, 8).map((row) => ({
     ...row,
-    shortName: row.tackle.length > 28 ? `${row.tackle.slice(0, 28)}...` : row.tackle,
+    shortName: row.name.length > 28 ? `${row.name.slice(0, 28)}...` : row.name,
   }));
 
   return (
@@ -32,10 +41,10 @@ export default function TopTackleChart({ rows, title = "Top Tackle" }: Props) {
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
-                  const row = payload[0].payload as { tackle: string; count: number };
+                  const row = payload[0].payload as Row;
                   return (
                     <div className="stats-tooltip">
-                      <p className="stats-wrap">{row.tackle}</p>
+                      <p className="stats-wrap">{row.name}</p>
                       <p className="stats-tooltip-value">{row.count} catches</p>
                     </div>
                   );
@@ -43,16 +52,15 @@ export default function TopTackleChart({ rows, title = "Top Tackle" }: Props) {
               />
               <Bar dataKey="count" radius={[3, 3, 3, 3]}>
                 {data.map((row, index) => (
-                  <Cell key={row.tackle} fill={index === 0 ? "#3b82f6" : "#2563eb"} fillOpacity={1 - index * 0.06} />
+                  <Cell key={row.name} fill={index === 0 ? "#3b82f6" : "#2563eb"} fillOpacity={1 - index * 0.06} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="stats-empty-inline">No tackle data available yet.</p>
+          <p className="stats-empty-inline">{emptyLabel}</p>
         )}
       </CardContent>
     </Card>
   );
 }
-

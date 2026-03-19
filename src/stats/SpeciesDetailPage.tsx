@@ -6,7 +6,7 @@ import { getStatsSpeciesDetail } from "@/lib/supabase-data";
 import SpeciesConditionsCard from "@/stats/SpeciesConditionsCard";
 import SpeciesMonthlyChart from "@/stats/SpeciesMonthlyChart";
 import SpeciesTimeScatter from "@/stats/SpeciesTimeScatter";
-import TopTackleChart from "@/stats/TopTackleChart";
+import TopNamedCountChart from "@/stats/TopNamedCountChart";
 import { getSpeciesColor } from "@/stats/helpers";
 
 type Props = {
@@ -51,7 +51,8 @@ export default function SpeciesDetailPage({ species }: Props) {
         <FaFish className="stats-species-header-icon" style={{ color }} />
       </div>
 
-      <TopTackleChart rows={data.topTackle} title="Top Tackle" />
+      <TopNamedCountChart rows={data.topLures} title="Top Lures" emptyLabel="No lure data available yet." />
+      <TopNamedCountChart rows={data.topBaits} title="Top Baits" emptyLabel="No bait data available yet." />
       <SpeciesConditionsCard conditions={data.conditions} />
       <SpeciesMonthlyChart monthly={data.monthly} color={color} />
       <SpeciesTimeScatter points={data.points} color={color} />

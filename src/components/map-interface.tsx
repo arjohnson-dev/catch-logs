@@ -25,6 +25,8 @@ import {
 import L from "leaflet";
 import {
   FaBookBookmark,
+  FaChevronDown,
+  FaChevronUp,
   FaCrosshairs,
   FaLocationArrow,
   FaMapLocationDot,
@@ -36,6 +38,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Pin, type PinWithEntries } from "@/types/domain";
 import { useToast } from "@/hooks/use-toast";
+import { normalizeFishingGearValue } from "@/lib/fishing-gear";
+import {
+  loadSessionGearVisibility,
+  saveSessionGearVisibility,
+} from "@/lib/session-gear";
 import { createPin, getPinsWithEntries } from "@/lib/supabase-data";
 import { getEntries } from "@/lib/supabase-data";
 import { useAuth } from "@/hooks/useAuth";
@@ -81,8 +88,10 @@ interface MapInterfaceProps {
   onPinDropModeChange: (mode: boolean) => void;
   moveEntryId?: number | null;
   onEntryMove?: (entryId: number, lat: number, lng: number) => void;
-  sessionTackle: string;
-  onSessionTackleChange: (value: string) => void;
+  sessionLure: string;
+  sessionBait: string;
+  onSessionLureChange: (value: string) => void;
+  onSessionBaitChange: (value: string) => void;
 }
 
 function MapClickHandler({
@@ -188,8 +197,10 @@ export default function MapInterface({
   onPinDropModeChange,
   moveEntryId,
   onEntryMove,
-  sessionTackle,
-  onSessionTackleChange,
+  sessionLure,
+  sessionBait,
+  onSessionLureChange,
+  onSessionBaitChange,
 }: MapInterfaceProps) {
   const mapRef = useRef<L.Map | null>(null);
   const { toast } = useToast();
@@ -200,6 +211,7 @@ export default function MapInterface({
   );
   const hasCenteredOnInitialLocation = useRef(false);
   const [showPinMenu, setShowPinMenu] = useState(false);
+  const [isGearPanelVisible, setIsGearPanelVisible] = useState(true);
   const initialCenter: [number, number] = [46.8772, -96.7898];
 
   const { data: pins = [], isLoading } = useQuery<PinWithEntries[]>({
@@ -211,17 +223,30 @@ export default function MapInterface({
     queryFn: getEntries,
   });
 
-  const tackleSuggestions = Array.from(
+  const lureSuggestions = Array.from(
     new Set(
       entries
-        .map((entry) => entry.tackle?.trim())
-        .filter((tackle): tackle is string =>
-          Boolean(tackle && tackle.length > 0),
+        .map((entry) => normalizeFishingGearValue(entry.lure))
+        .filter((lure): lure is string =>
+          Boolean(lure && lure.length > 0),
         ),
     ),
   )
-    .filter((tackle) =>
-      tackle.toLowerCase().includes(sessionTackle.toLowerCase()),
+    .filter((lure) =>
+      lure.toLowerCase().includes(sessionLure.toLowerCase()),
+    )
+    .slice(0, 8);
+  const baitSuggestions = Array.from(
+    new Set(
+      entries
+        .map((entry) => normalizeFishingGearValue(entry.bait))
+        .filter((bait): bait is string =>
+          Boolean(bait && bait.length > 0),
+        ),
+    ),
+  )
+    .filter((bait) =>
+      bait.toLowerCase().includes(sessionBait.toLowerCase()),
     )
     .slice(0, 8);
 
@@ -367,6 +392,21 @@ export default function MapInterface({
     MAP_BASE_LAYERS.find((layer) => layer.id === DEFAULT_MAP_BASE_LAYER) ??
     MAP_BASE_LAYERS[0];
 
+  useEffect(() => {
+    if (!user?.id) {
+      setIsGearPanelVisible(true);
+      return;
+    }
+
+    setIsGearPanelVisible(loadSessionGearVisibility(user.id));
+  }, [user?.id]);
+
+  const handleGearPanelVisibilityChange = (visible: boolean) => {
+    setIsGearPanelVisible(visible);
+    if (!user?.id) return;
+    saveSessionGearVisibility(user.id, visible);
+  };
+
   if (isLoading) {
     return (
       <div className="map-loading">
@@ -490,23 +530,62 @@ export default function MapInterface({
         </Button>
       </div>
 
-      <div className="map-tackle-panel">
-        <label className="map-tackle-label" htmlFor="session-tackle-input">
-          Tackle
-        </label>
-        <Input
-          id="session-tackle-input"
-          list="session-tackle-suggestions"
-          placeholder="What are you fishing with?"
-          value={sessionTackle}
-          onChange={(e) => onSessionTackleChange(e.target.value)}
-          className="map-tackle-input"
-        />
-        <datalist id="session-tackle-suggestions">
-          {tackleSuggestions.map((suggestion) => (
-            <option key={suggestion} value={suggestion} />
-          ))}
-        </datalist>
+      <div className={`map-tackle-panel ${isGearPanelVisible ? "" : "map-tackle-panel-collapsed"}`}>
+        <div className="map-tackle-header">
+          <div>
+            <p className="map-tackle-title">Gear</p>
+            {isGearPanelVisible && (
+              <p className="map-tackle-subtitle">Set quick defaults for your next entry</p>
+            )}
+          </div>
+          <button
+            type="button"
+            className="map-tackle-toggle"
+            onClick={() => handleGearPanelVisibilityChange(!isGearPanelVisible)}
+            aria-expanded={isGearPanelVisible}
+            aria-controls="map-gear-panel-body"
+          >
+            <span>{isGearPanelVisible ? "Hide" : "Gear"}</span>
+            {isGearPanelVisible ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
+          </button>
+        </div>
+
+        {isGearPanelVisible && (
+          <div id="map-gear-panel-body">
+            <label className="map-tackle-label" htmlFor="session-lure-input">
+              Lure
+            </label>
+            <Input
+              id="session-lure-input"
+              list="session-lure-suggestions"
+              placeholder="What lure are you using?"
+              value={sessionLure}
+              onChange={(e) => onSessionLureChange(e.target.value)}
+              className="map-tackle-input"
+            />
+            <datalist id="session-lure-suggestions">
+              {lureSuggestions.map((suggestion) => (
+                <option key={suggestion} value={suggestion} />
+              ))}
+            </datalist>
+            <label className="map-tackle-label map-tackle-label-secondary" htmlFor="session-bait-input">
+              Bait
+            </label>
+            <Input
+              id="session-bait-input"
+              list="session-bait-suggestions"
+              placeholder="Optional bait"
+              value={sessionBait}
+              onChange={(e) => onSessionBaitChange(e.target.value)}
+              className="map-tackle-input"
+            />
+            <datalist id="session-bait-suggestions">
+              {baitSuggestions.map((suggestion) => (
+                <option key={suggestion} value={suggestion} />
+              ))}
+            </datalist>
+          </div>
+        )}
       </div>
 
       {/* Add Pin Menu - positioned for mobile viewport */}

@@ -374,8 +374,50 @@ a {
   backdrop-filter: blur(8px);
 }
 
+.map-tackle-panel-collapsed {
+  width: auto;
+  max-width: calc(100% - 96px);
+}
+
+.map-tackle-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.map-tackle-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.map-tackle-subtitle {
+  margin: 3px 0 0;
+  font-size: 0.72rem;
+  color: #9ca3af;
+}
+
+.map-tackle-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.92);
+  color: #f9fafb;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .map-tackle-label {
   display: block;
+  margin-top: 10px;
   margin-bottom: 6px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -392,6 +434,10 @@ a {
 
 .map-tackle-input::placeholder {
   color: #9ca3af !important;
+}
+
+.map-tackle-label-secondary {
+  margin-top: 10px;
 }
 
 .map-mode-indicator p {
