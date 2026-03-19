@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaFishFins } from "react-icons/fa6";
-import { getSpeciesImageUrl } from "@/lib/field-guide";
+import { getFishBaseImageReferenceUrl, getSpeciesImageUrl } from "@/lib/field-guide";
 import type { FishSpeciesImage } from "@/types/field-guide";
 
 function getFallbackAltText(commonName: string | null, scientificName: string) {
@@ -11,22 +11,34 @@ export function SpeciesImage({
   image,
   commonName,
   scientificName,
+  imageReference,
   className,
   imgClassName,
   fallbackClassName,
   priority = false,
+  onRenderStateChange,
 }: {
   image: FishSpeciesImage | null;
   commonName: string | null;
   scientificName: string;
+  imageReference?: string | null;
   className?: string;
   imgClassName?: string;
   fallbackClassName?: string;
   priority?: boolean;
+  onRenderStateChange?: (state: "image" | "fallback") => void;
 }) {
-  const [didFail, setDidFail] = useState(false);
-  const imageUrl = didFail ? null : getSpeciesImageUrl(image);
+  const imageKey = image?.id ?? image?.externalUrl ?? imageReference ?? null;
+  const [failedImageKey, setFailedImageKey] = useState<string | null>(null);
+  const didFail = imageKey !== null && failedImageKey === imageKey;
+  const imageUrl = didFail
+    ? null
+    : getSpeciesImageUrl(image) ?? getFishBaseImageReferenceUrl(imageReference);
   const altText = image?.altText ?? getFallbackAltText(commonName, scientificName);
+
+  useEffect(() => {
+    onRenderStateChange?.(imageUrl ? "image" : "fallback");
+  }, [imageUrl, onRenderStateChange]);
 
   return (
     <div className={className}>
@@ -37,7 +49,15 @@ export function SpeciesImage({
           className={imgClassName}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
-          onError={() => setDidFail(true)}
+          onError={() => {
+            console.warn("Species image failed to load; showing fallback.", {
+              speciesName: commonName ?? scientificName,
+              imageUrl,
+              sourceUrl: image?.sourceUrl ?? null,
+              imageReference: imageReference ?? null,
+            });
+            setFailedImageKey(imageKey);
+          }}
         />
       ) : (
         <div className={fallbackClassName} aria-hidden="true">

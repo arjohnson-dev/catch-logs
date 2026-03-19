@@ -10,7 +10,6 @@ export interface FishSpeciesImage {
   speciesId: number;
   sourceName: string | null;
   sourceUrl: string | null;
-  storagePath: string | null;
   externalUrl: string | null;
   licenseType: string | null;
   copyrightHolder: string | null;
@@ -33,6 +32,27 @@ export interface FishGuideStructuredSection {
   }>;
 }
 
+export interface AiSummarySource {
+  source: string;
+  type: "internal" | "trusted_web" | string;
+  key?: string;
+  url?: string | null;
+}
+
+export interface GenerateSpeciesSummaryResponse {
+  ok: boolean;
+  cached?: boolean;
+  summary?: string;
+  sources?: AiSummarySource[];
+  species?: {
+    spec_code: number;
+    slug: string;
+    scientific_name: string;
+    canonical_common_name: string | null;
+  };
+  error?: string;
+}
+
 export interface FishSpeciesListItem {
   specCode: number;
   slug: string;
@@ -47,7 +67,6 @@ export interface FishSpeciesListItem {
   environment: FishEnvironment;
   environmentType: string | null;
   browseTags: string[];
-  generalSummary: string | null;
   identificationSummary: string | null;
   habitatSummary: string | null;
   behaviorSummary: string | null;

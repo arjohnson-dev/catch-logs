@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ImageAttribution } from "@/components/image-attribution";
+import { SpeciesAiSummaryCard } from "@/components/species-ai-summary-card";
 import { SpeciesImage } from "@/components/species-image";
 import { useUnitPreference } from "@/hooks/use-unit-preference";
 import {
@@ -107,11 +108,10 @@ function formatTagLabel(value: string) {
     .join(" ");
 }
 
-function getSpeciesSummaryPreview(species: FishSpeciesListItem) {
+function getSpeciesSummaryPreview(species: FishSpeciesListItem | FishSpeciesDetail) {
   return (
-    species.generalSummary ??
-    species.habitatSummary ??
     species.identificationSummary ??
+    species.habitatSummary ??
     species.behaviorSummary ??
     species.anglerNotes ??
     species.distributionSummary
@@ -249,6 +249,7 @@ function ResourceSpeciesCard({
             image={species.primaryImage}
             commonName={species.canonicalCommonName}
             scientificName={species.scientificName}
+            imageReference={species.imageReference}
             className="species-image-shell species-image-shell-card"
             imgClassName="species-image-media"
             fallbackClassName="species-image-fallback species-image-fallback-card"
@@ -385,16 +386,20 @@ function DetailHeader({
   isFavorite: boolean;
   onToggleFavorite: () => void;
 }) {
+  const [heroImageState, setHeroImageState] = useState<"image" | "fallback">("fallback");
+
   return (
     <Card className="resources-card resources-hero-card surface-card">
       <SpeciesImage
         image={species.primaryImage}
         commonName={species.canonicalCommonName}
         scientificName={species.scientificName}
+        imageReference={species.imageReference}
         className="species-image-shell species-image-shell-hero"
         imgClassName="species-image-media"
         fallbackClassName="species-image-fallback species-image-fallback-hero"
         priority
+        onRenderStateChange={setHeroImageState}
       />
       <CardContent className="resources-species-hero resources-species-hero-body">
         <div className="resources-species-copy">
@@ -422,11 +427,11 @@ function DetailHeader({
             {species.scopeHabitat && <span className="resources-pill">{species.scopeHabitat}</span>}
             {species.browseTags.map((tag) => (
               <span key={tag} className="resources-pill">
-              {formatTagLabel(tag)}
+                {formatTagLabel(tag)}
               </span>
             ))}
           </div>
-          <ImageAttribution image={species.primaryImage} />
+          {heroImageState === "image" && <ImageAttribution image={species.primaryImage} />}
         </div>
       </CardContent>
     </Card>
@@ -463,12 +468,8 @@ function SpeciesDetailPage({
     species.habitatSummary,
     species.identificationSummary,
   );
-  const showBehaviorSection = shouldRenderSection(
-    species.behaviorSummary,
-    species.generalSummary,
-  );
+  const showBehaviorSection = shouldRenderSection(species.behaviorSummary);
   const showDietSection = shouldRenderSection(species.dietSummary);
-  const generalSummary = formatSummaryText(species.generalSummary, unitSystem);
   const distributionSummary = formatSummaryText(species.distributionSummary, unitSystem);
   const nativeRegionSummary = formatSummaryText(species.nativeRegionSummary, unitSystem);
   const identificationSummary = formatSummaryText(species.identificationSummary, unitSystem);
@@ -476,6 +477,7 @@ function SpeciesDetailPage({
   const behaviorSummary = formatSummaryText(species.behaviorSummary, unitSystem);
   const dietSummary = formatSummaryText(species.dietSummary, unitSystem);
   const anglerNotes = formatSummaryText(species.anglerNotes, unitSystem);
+  const fallbackSummary = formatSummaryText(getSpeciesSummaryPreview(species), unitSystem);
 
   return (
     <div className="page-scroll">
@@ -494,6 +496,11 @@ function SpeciesDetailPage({
             species={species}
             isFavorite={isFavorite}
             onToggleFavorite={onToggleFavorite}
+          />
+
+          <SpeciesAiSummaryCard
+            slug={species.slug}
+            fallbackSummary={fallbackSummary}
           />
 
           <SpeciesSection title="Overview">
@@ -563,14 +570,6 @@ function SpeciesDetailPage({
                     <strong>Maximum weight:</strong> {renderWeight(species.maxWeightG, unitSystem)}
                   </p>
                 )}
-              </div>
-            </SpeciesSection>
-          )}
-
-          {generalSummary && (
-            <SpeciesSection title="General Summary">
-              <div className="resources-detail-list">
-                <p>{generalSummary}</p>
               </div>
             </SpeciesSection>
           )}
@@ -686,6 +685,7 @@ export default function FieldGuide() {
       getFieldGuideSpeciesList({
         search: trimmedSearch,
       }),
+    enabled: trimmedSearch.length > 0,
   });
 
   const speciesDetailQuery = useQuery({
@@ -1037,9 +1037,11 @@ export default function FieldGuide() {
                     ? "Sign in to access bookmarks"
                     : isFavoritesRoute && favoriteSpeciesListQuery.isLoading
                       ? "Loading bookmarks..."
-                      : speciesListQuery.isLoading && !isFavoritesRoute
-                        ? "Loading active species..."
-                        : `${isFavoritesRoute ? displayedFavoriteSpecies.length : filteredSpecies.length} species ready to browse`}
+                        : speciesListQuery.isLoading && !isFavoritesRoute
+                          ? "Loading active species..."
+                        : !isFavoritesRoute && trimmedSearch.length === 0
+                          ? "Start typing to search the field guide"
+                          : `${isFavoritesRoute ? displayedFavoriteSpecies.length : filteredSpecies.length} species ready to browse`}
                 </p>
               </div>
             </div>
@@ -1092,6 +1094,18 @@ export default function FieldGuide() {
                       {isFavoritesRoute
                         ? "Your saved species aren't available right now."
                         : "The field guide is having trouble reaching Supabase right now."}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : !isFavoritesRoute && trimmedSearch.length === 0 ? (
+              <Card className="resources-card surface-card">
+                <CardContent className="resources-empty-state">
+                  <FaMagnifyingGlass size={20} />
+                  <div>
+                    <h2 className="resources-empty-title">Search the field guide</h2>
+                    <p className="resources-empty-copy">
+                      Start typing a species name to see matching results.
                     </p>
                   </div>
                 </CardContent>

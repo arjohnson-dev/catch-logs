@@ -1,5 +1,9 @@
 import type { FishSpeciesImage } from "@/types/field-guide";
 
+function isHttpUrl(value: string | null | undefined) {
+  return Boolean(value && /^https?:\/\//i.test(value));
+}
+
 function getAttributionLabel(image: FishSpeciesImage) {
   return (
     image.attributionText ??
@@ -21,18 +25,23 @@ export function ImageAttribution({
   }
 
   const attributionLabel = getAttributionLabel(image);
-  const sourceHref = image.sourceUrl;
+  const sourceHref = isHttpUrl(image.sourceUrl) ? image.sourceUrl : null;
+  const showSourceName = Boolean(image.sourceName && attributionLabel !== image.sourceName);
 
   if (!attributionLabel && !sourceHref) {
     return null;
   }
 
   return (
-    <div className={compact ? "species-image-attribution species-image-attribution-compact" : "species-image-attribution"}>
+    <div
+      className={
+        compact
+          ? "species-image-attribution species-image-attribution-compact"
+          : "species-image-attribution"
+      }
+    >
       {attributionLabel && <span>{attributionLabel}</span>}
-      {image.sourceName && attributionLabel !== image.sourceName && (
-        <span>{image.sourceName}</span>
-      )}
+      {showSourceName && <span>{image.sourceName}</span>}
       {sourceHref && (
         <a
           href={sourceHref}

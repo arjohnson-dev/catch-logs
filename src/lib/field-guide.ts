@@ -23,7 +23,6 @@ type FieldGuideSpeciesRow = {
   search_aliases?: JsonValue;
   reproduction?: JsonValue;
   spawning?: JsonValue;
-  general_summary?: string | null;
   identification_summary?: string | null;
   habitat_summary?: string | null;
   behavior_summary?: string | null;
@@ -47,7 +46,6 @@ type FieldGuideSpeciesImageRow = {
   species_id: number | string | null;
   source_name?: string | null;
   source_url?: string | null;
-  storage_path?: string | null;
   external_url?: string | null;
   license_type?: string | null;
   copyright_holder?: string | null;
@@ -72,7 +70,6 @@ const FIELD_GUIDE_LIST_COLUMNS = [
   "alternate_common_names",
   "browse_tags",
   "search_aliases",
-  "general_summary",
   "distribution_summary",
   "family",
   "image_reference",
@@ -86,7 +83,6 @@ const FIELD_GUIDE_PRIMARY_IMAGE_COLUMNS = [
   "species_id",
   "source_name",
   "source_url",
-  "storage_path",
   "external_url",
   "license_type",
   "copyright_holder",
@@ -100,10 +96,6 @@ const FIELD_GUIDE_PRIMARY_IMAGE_COLUMNS = [
   "status",
   "is_active",
 ].join(",");
-const SPECIES_IMAGE_BUCKET =
-  import.meta.env.VITE_SUPABASE_SPECIES_IMAGE_BUCKET ??
-  import.meta.env.VITE_SUPABASE_SPECIES_IMAGES_BUCKET ??
-  null;
 let speciesImagesAccessUnavailable = false;
 
 function decodeNumericHtmlEntities(value: string) {
@@ -316,7 +308,6 @@ function mapSpeciesRow(row: FieldGuideSpeciesRow): FishSpeciesDetail {
     environmentType: coerceString(row.environment_type),
     environment: toEnvironment(row, browseTags),
     browseTags,
-    generalSummary: coerceString(row.general_summary),
     identificationSummary: coerceString(row.identification_summary),
     habitatSummary: coerceString(row.habitat_summary),
     behaviorSummary: coerceString(row.behavior_summary),
@@ -354,7 +345,6 @@ function mapSpeciesImageRow(row: FieldGuideSpeciesImageRow): FishSpeciesImage | 
     speciesId: toSpecCode(row.species_id),
     sourceName: coerceString(row.source_name),
     sourceUrl: coerceString(row.source_url),
-    storagePath: coerceString(row.storage_path),
     externalUrl: coerceString(row.external_url),
     licenseType: coerceString(row.license_type),
     copyrightHolder: coerceString(row.copyright_holder),
@@ -374,6 +364,20 @@ function isHttpUrl(value: string | null | undefined) {
   return Boolean(value && /^https?:\/\//i.test(value));
 }
 
+function isFishBaseImageReference(value: string | null | undefined) {
+  return Boolean(value && /^[A-Za-z0-9_-]+\.(gif|jpe?g|png|webp)$/i.test(value));
+}
+
+export function getFishBaseImageReferenceUrl(
+  imageReference: string | null | undefined,
+): string | null {
+  if (!isFishBaseImageReference(imageReference)) {
+    return null;
+  }
+
+  return `https://www.fishbase.se/images/species/${imageReference}`;
+}
+
 async function getApprovedPrimaryImageMap(specCodes: number[]) {
   if (speciesImagesAccessUnavailable) {
     return new Map<number, FishSpeciesImage>();
@@ -385,7 +389,6 @@ async function getApprovedPrimaryImageMap(specCodes: number[]) {
   }
 
   const { data, error } = await supabase
-    .schema("field-guide")
     .from("species_primary_images")
     .select(FIELD_GUIDE_PRIMARY_IMAGE_COLUMNS)
     .in("species_id", uniqueSpecCodes);
@@ -528,17 +531,6 @@ export async function getMyFavoriteSpecies(): Promise<FishSpeciesListItem[]> {
 export function getSpeciesImageUrl(image: FishSpeciesImage | null | undefined): string | null {
   if (!image || image.isActive !== true || image.isAppSafe !== true || image.status !== "approved") {
     return null;
-  }
-
-  if (image.storagePath) {
-    if (isHttpUrl(image.storagePath)) {
-      return image.storagePath;
-    }
-
-    if (SPECIES_IMAGE_BUCKET) {
-      const { data } = supabase.storage.from(SPECIES_IMAGE_BUCKET).getPublicUrl(image.storagePath);
-      return data.publicUrl || null;
-    }
   }
 
   return isHttpUrl(image.externalUrl) ? image.externalUrl : null;
