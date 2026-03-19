@@ -12,9 +12,14 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
+import "@fontsource/source-sans-pro/400.css";
+import "@fontsource/source-sans-pro/600.css";
+import "@fontsource/source-sans-pro/700.css";
+import "@fontsource/source-serif-pro/400.css";
+import "@fontsource/source-serif-pro/600.css";
+import "@fontsource/source-serif-pro/700.css";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import "./index.css";
-import "./styles/mobile-first.css";
+import "./styles/app.css";
 
 createRoot(document.getElementById("root")!).render(<App />);

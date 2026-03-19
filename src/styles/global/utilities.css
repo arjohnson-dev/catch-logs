@@ -1,0 +1,28 @@
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-subtle {
+  color: var(--color-text-subtle);
+}
+
+.text-white {
+  color: var(--color-text-inverse);
+}
+
+.icon-primary {
+  color: var(--color-info-strong);
+}
+
+.icon-success {
+  color: #22c55e;
+}
+
+.icon-error {
+  color: var(--color-danger);
+}
+
+.touch-target {
+  min-width: 48px;
+  min-height: 48px;
+}

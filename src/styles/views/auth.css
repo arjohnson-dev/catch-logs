@@ -1,0 +1,127 @@
+.auth-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--color-bg-canvas);
+}
+
+.auth-container {
+  width: min(100%, 420px);
+  padding: var(--space-5) 0;
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.auth-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.auth-logo-badge {
+  background: var(--color-text-inverse);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+}
+
+.auth-logo-title {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+}
+
+.auth-logo-subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.auth-links {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2-5);
+  color: var(--color-text-dim);
+}
+
+.auth-card {
+  border: 0;
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-muted);
+  background: var(--color-surface-muted);
+  overflow: hidden;
+}
+
+.auth-toggle-button.auth-toggle-button {
+  min-width: 92px;
+  padding: var(--space-2) var(--space-6);
+  border-radius: 9px;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.auth-toggle-button-active.auth-toggle-button-active {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.auth-toggle-button-inactive.auth-toggle-button-inactive {
+  background: transparent;
+  color: var(--color-text-dim);
+}
+
+.auth-toggle-button-inactive.auth-toggle-button-inactive:hover {
+  color: var(--color-text-inverse);
+}
+
+.auth-status-alert {
+  margin-bottom: var(--space-4);
+}
+
+.auth-status-alert-success {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.auth-status-alert-error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.auth-status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.auth-status-text-success {
+  color: var(--color-success-text);
+}
+
+.auth-status-text-error {
+  color: var(--color-danger-text);
+}
+
+.auth-link-button {
+  font-size: var(--font-size-sm);
+}
+
+.auth-link-button:hover {
+  color: var(--color-text-inverse);
+}

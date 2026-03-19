@@ -132,7 +132,7 @@ export default function ResetPassword() {
   if (!isReady && !resetSuccess) {
     return (
       <div className="center-card-shell">
-        <Card className="center-card">
+        <Card className="center-card surface-card">
           <CardContent className="py-8 text-center text-muted">
             Validating reset link...
           </CardContent>
@@ -144,7 +144,7 @@ export default function ResetPassword() {
   if (resetSuccess) {
     return (
       <div className="center-card-shell">
-        <Card className="center-card">
+        <Card className="center-card surface-card">
           <CardHeader className="center-card-header">
             <CardTitle className="flex items-center justify-center gap-2">
               <FaCircleCheck size={20} className="icon-success" />
@@ -170,7 +170,7 @@ export default function ResetPassword() {
 
   return (
     <div className="center-card-shell">
-      <Card className="center-card">
+      <Card className="center-card surface-card">
         <CardHeader className="center-card-header">
           <CardTitle className="flex items-center justify-center gap-2">
             <FaLock size={20} className="icon-primary" />

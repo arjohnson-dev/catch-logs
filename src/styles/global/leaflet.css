@@ -1,0 +1,35 @@
+/* Leaflet panes need explicit stacking to stay under overlays and modals. */
+.leaflet-tile-pane {
+  z-index: var(--z-map-base) !important;
+}
+
+.leaflet-overlay-pane {
+  z-index: var(--z-map-overlay) !important;
+}
+
+.leaflet-marker-pane {
+  z-index: var(--z-map-marker) !important;
+}
+
+.leaflet-popup-pane {
+  z-index: var(--z-map-popup) !important;
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-map-base) !important;
+}
+
+.leaflet-control-attribution,
+.leaflet-control-zoom {
+  display: none !important;
+}
+
+.leaflet-marker-icon.selected-pin {
+  filter: hue-rotate(200deg) brightness(1.2) saturate(1.5) !important;
+}
+
+.leaflet-marker-icon.unselected-pin {
+  filter: none !important;
+}

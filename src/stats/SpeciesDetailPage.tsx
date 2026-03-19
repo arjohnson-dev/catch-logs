@@ -4,6 +4,7 @@ import { FaBookOpen, FaFish } from "react-icons/fa6";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { appQueryKeys } from "@/lib/query-keys";
 import {
   getFieldGuideSpeciesDetail,
 } from "@/lib/field-guide";
@@ -22,12 +23,12 @@ type Props = {
 export default function SpeciesDetailPage({ species }: Props) {
   const color = useMemo(() => getSpeciesColor(species, 0), [species]);
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["stats", "species", species],
+    queryKey: appQueryKeys.statsSpecies(species),
     queryFn: () => getStatsSpeciesDetail(species),
     enabled: species.trim().length > 0,
   });
   const { data: fieldGuideSpecies } = useQuery<FishSpeciesDetail | null>({
-    queryKey: ["field-guide", "species-link", data?.fieldGuideSpecCode ?? null],
+    queryKey: appQueryKeys.fieldGuideSpeciesLink(data?.fieldGuideSpecCode ?? null),
     queryFn: async () => {
       if (!data?.fieldGuideSpecCode) {
         return null;

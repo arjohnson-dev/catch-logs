@@ -1,0 +1,28 @@
+/* Import order defines the cascade:
+   global foundations -> shared primitives -> component styles -> view composition. */
+@import "./global/tailwind.css";
+@import "./global/tokens.css";
+@import "./global/base.css";
+@import "./global/utilities.css";
+@import "./global/leaflet.css";
+@import "./shared/layout.css";
+@import "./shared/typography.css";
+@import "./shared/surfaces.css";
+@import "./shared/controls.css";
+@import "./shared/overlays.css";
+@import "./components/app-shell.css";
+@import "./components/bottom-navigation.css";
+@import "./components/feature-beta-banner.css";
+@import "./components/map-interface.css";
+@import "./components/options-modal.css";
+@import "./components/pin-summary.css";
+@import "./components/journal-list.css";
+@import "./components/species-image.css";
+@import "./components/species-ai-summary.css";
+@import "./views/auth.css";
+@import "./views/dashboard.css";
+@import "./views/legal.css";
+@import "./views/entries.css";
+@import "./views/resources.css";
+@import "./views/settings.css";
+@import "./views/stats.css";

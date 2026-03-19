@@ -18,6 +18,7 @@ import JournalEntryForm from "@/components/journal-entry-form";
 import { Button } from "@/components/ui/button";
 import { FaArrowLeft } from "react-icons/fa6";
 import { deletePin } from "@/lib/supabase-data";
+import { invalidateCatchData } from "@/lib/query-keys";
 
 function parsePinId(raw: string | null): number | null {
   if (!raw) return null;
@@ -54,8 +55,7 @@ export default function NewEntryPage() {
     if (isNewPin) {
       try {
         await deletePin(pinId);
-        queryClient.invalidateQueries({ queryKey: ["pins"] });
-        queryClient.invalidateQueries({ queryKey: ["entries"] });
+        await invalidateCatchData(queryClient);
       } catch (error) {
         console.error("Failed to delete pin:", error);
       }

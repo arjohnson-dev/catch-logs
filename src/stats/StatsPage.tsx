@@ -4,6 +4,8 @@ import { FaArrowLeft } from "react-icons/fa6";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import FeatureBetaBanner from "@/components/feature-beta-banner";
+import { appQueryKeys } from "@/lib/query-keys";
 import { getStatsOverview } from "@/lib/supabase-data";
 import SpeciesBreakdownChart from "@/stats/SpeciesBreakdownChart";
 import SpeciesDetailPage from "@/stats/SpeciesDetailPage";
@@ -13,7 +15,7 @@ import TopNamedCountChart from "@/stats/TopNamedCountChart";
 export default function StatsPage() {
   const [selectedSpecies, setSelectedSpecies] = useState<string | null>(null);
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["stats", "overview"],
+    queryKey: appQueryKeys.statsOverview(),
     queryFn: getStatsOverview,
   });
 
@@ -44,17 +46,7 @@ export default function StatsPage() {
           <SpeciesDetailPage species={selectedSpecies} />
         ) : (
           <div className="stats-stack-lg">
-            <Card className="stats-card stats-beta-card">
-              <CardContent className="pt-6">
-                <p className="stats-beta-copy">
-                  Stats is currently in beta. Feedback and improvement ideas are encouraged via the{" "}
-                  <Link to="/support" className="text-link">
-                    Contact Support page
-                  </Link>
-                  .
-                </p>
-              </CardContent>
-            </Card>
+            <FeatureBetaBanner featureName="Stats" />
 
             {isLoading && (
               <div className="stats-stack">

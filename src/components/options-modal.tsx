@@ -13,9 +13,20 @@
  * from CatchLogs LLC.
  */
 import { useEffect, useRef, useState } from "react";
-import { FaArrowRightFromBracket, FaGear, FaXmark } from "react-icons/fa6";
+import {
+  FaArrowRightFromBracket,
+  FaChevronDown,
+  FaChevronUp,
+  FaGear,
+  FaXmark,
+} from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { useToast } from "@/hooks/use-toast";
@@ -102,6 +113,7 @@ export default function OptionsModal({
   });
   const [hasLoadedGearDefaults, setHasLoadedGearDefaults] = useState(false);
   const [usesLocalGearFallback, setUsesLocalGearFallback] = useState(false);
+  const [isGearOpen, setIsGearOpen] = useState(false);
   const hasShownSaveErrorRef = useRef(false);
 
   const handleMapBaseLayerChange = (value: string) => {
@@ -296,199 +308,221 @@ export default function OptionsModal({
             </div>
           </div>
           <div className="options-modal-map-section">
-            <p className="options-modal-map-title">Gear</p>
-            <div className="options-modal-field-grid">
-              <div className="options-modal-field-grid options-modal-field-grid-split">
-                <div className="options-modal-field">
-                  <label className="options-modal-field-label" htmlFor="options-tackle-rod-length">
-                    Rod Length
-                  </label>
-                  <select
-                    id="options-tackle-rod-length"
-                    value={gearDefaults.rodLength}
-                    onChange={(e) => handleGearDefaultsChange("rodLength", e.target.value)}
-                    className="field-dark options-modal-select"
-                  >
-                    <option value="">Select length</option>
-                    {ROD_LENGTH_OPTIONS.filter(Boolean).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="options-modal-field">
-                  <label className="options-modal-field-label" htmlFor="options-tackle-rod-power">
-                    Rod Power
-                  </label>
-                  <select
-                    id="options-tackle-rod-power"
-                    value={gearDefaults.rodPower}
-                    onChange={(e) => handleGearDefaultsChange("rodPower", e.target.value)}
-                    className="field-dark options-modal-select"
-                  >
-                    <option value="">Select power</option>
-                    {ROD_POWER_OPTIONS.filter(Boolean).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="options-modal-field">
-                <label className="options-modal-field-label" htmlFor="options-tackle-rod-action">
-                  Rod Action
-                </label>
-                <select
-                  id="options-tackle-rod-action"
-                  value={gearDefaults.rodAction}
-                  onChange={(e) => handleGearDefaultsChange("rodAction", e.target.value)}
-                  className="field-dark options-modal-select"
+            <Collapsible open={isGearOpen} onOpenChange={setIsGearOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="options-modal-section-toggle"
                 >
-                  <option value="">Select action</option>
-                  {ROD_ACTION_OPTIONS.filter(Boolean).map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="options-modal-field">
-                <div className="options-modal-slider-header">
-                  <label className="options-modal-field-label" htmlFor="options-tackle-drag">
-                    Drag
-                  </label>
-                  <span className="options-modal-slider-value">{gearDefaults.drag.toFixed(2)}</span>
+                  <span className="options-modal-section-toggle-copy">
+                    <span className="options-modal-map-title">Gear</span>
+                    <span className="options-modal-section-toggle-note">
+                      Save your default rod, line, and terminal setup.
+                    </span>
+                  </span>
+                  {isGearOpen ? (
+                    <FaChevronUp className="h-4 w-4" />
+                  ) : (
+                    <FaChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="options-modal-collapsible-content">
+                <div className="options-modal-field-grid">
+                  <div className="options-modal-field-grid options-modal-field-grid-split">
+                    <div className="options-modal-field">
+                      <label className="options-modal-field-label" htmlFor="options-tackle-rod-length">
+                        Rod Length
+                      </label>
+                      <select
+                        id="options-tackle-rod-length"
+                        value={gearDefaults.rodLength}
+                        onChange={(e) => handleGearDefaultsChange("rodLength", e.target.value)}
+                        className="field-dark options-modal-select"
+                      >
+                        <option value="">Select length</option>
+                        {ROD_LENGTH_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="options-modal-field">
+                      <label className="options-modal-field-label" htmlFor="options-tackle-rod-power">
+                        Rod Power
+                      </label>
+                      <select
+                        id="options-tackle-rod-power"
+                        value={gearDefaults.rodPower}
+                        onChange={(e) => handleGearDefaultsChange("rodPower", e.target.value)}
+                        className="field-dark options-modal-select"
+                      >
+                        <option value="">Select power</option>
+                        {ROD_POWER_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="options-modal-field">
+                    <label className="options-modal-field-label" htmlFor="options-tackle-rod-action">
+                      Rod Action
+                    </label>
+                    <select
+                      id="options-tackle-rod-action"
+                      value={gearDefaults.rodAction}
+                      onChange={(e) => handleGearDefaultsChange("rodAction", e.target.value)}
+                      className="field-dark options-modal-select"
+                    >
+                      <option value="">Select action</option>
+                      {ROD_ACTION_OPTIONS.filter(Boolean).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="options-modal-field">
+                    <div className="options-modal-slider-header">
+                      <label className="options-modal-field-label" htmlFor="options-tackle-drag">
+                        Drag
+                      </label>
+                      <span className="options-modal-slider-value">{gearDefaults.drag.toFixed(2)}</span>
+                    </div>
+                    <input
+                      id="options-tackle-drag"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={gearDefaults.drag}
+                      onChange={(e) =>
+                        handleGearDefaultsChange("drag", Number.parseFloat(e.target.value) || 0)
+                      }
+                      className="options-modal-slider"
+                    />
+                    <div className="options-modal-slider-scale">
+                      <span>Loose</span>
+                      <span>Tight</span>
+                    </div>
+                  </div>
+                  <div className="options-modal-field-grid options-modal-field-grid-split">
+                    <div className="options-modal-field">
+                      <label className="options-modal-field-label" htmlFor="options-tackle-line-type">
+                        Line Type
+                      </label>
+                      <select
+                        id="options-tackle-line-type"
+                        value={gearDefaults.lineType}
+                        onChange={(e) => handleGearDefaultsChange("lineType", e.target.value)}
+                        className="field-dark options-modal-select"
+                      >
+                        <option value="">Select line type</option>
+                        {LINE_TYPE_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="options-modal-field">
+                      <label className="options-modal-field-label" htmlFor="options-tackle-line-test">
+                        Test Weight
+                      </label>
+                      <select
+                        id="options-tackle-line-test"
+                        value={gearDefaults.lineTest}
+                        onChange={(e) => handleGearDefaultsChange("lineTest", e.target.value)}
+                        className="field-dark options-modal-select"
+                      >
+                        <option value="">Select test</option>
+                        {LINE_TEST_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="options-modal-field">
+                    <label className="options-modal-field-label" htmlFor="options-tackle-bobber-float">
+                      Bobber/Float
+                    </label>
+                    <select
+                      id="options-tackle-bobber-float"
+                      value={gearDefaults.bobberFloat}
+                      onChange={(e) => handleGearDefaultsChange("bobberFloat", e.target.value)}
+                      className="field-dark options-modal-select"
+                    >
+                      <option value="">Select bobber/float</option>
+                      {BOBBER_FLOAT_OPTIONS.filter(Boolean).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="options-modal-field">
+                    <label className="options-modal-field-label" htmlFor="options-tackle-weight">
+                      Weight (oz)
+                    </label>
+                    <Input
+                      id="options-tackle-weight"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={gearDefaults.weight}
+                      onChange={(e) => handleGearDefaultsChange("weight", e.target.value)}
+                      className="field-dark"
+                      placeholder="0.125"
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div className="options-modal-field-grid options-modal-field-grid-split">
+                    <div className="options-modal-field">
+                      <label className="options-modal-field-label" htmlFor="options-tackle-leader-material">
+                        Leader Material
+                      </label>
+                      <select
+                        id="options-tackle-leader-material"
+                        value={gearDefaults.leaderMaterial}
+                        onChange={(e) => handleGearDefaultsChange("leaderMaterial", e.target.value)}
+                        className="field-dark options-modal-select"
+                      >
+                        <option value="">Select material</option>
+                        {LEADER_MATERIAL_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="options-modal-field">
+                      <label className="options-modal-field-label" htmlFor="options-tackle-leader-length">
+                        Leader Length
+                      </label>
+                      <select
+                        id="options-tackle-leader-length"
+                        value={gearDefaults.leaderLength}
+                        onChange={(e) => handleGearDefaultsChange("leaderLength", e.target.value)}
+                        className="field-dark options-modal-select"
+                      >
+                        <option value="">Select length</option>
+                        {LEADER_LENGTH_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <input
-                  id="options-tackle-drag"
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={gearDefaults.drag}
-                  onChange={(e) =>
-                    handleGearDefaultsChange("drag", Number.parseFloat(e.target.value) || 0)
-                  }
-                  className="options-modal-slider"
-                />
-                <div className="options-modal-slider-scale">
-                  <span>Loose</span>
-                  <span>Tight</span>
-                </div>
-              </div>
-              <div className="options-modal-field-grid options-modal-field-grid-split">
-                <div className="options-modal-field">
-                  <label className="options-modal-field-label" htmlFor="options-tackle-line-type">
-                    Line Type
-                  </label>
-                  <select
-                    id="options-tackle-line-type"
-                    value={gearDefaults.lineType}
-                    onChange={(e) => handleGearDefaultsChange("lineType", e.target.value)}
-                    className="field-dark options-modal-select"
-                  >
-                    <option value="">Select line type</option>
-                    {LINE_TYPE_OPTIONS.filter(Boolean).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="options-modal-field">
-                  <label className="options-modal-field-label" htmlFor="options-tackle-line-test">
-                    Test Weight
-                  </label>
-                  <select
-                    id="options-tackle-line-test"
-                    value={gearDefaults.lineTest}
-                    onChange={(e) => handleGearDefaultsChange("lineTest", e.target.value)}
-                    className="field-dark options-modal-select"
-                  >
-                    <option value="">Select test</option>
-                    {LINE_TEST_OPTIONS.filter(Boolean).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="options-modal-field">
-                <label className="options-modal-field-label" htmlFor="options-tackle-bobber-float">
-                  Bobber/Float
-                </label>
-                <select
-                  id="options-tackle-bobber-float"
-                  value={gearDefaults.bobberFloat}
-                  onChange={(e) => handleGearDefaultsChange("bobberFloat", e.target.value)}
-                  className="field-dark options-modal-select"
-                >
-                  <option value="">Select bobber/float</option>
-                  {BOBBER_FLOAT_OPTIONS.filter(Boolean).map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="options-modal-field">
-                <label className="options-modal-field-label" htmlFor="options-tackle-weight">
-                  Weight (oz)
-                </label>
-                <Input
-                  id="options-tackle-weight"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={gearDefaults.weight}
-                  onChange={(e) => handleGearDefaultsChange("weight", e.target.value)}
-                  className="field-dark"
-                  placeholder="0.125"
-                  inputMode="decimal"
-                />
-              </div>
-              <div className="options-modal-field-grid options-modal-field-grid-split">
-                <div className="options-modal-field">
-                  <label className="options-modal-field-label" htmlFor="options-tackle-leader-material">
-                    Leader Material
-                  </label>
-                  <select
-                    id="options-tackle-leader-material"
-                    value={gearDefaults.leaderMaterial}
-                    onChange={(e) => handleGearDefaultsChange("leaderMaterial", e.target.value)}
-                    className="field-dark options-modal-select"
-                  >
-                    <option value="">Select material</option>
-                    {LEADER_MATERIAL_OPTIONS.filter(Boolean).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="options-modal-field">
-                  <label className="options-modal-field-label" htmlFor="options-tackle-leader-length">
-                    Leader Length
-                  </label>
-                  <select
-                    id="options-tackle-leader-length"
-                    value={gearDefaults.leaderLength}
-                    onChange={(e) => handleGearDefaultsChange("leaderLength", e.target.value)}
-                    className="field-dark options-modal-select"
-                  >
-                    <option value="">Select length</option>
-                    {LEADER_LENGTH_OPTIONS.filter(Boolean).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
           <Button
             variant="outline"

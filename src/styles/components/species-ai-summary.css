@@ -1,0 +1,77 @@
+.resources-ai-summary-card {
+  overflow: hidden;
+}
+
+.resources-ai-summary-helper {
+  margin: var(--space-1-5) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.resources-ai-summary-loading {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.resources-ai-summary-status {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.resources-ai-summary-skeleton {
+  display: grid;
+  gap: var(--space-2-5);
+}
+
+.resources-ai-summary-line {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    rgba(125, 181, 255, 0.08),
+    rgba(125, 181, 255, 0.2),
+    rgba(125, 181, 255, 0.08)
+  );
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.resources-ai-summary-line-short {
+  width: 72%;
+}
+
+.resources-ai-summary-sources {
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+}
+
+.resources-ai-summary-disclaimer {
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+}
+
+.resources-ai-summary-body {
+  white-space: pre-line;
+}
+
+.resources-ai-summary-copy {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.resources-ai-summary-sources-label {
+  color: #c6cfda;
+  font-weight: 600;
+}
+
+.resources-ai-summary-source-list {
+  overflow-wrap: anywhere;
+}
+
+.resources-ai-summary-source-link,
+.resources-ai-summary-cta {
+  font-size: inherit;
+}

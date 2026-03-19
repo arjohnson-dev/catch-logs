@@ -22,7 +22,7 @@ export default function NotFound() {
 
   return (
     <div className="center-card-shell">
-      <Card className="center-card">
+      <Card className="center-card surface-card">
         <CardHeader className="center-card-header">
           <CardTitle className="text-2xl">404 - Page Not Found</CardTitle>
         </CardHeader>

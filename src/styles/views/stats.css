@@ -1,0 +1,220 @@
+.stats-page-content,
+.stats-page-content-main {
+  max-width: 640px;
+}
+
+.stats-page-content-main {
+  --stats-gap: var(--space-4);
+  padding-top: var(--space-6);
+  padding-bottom: 72px;
+}
+
+.stats-stack,
+.stats-stack-lg {
+  display: grid;
+}
+
+.stats-stack {
+  gap: var(--space-4);
+}
+
+.stats-stack-lg {
+  gap: var(--stats-gap);
+}
+
+.stats-loading-block {
+  height: 128px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-panel);
+  animation: pulse 1.3s ease-in-out infinite;
+}
+
+.stats-card {
+  background: var(--color-surface-panel);
+  border: 1px solid var(--color-border-default);
+}
+
+.stats-grid-summary {
+  display: grid;
+  margin: 0;
+  row-gap: var(--stats-gap);
+  column-gap: var(--stats-gap);
+}
+
+.stats-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-inverse);
+  font-size: 1.05rem;
+}
+
+.stats-metric-value {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text-inverse);
+}
+
+.stats-metric-primary {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-inverse);
+}
+
+.stats-metric-subtle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.stats-metric-stack {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.stats-wrap {
+  overflow-wrap: anywhere;
+}
+
+.stats-species-layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.stats-species-chart {
+  min-height: 220px;
+}
+
+.stats-species-list {
+  display: grid;
+  border-top: 1px solid var(--color-border-muted);
+}
+
+.stats-species-row {
+  width: 100%;
+  padding: var(--space-2-5) 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-muted);
+  background: transparent;
+  color: inherit;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.stats-species-row:last-child {
+  border-bottom: 0;
+}
+
+.stats-species-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
+}
+
+.stats-species-name {
+  color: #e2e8f0;
+  font-size: 0.86rem;
+}
+
+.stats-species-count {
+  color: #dbeafe;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.stats-species-pct {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.stats-empty-inline {
+  margin: 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.stats-tooltip {
+  padding: var(--space-2) var(--space-2-5);
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface-panel);
+  font-size: var(--font-size-xs);
+  color: #d1d5db;
+}
+
+.stats-tooltip p {
+  margin: 0;
+}
+
+.stats-tooltip-value {
+  color: var(--color-info-text);
+  font-weight: 600;
+}
+
+.stats-species-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2-5);
+  align-items: center;
+}
+
+.stats-species-header-copy {
+  min-width: 0;
+}
+
+.stats-species-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-inverse);
+}
+
+.stats-species-header-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.stats-conditions-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.stats-condition-item {
+  padding: var(--space-2-5);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+}
+
+.stats-condition-label {
+  margin: 0 0 var(--space-1-5);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+}
+
+.stats-condition-value {
+  margin: 0;
+  color: var(--color-text-inverse);
+}
+
+@media (min-width: 768px) {
+  .stats-grid-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-species-layout {
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    align-items: center;
+  }
+
+  .stats-conditions-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
