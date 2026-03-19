@@ -18,6 +18,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { UnitPreferenceProvider } from "@/hooks/use-unit-preference";
 import Dashboard from "@/pages/dashboard";
 import AuthPage from "@/pages/auth";
 import Terms from "@/pages/terms";
@@ -64,10 +65,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <UnitPreferenceProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </UnitPreferenceProvider>
     </QueryClientProvider>
   );
 }

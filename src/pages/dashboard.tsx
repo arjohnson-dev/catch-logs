@@ -20,9 +20,10 @@ import OptionsModal from "@/components/options-modal";
 import { FaGear } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import catchLogsIcon from "@assets/catchlogs-icon.png";
 import { moveEntryToNewCoordinates } from "@/lib/supabase-data";
+import { getMyFavoriteSpecCodes } from "@/lib/field-guide";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -37,6 +38,10 @@ import Support from "@/pages/support";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import NotFound from "@/pages/not-found";
+import ResourcesHub from "@/pages/resources";
+import FieldGuide from "@/pages/field-guide";
+import ResourcesPlaceholder from "@/pages/resources-placeholder";
+import TrustedSourcesPage from "@/pages/trusted-sources";
 
 export default function Dashboard() {
   const currentPath = window.location.pathname;
@@ -66,6 +71,12 @@ export default function Dashboard() {
   const [isPinDropMode, setIsPinDropMode] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const userId = user?.id ?? null;
+  useQuery({
+    queryKey: ["field-guide", "favorite-spec-codes", userId],
+    queryFn: getMyFavoriteSpecCodes,
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60 * 5,
+  });
   const sessionTackle = userId
     ? (sessionTackleByUser[userId] ?? loadSessionTackle(userId))
     : "";
@@ -164,6 +175,45 @@ export default function Dashboard() {
   };
 
   const renderOverlayView = () => {
+    if (normalizedPath === "/resources") {
+      return <ResourcesHub />;
+    }
+
+    if (normalizedPath === "/resources/field-guide" || normalizedPath.startsWith("/resources/field-guide/")) {
+      return <FieldGuide />;
+    }
+
+    if (normalizedPath === "/resources/trusted-sources") {
+      return <TrustedSourcesPage />;
+    }
+
+    if (normalizedPath === "/resources/fishing-reports") {
+      return (
+        <ResourcesPlaceholder
+          title="Fishing Reports"
+          description="Check current local fishing activity and conditions."
+        />
+      );
+    }
+
+    if (normalizedPath === "/resources/weather") {
+      return (
+        <ResourcesPlaceholder
+          title="Weather & Conditions"
+          description="View weather-related context relevant to fishing."
+        />
+      );
+    }
+
+    if (normalizedPath === "/resources/regulations") {
+      return (
+        <ResourcesPlaceholder
+          title="Regulations"
+          description="Access fishing rules and regulatory information."
+        />
+      );
+    }
+
     switch (normalizedPath) {
       case "/":
         return null;

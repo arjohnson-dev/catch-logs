@@ -12,7 +12,7 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import { FaBookOpen, FaChartColumn } from "react-icons/fa6";
+import { FaBookOpen, FaChartColumn, FaFishFins } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
@@ -42,6 +42,16 @@ export default function BottomNavigation({
           >
             <FaChartColumn size={20} />
             <span className="btn-nav-label">Stats</span>
+          </Button>
+        </Link>
+
+        <Link to="/resources">
+          <Button
+            variant="ghost"
+            className="touch-target btn-nav btn-nav-resources"
+          >
+            <FaFishFins size={20} />
+            <span className="btn-nav-label">Resources</span>
           </Button>
         </Link>
       </div>
