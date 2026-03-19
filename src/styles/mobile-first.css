@@ -1531,6 +1531,11 @@ a {
   font-size: 0.86rem;
 }
 
+.resources-ai-summary-disclaimer {
+  color: var(--text-muted) !important;
+  font-size: 0.86rem;
+}
+
 .resources-ai-summary-body {
   white-space: pre-line;
 }
@@ -1550,6 +1555,10 @@ a {
 }
 
 .resources-ai-summary-source-link {
+  font-size: inherit;
+}
+
+.resources-ai-summary-cta {
   font-size: inherit;
 }
 

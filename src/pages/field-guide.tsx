@@ -442,10 +442,12 @@ function SpeciesDetailPage({
   species,
   isFavorite,
   onToggleFavorite,
+  onBack,
 }: {
   species: FishSpeciesDetail;
   isFavorite: boolean;
   onToggleFavorite: () => void;
+  onBack: () => void;
 }) {
   const { unitSystem } = useUnitPreference();
   const hasDistributionSection = Boolean(
@@ -483,11 +485,9 @@ function SpeciesDetailPage({
     <div className="page-scroll">
       <div className="page-content resources-page-content">
         <div className="page-header">
-          <Link to="/resources">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="sm" className="legal-back-button" onClick={onBack}>
+            <FaArrowLeft className="w-4 h-4" />
+          </Button>
           <h1 className="page-title">Field Guide</h1>
         </div>
 
@@ -795,6 +795,15 @@ export default function FieldGuide() {
     });
   };
 
+  const handleDetailBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    navigate("/resources/field-guide");
+  };
+
   const filteredSpecies = useMemo(() => {
     return species
       .filter((item) => {
@@ -939,6 +948,7 @@ export default function FieldGuide() {
         species={speciesDetailQuery.data}
         isFavorite={favoriteSet.has(speciesDetailQuery.data.specCode)}
         onToggleFavorite={() => toggleFavorite(speciesDetailQuery.data.specCode)}
+        onBack={handleDetailBack}
       />
     );
   }

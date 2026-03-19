@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSupabaseFunctionHeaders, supabase } from "@/lib/supabase";
+import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { useUnitPreference } from "@/hooks/use-unit-preference";
+import { supabase } from "@/lib/supabase";
+import { formatMeasurementText } from "@/lib/unit-preferences";
 import type {
   AiSummarySource,
   GenerateSpeciesSummaryResponse,
@@ -18,7 +22,6 @@ type SpeciesAiSummaryData = {
 };
 
 const SUMMARY_UNAVAILABLE_MESSAGE = "Summary unavailable right now.";
-
 function isAiSummarySource(value: unknown): value is AiSummarySource {
   if (!value || typeof value !== "object") {
     return false;
@@ -62,11 +65,33 @@ function parseGenerateSpeciesSummaryResponse(payload: unknown): SpeciesAiSummary
   };
 }
 
-async function getSpeciesAiSummary(slug: string) {
-  const headers = await getSupabaseFunctionHeaders();
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error.trim();
+  }
+
+  return SUMMARY_UNAVAILABLE_MESSAGE;
+}
+
+async function getSpeciesAiSummary(slug: string, unitSystem: "metric" | "imperial") {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const { data, error } = await supabase.functions.invoke("generate-species-summary", {
-    body: { slug },
-    headers,
+    body: {
+      slug,
+      unitSystem,
+    },
+    headers: session?.access_token
+      ? {
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      : undefined,
   });
 
   if (error) {
@@ -135,13 +160,17 @@ export function SpeciesAiSummaryCard({
   slug,
   fallbackSummary = null,
 }: SpeciesAiSummaryCardProps) {
+  const { isAuthenticated } = useAuth();
+  const { unitSystem } = useUnitPreference();
+  const summaryUnitSystem: "metric" | "imperial" =
+    unitSystem === "imperial" ? "imperial" : "metric";
   const normalizedSlug = slug?.trim() ?? "";
   const hasSlug = normalizedSlug.length > 0;
 
   const summaryQuery = useQuery({
-    queryKey: ["field-guide", "species-ai-summary", normalizedSlug],
-    queryFn: () => getSpeciesAiSummary(normalizedSlug),
-    enabled: hasSlug,
+    queryKey: ["field-guide", "species-ai-summary", normalizedSlug, summaryUnitSystem],
+    queryFn: () => getSpeciesAiSummary(normalizedSlug, summaryUnitSystem),
+    enabled: hasSlug && isAuthenticated,
     staleTime: 1000 * 60 * 30,
     retry: false,
   });
@@ -156,14 +185,17 @@ export function SpeciesAiSummaryCard({
   if (summaryQuery.data?.summary) {
     content = summaryQuery.data.summary;
     sources = summaryQuery.data.sources;
-  } else if (summaryQuery.isError && !fallbackSummary) {
-    content = SUMMARY_UNAVAILABLE_MESSAGE;
+  } else if (summaryQuery.isError) {
+    content = getErrorMessage(summaryQuery.error);
   } else if (!hasSlug && !fallbackSummary) {
     content = SUMMARY_UNAVAILABLE_MESSAGE;
   }
 
+  const formattedContent = formatMeasurementText(content, unitSystem);
   const paragraphs =
-    content === SUMMARY_UNAVAILABLE_MESSAGE ? [content] : splitSummaryIntoParagraphs(content);
+    formattedContent === SUMMARY_UNAVAILABLE_MESSAGE
+      ? [formattedContent]
+      : splitSummaryIntoParagraphs(formattedContent);
 
   return (
     <Card className="resources-card surface-card resources-ai-summary-card">
@@ -173,7 +205,7 @@ export function SpeciesAiSummaryCard({
             AI Summary
           </CardTitle>
           <p className="resources-ai-summary-helper">
-            Generated from CatchLogs data and trusted references.
+            AI-generated from CatchLogs data and trusted references. AI can make mistakes, and summaries may sometimes take a little time to load.
           </p>
         </CardHeader>
         <CardContent className="pt-0">
@@ -201,6 +233,13 @@ export function SpeciesAiSummaryCard({
                 ))}
               </div>
               <SummarySources sources={sources} />
+              <p className="resources-ai-summary-disclaimer">
+                Double-check important details and{" "}
+                <Link to="/resources" className="text-link resources-ai-summary-cta">
+                  review our whitelist of trusted resources
+                </Link>
+                .
+              </p>
             </div>
           )}
         </CardContent>
