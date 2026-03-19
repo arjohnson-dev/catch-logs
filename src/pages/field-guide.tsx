@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ImageAttribution } from "@/components/image-attribution";
 import { SpeciesImage } from "@/components/species-image";
+import { useUnitPreference } from "@/hooks/use-unit-preference";
 import {
   favoriteSpecies,
   getFieldGuideSpeciesDetail,
@@ -25,6 +26,12 @@ import {
 } from "@/lib/field-guide";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import {
+  formatLength as formatDisplayLength,
+  formatMeasurementText,
+  formatWeight as formatDisplayWeight,
+  type UnitSystem,
+} from "@/lib/unit-preferences";
 import type {
   FishEnvironment,
   FishGuideStructuredSection,
@@ -111,6 +118,14 @@ function getSpeciesSummaryPreview(species: FishSpeciesListItem) {
   );
 }
 
+function formatSummaryText(value: string | null, unitSystem: UnitSystem) {
+  if (!value) {
+    return null;
+  }
+
+  return formatMeasurementText(value, unitSystem);
+}
+
 function getHabitatHint(species: FishSpeciesListItem) {
   return (
     species.scopeHabitat ??
@@ -170,7 +185,7 @@ function matchesWaterType(species: FishSpeciesListItem, waterType: string) {
   }
 
   if (waterType === "freshwater") {
-    return species.isFreshwater || species.environment === "freshwater";
+    return species.environment === "freshwater";
   }
 
   return species.environment === waterType;
@@ -222,6 +237,10 @@ function ResourceSpeciesCard({
   onOpen: () => void;
   onToggleFavorite: () => void;
 }) {
+  const { unitSystem } = useUnitPreference();
+  const habitatHint = formatSummaryText(getHabitatHint(species), unitSystem);
+  const summaryPreview = formatSummaryText(getSpeciesSummaryPreview(species), unitSystem);
+
   return (
     <Card className="resources-card resources-result-card surface-card surface-card-hover">
       <CardContent className="p-0">
@@ -272,8 +291,8 @@ function ResourceSpeciesCard({
                 ))}
               </div>
             )}
-            {getHabitatHint(species) && (
-              <p className="resources-result-meta">{truncateText(getHabitatHint(species)!, 120)}</p>
+            {habitatHint && (
+              <p className="resources-result-meta">{truncateText(habitatHint, 120)}</p>
             )}
             {species.alternateCommonNames.length > 0 && (
               <div className="resources-result-aliases">
@@ -287,9 +306,9 @@ function ResourceSpeciesCard({
                 </div>
               </div>
             )}
-            {getSpeciesSummaryPreview(species) && (
+            {summaryPreview && (
               <p className="resources-result-summary">
-                {truncateText(getSpeciesSummaryPreview(species)!, 180)}
+                {truncateText(summaryPreview, 180)}
               </p>
             )}
           </div>
@@ -339,6 +358,22 @@ function StructuredSection({
       </div>
     </SpeciesSection>
   );
+}
+
+function renderLength(valueCm: number | null, unitSystem: UnitSystem) {
+  if (!valueCm) {
+    return null;
+  }
+
+  return formatDisplayLength(valueCm, unitSystem);
+}
+
+function renderWeight(valueG: number | null, unitSystem: UnitSystem) {
+  if (!valueG) {
+    return null;
+  }
+
+  return formatDisplayWeight(valueG, unitSystem);
 }
 
 function DetailHeader({
@@ -407,6 +442,7 @@ function SpeciesDetailPage({
   isFavorite: boolean;
   onToggleFavorite: () => void;
 }) {
+  const { unitSystem } = useUnitPreference();
   const hasDistributionSection = Boolean(
     species.scopeHabitat || species.distributionSummary || species.nativeRegionSummary,
   );
@@ -414,7 +450,6 @@ function SpeciesDetailPage({
   const hasQuickFactsSection = Boolean(
     species.environmentType ||
       species.scopeHabitat ||
-      species.isFreshwater ||
       species.family ||
       species.order ||
       species.maxLengthCm ||
@@ -433,6 +468,14 @@ function SpeciesDetailPage({
     species.generalSummary,
   );
   const showDietSection = shouldRenderSection(species.dietSummary);
+  const generalSummary = formatSummaryText(species.generalSummary, unitSystem);
+  const distributionSummary = formatSummaryText(species.distributionSummary, unitSystem);
+  const nativeRegionSummary = formatSummaryText(species.nativeRegionSummary, unitSystem);
+  const identificationSummary = formatSummaryText(species.identificationSummary, unitSystem);
+  const habitatSummary = formatSummaryText(species.habitatSummary, unitSystem);
+  const behaviorSummary = formatSummaryText(species.behaviorSummary, unitSystem);
+  const dietSummary = formatSummaryText(species.dietSummary, unitSystem);
+  const anglerNotes = formatSummaryText(species.anglerNotes, unitSystem);
 
   return (
     <div className="page-scroll">
@@ -482,9 +525,6 @@ function SpeciesDetailPage({
                 </p>
               )}
               <p>
-                <strong>SpecCode:</strong> {species.specCode}
-              </p>
-              <p>
                 <strong>Environment:</strong> {titleCaseEnvironment(species.environment)}
               </p>
             </div>
@@ -503,11 +543,6 @@ function SpeciesDetailPage({
                     <strong>Habitat:</strong> {species.scopeHabitat}
                   </p>
                 )}
-                {species.isFreshwater && (
-                  <p>
-                    <strong>Freshwater:</strong> Yes
-                  </p>
-                )}
                 {species.family && (
                   <p>
                     <strong>Family:</strong> {species.family}
@@ -520,22 +555,22 @@ function SpeciesDetailPage({
                 )}
                 {species.maxLengthCm && (
                   <p>
-                    <strong>Maximum length:</strong> {species.maxLengthCm} cm
+                    <strong>Maximum length:</strong> {renderLength(species.maxLengthCm, unitSystem)}
                   </p>
                 )}
                 {species.maxWeightG && (
                   <p>
-                    <strong>Maximum weight:</strong> {species.maxWeightG} g
+                    <strong>Maximum weight:</strong> {renderWeight(species.maxWeightG, unitSystem)}
                   </p>
                 )}
               </div>
             </SpeciesSection>
           )}
 
-          {species.generalSummary && (
+          {generalSummary && (
             <SpeciesSection title="General Summary">
               <div className="resources-detail-list">
-                <p>{species.generalSummary}</p>
+                <p>{generalSummary}</p>
               </div>
             </SpeciesSection>
           )}
@@ -548,14 +583,14 @@ function SpeciesDetailPage({
                     <strong>Habitat:</strong> {species.scopeHabitat}
                   </p>
                 )}
-                {species.distributionSummary && (
+                {distributionSummary && (
                   <p>
-                    <strong>Distribution:</strong> {species.distributionSummary}
+                    <strong>Distribution:</strong> {distributionSummary}
                   </p>
                 )}
-                {species.nativeRegionSummary && (
+                {nativeRegionSummary && (
                   <p>
-                    <strong>Native region:</strong> {species.nativeRegionSummary}
+                    <strong>Native region:</strong> {nativeRegionSummary}
                   </p>
                 )}
               </div>
@@ -565,7 +600,7 @@ function SpeciesDetailPage({
           {showIdentificationSection && (
             <SpeciesSection title="Identification">
               <div className="resources-detail-list">
-                <p>{species.identificationSummary}</p>
+                <p>{identificationSummary}</p>
               </div>
             </SpeciesSection>
           )}
@@ -573,7 +608,7 @@ function SpeciesDetailPage({
           {showHabitatSection && (
             <SpeciesSection title="Habitat">
               <div className="resources-detail-list">
-                <p>{species.habitatSummary}</p>
+                <p>{habitatSummary}</p>
               </div>
             </SpeciesSection>
           )}
@@ -581,7 +616,7 @@ function SpeciesDetailPage({
           {showBehaviorSection && (
             <SpeciesSection title="Behavior">
               <div className="resources-detail-list">
-                <p>{species.behaviorSummary}</p>
+                <p>{behaviorSummary}</p>
               </div>
             </SpeciesSection>
           )}
@@ -589,7 +624,7 @@ function SpeciesDetailPage({
           {showDietSection && (
             <SpeciesSection title="Diet">
               <div className="resources-detail-list">
-                <p>{species.dietSummary}</p>
+                <p>{dietSummary}</p>
               </div>
             </SpeciesSection>
           )}
@@ -599,12 +634,12 @@ function SpeciesDetailPage({
               <div className="resources-detail-list">
                 {species.maxLengthCm && (
                   <p>
-                    <strong>Maximum length:</strong> {species.maxLengthCm} cm
+                    <strong>Maximum length:</strong> {renderLength(species.maxLengthCm, unitSystem)}
                   </p>
                 )}
                 {species.maxWeightG && (
                   <p>
-                    <strong>Maximum weight:</strong> {species.maxWeightG} g
+                    <strong>Maximum weight:</strong> {renderWeight(species.maxWeightG, unitSystem)}
                   </p>
                 )}
               </div>
@@ -614,10 +649,10 @@ function SpeciesDetailPage({
           <StructuredSection title="Reproduction" data={species.reproduction} />
           <StructuredSection title="Spawning" data={species.spawning} />
 
-          {species.anglerNotes && (
+          {anglerNotes && (
             <SpeciesSection title="Angler Notes">
               <div className="resources-detail-list">
-                <p>{species.anglerNotes}</p>
+                <p>{anglerNotes}</p>
               </div>
             </SpeciesSection>
           )}

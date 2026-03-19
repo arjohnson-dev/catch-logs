@@ -45,7 +45,7 @@ export function SpeciesImage({
             <FaFishFins size={24} />
           </div>
           <div className="species-image-fallback-copy">
-            <span className="species-image-fallback-label">Image coming soon</span>
+            <span className="species-image-fallback-label">Image unavailable</span>
             <span className="species-image-fallback-title">
               {commonName ?? scientificName}
             </span>

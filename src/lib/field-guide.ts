@@ -38,7 +38,6 @@ type FieldGuideSpeciesRow = {
   max_length_cm?: number | null;
   max_weight_g?: number | null;
   image_reference?: string | null;
-  is_freshwater?: boolean | null;
   is_north_american?: boolean | null;
   is_active?: boolean | null;
 };
@@ -77,7 +76,6 @@ const FIELD_GUIDE_LIST_COLUMNS = [
   "distribution_summary",
   "family",
   "image_reference",
-  "is_freshwater",
   "is_active",
 ].join(",");
 
@@ -194,12 +192,6 @@ function toEnvironment(row: FieldGuideSpeciesRow, browseTags: string[]): FishEnv
   if (directValue === "freshwater/marine") return "mixed";
   if (directValue === "freshwater-brackish") return "mixed";
   if (directValue === "brackish/marine") return "mixed";
-
-  if (row.is_freshwater) {
-    return normalizedTags.includes("marine") || normalizedTags.includes("brackish")
-      ? "mixed"
-      : "freshwater";
-  }
 
   if (normalizedTags.includes("freshwater") && normalizedTags.includes("marine")) {
     return "mixed";
@@ -338,7 +330,6 @@ function mapSpeciesRow(row: FieldGuideSpeciesRow): FishSpeciesDetail {
     imageReference: coerceString(row.image_reference),
     primaryImage: null,
     scopeHabitat: coerceString(row.scope_habitat),
-    isFreshwater: Boolean(row.is_freshwater),
     reproduction: toStructuredEntries(row.reproduction),
     spawning: toStructuredEntries(row.spawning),
   };

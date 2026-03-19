@@ -16,6 +16,7 @@ import { useState } from "react";
 import { FaArrowRightFromBracket, FaGear, FaXmark } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useUnitPreference } from "@/hooks/use-unit-preference";
 import type { User } from "@/types/domain";
 import {
   MAP_BASE_LAYERS,
@@ -46,6 +47,7 @@ export default function OptionsModal({
   onLogout,
 }: OptionsModalProps) {
   const currentYear = new Date().getFullYear();
+  const { unitSystem, setUnitSystem } = useUnitPreference();
   const [mapBaseLayer, setMapBaseLayer] = useState<MapBaseLayerId>(() =>
     loadMapBaseLayerPreference(user.id),
   );
@@ -134,6 +136,30 @@ export default function OptionsModal({
                 Show Labels
               </span>
             </label>
+          </div>
+          <div className="options-modal-map-section">
+            <p className="options-modal-map-title">Units</p>
+            <p className="settings-meta !m-0">
+              Field guide measurements default to imperial for U.S. launch.
+            </p>
+            <div className="settings-actions">
+              <Button
+                type="button"
+                className={unitSystem === "imperial" ? "btn-primary" : "btn-outline-muted"}
+                variant={unitSystem === "imperial" ? "default" : "outline"}
+                onClick={() => setUnitSystem("imperial")}
+              >
+                Imperial
+              </Button>
+              <Button
+                type="button"
+                className={unitSystem === "metric" ? "btn-primary" : "btn-outline-muted"}
+                variant={unitSystem === "metric" ? "default" : "outline"}
+                onClick={() => setUnitSystem("metric")}
+              >
+                Metric
+              </Button>
+            </div>
           </div>
           <Button
             variant="outline"

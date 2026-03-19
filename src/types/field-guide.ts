@@ -60,7 +60,6 @@ export interface FishSpeciesListItem {
   imageReference: string | null;
   primaryImage: FishSpeciesImage | null;
   scopeHabitat: string | null;
-  isFreshwater: boolean;
 }
 
 export interface FishSpeciesDetail extends FishSpeciesListItem {

@@ -41,6 +41,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { useToast } from "@/hooks/use-toast";
 import { deleteCurrentAccount } from "@/lib/account";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,6 +65,7 @@ type SupportSubjectOption = (typeof SUPPORT_SUBJECT_OPTIONS)[number] | "";
 
 export default function Settings() {
   const { user } = useAuth();
+  const { unitSystem, setUnitSystem } = useUnitPreference();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -321,6 +323,39 @@ export default function Settings() {
         </div>
 
         <div className="settings-stack">
+          <Card className="settings-card">
+            <CardHeader>
+              <div className="settings-card-header">
+                <CardTitle className="settings-card-title">
+                  Units
+                </CardTitle>
+              </div>
+              <p className="settings-meta">
+                Choose how measurements are displayed across the app. Imperial is the default.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="settings-actions">
+                <Button
+                  type="button"
+                  className={unitSystem === "imperial" ? "btn-primary" : "btn-outline-muted"}
+                  variant={unitSystem === "imperial" ? "default" : "outline"}
+                  onClick={() => setUnitSystem("imperial")}
+                >
+                  Imperial
+                </Button>
+                <Button
+                  type="button"
+                  className={unitSystem === "metric" ? "btn-primary" : "btn-outline-muted"}
+                  variant={unitSystem === "metric" ? "default" : "outline"}
+                  onClick={() => setUnitSystem("metric")}
+                >
+                  Metric
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="settings-card">
             <CardHeader>
               <div className="settings-card-header">
