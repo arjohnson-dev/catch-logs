@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { normalizeSpeciesSearchText } from "@/lib/field-guide-search";
 import type {
   FishEnvironment,
   FishGuideStructuredSection,
@@ -142,13 +143,7 @@ function normalizeText(value: string) {
 }
 
 function normalizeSpeciesLookupText(value: string) {
-  return normalizeText(value)
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\w\s]/g, " ")
-    .replace(/_/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeSpeciesSearchText(normalizeText(value));
 }
 
 function coerceString(value: JsonValue | undefined): string | null {

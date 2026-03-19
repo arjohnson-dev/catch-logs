@@ -24,6 +24,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import catchLogsIcon from "@assets/catchlogs-icon.png";
 import { moveEntryToNewCoordinates, moveEntryToPin } from "@/lib/supabase-data";
 import { getMyFavoriteSpecCodes } from "@/lib/field-guide";
+import { appQueryKeys, invalidateCatchData } from "@/lib/query-keys";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -81,7 +82,7 @@ export default function Dashboard() {
     ? (sessionBaitByUser[userId] ?? loadSessionBait(userId))
     : "";
   useQuery({
-    queryKey: ["field-guide", "favorite-spec-codes", userId],
+    queryKey: appQueryKeys.fieldGuideFavoriteSpecCodes(userId),
     queryFn: getMyFavoriteSpecCodes,
     enabled: Boolean(userId),
     staleTime: 1000 * 60 * 5,
@@ -183,8 +184,7 @@ export default function Dashboard() {
         latitude: lat,
         longitude: lng,
       });
-      queryClient.invalidateQueries({ queryKey: ["pins"] });
-      queryClient.invalidateQueries({ queryKey: ["entries"] });
+      await invalidateCatchData(queryClient);
       setMoveEntryId(null);
       toast({
         title: "Entry moved",
@@ -206,8 +206,7 @@ export default function Dashboard() {
         entryId,
         targetPinId,
       });
-      queryClient.invalidateQueries({ queryKey: ["pins"] });
-      queryClient.invalidateQueries({ queryKey: ["entries"] });
+      await invalidateCatchData(queryClient);
       setMoveEntryId(null);
       setSelectedPinId(targetPinId);
       setShowPinSummary(true);

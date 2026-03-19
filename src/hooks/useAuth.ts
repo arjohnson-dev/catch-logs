@@ -15,11 +15,10 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { appQueryKeys } from "@/lib/query-keys";
 import { type User } from "@/types/domain";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
 import { clearSessionGearStorage } from "@/lib/session-gear";
-
-const AUTH_USER_QUERY_KEY = ["supabase", "auth", "user"] as const;
 
 function mapSupabaseUser(user: SupabaseUser | null): User | null {
   if (!user) {
@@ -39,7 +38,7 @@ function mapSupabaseUser(user: SupabaseUser | null): User | null {
 export function useAuth() {
   const queryClient = useQueryClient();
   const { data: user, isLoading, error } = useQuery<User | null>({
-    queryKey: AUTH_USER_QUERY_KEY,
+    queryKey: appQueryKeys.supabaseAuthUser(),
     queryFn: async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error) {
@@ -61,7 +60,7 @@ export function useAuth() {
       if (event === "SIGNED_OUT") {
         clearSessionGearStorage();
       }
-      queryClient.invalidateQueries({ queryKey: AUTH_USER_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: appQueryKeys.supabaseAuthUser() });
     });
 
     return () => {
@@ -89,7 +88,7 @@ export function useLogout() {
     },
     onSuccess: () => {
       queryClient.clear();
-      queryClient.setQueryData(AUTH_USER_QUERY_KEY, null);
+      queryClient.setQueryData(appQueryKeys.supabaseAuthUser(), null);
     },
   });
 }

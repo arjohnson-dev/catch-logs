@@ -1,0 +1,64 @@
+.dashboard-shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-canvas);
+}
+
+.dashboard-nav {
+  position: relative;
+  z-index: var(--z-dashboard-nav);
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.dashboard-nav-inner {
+  width: min(100%, 1280px);
+  height: var(--app-header-h);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dashboard-brand-icon {
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-text-inverse);
+  display: grid;
+  place-items: center;
+}
+
+.dashboard-brand-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.dashboard-brand-subtitle {
+  margin: 2px 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.dashboard-main {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  padding-bottom: var(--app-footer-h);
+}
+
+.dashboard-user-trigger.dashboard-user-trigger {
+  color: var(--color-text-inverse);
+  border-radius: var(--radius-pill);
+}

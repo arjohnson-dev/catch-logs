@@ -23,6 +23,7 @@ import JournalEntryCard from "@/components/journal-entry-card";
 import { Button } from "@/components/ui/button";
 import { type PinWithEntries } from "@/types/domain";
 import { getPinsWithEntries } from "@/lib/supabase-data";
+import { appQueryKeys } from "@/lib/query-keys";
 
 interface PinSummaryProps {
   pinId: number;
@@ -33,7 +34,7 @@ interface PinSummaryProps {
 export default function PinSummary({ pinId, onClose, onAddEntry }: PinSummaryProps) {
   const [, navigate] = useLocation();
   const { data: pins, isLoading } = useQuery<PinWithEntries[]>({
-    queryKey: ["pins"],
+    queryKey: appQueryKeys.pins(),
     queryFn: getPinsWithEntries,
   });
 

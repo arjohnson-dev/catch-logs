@@ -92,7 +92,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
           </Alert>
         )}
 
-        <Card className="auth-card">
+        <Card className="auth-card surface-card">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-center mb-4">
               {/* Toggle Switch */}

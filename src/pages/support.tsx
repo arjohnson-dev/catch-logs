@@ -89,7 +89,7 @@ export default function Support() {
           <h1 className="page-title">Contact Support</h1>
         </div>
 
-        <Card className="settings-card">
+        <Card className="settings-card surface-card">
           <CardHeader>
             <CardTitle className="settings-card-title">
               <FaHeadset size={18} />

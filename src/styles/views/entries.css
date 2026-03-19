@@ -1,0 +1,18 @@
+.journal-page-content {
+  max-width: 640px;
+  padding-bottom: 80px;
+}
+
+.entry-page-content {
+  max-width: 720px;
+  padding-bottom: 80px;
+}
+
+.entry-page-form {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.video-preview {
+  background: var(--color-black);
+}

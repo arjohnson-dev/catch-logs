@@ -1,0 +1,49 @@
+.page-content-prose p,
+.page-content-prose li,
+.terms-privacy-prose p,
+.terms-privacy-prose li,
+.auth-logo-subtitle,
+.dashboard-brand-subtitle,
+.resources-hero-copy,
+.resources-species-summary,
+.resources-results-copy,
+.resources-empty-copy,
+.resources-result-summary,
+.resources-result-meta,
+.resources-species-scientific,
+.resources-result-scientific,
+.resources-detail-list p,
+.resources-hub-description,
+.resources-ai-summary-helper,
+.resources-ai-summary-status,
+.resources-ai-summary-body,
+.resources-ai-summary-sources,
+.resources-ai-summary-disclaimer,
+.resources-trusted-source-description,
+.resources-attribution,
+.feature-beta-banner-copy,
+.settings-meta,
+.settings-danger-copy {
+  font-family: var(--font-serif);
+}
+
+.text-link {
+  color: var(--color-text-muted);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.text-link:hover {
+  color: var(--color-primary);
+}
+
+.settings-meta {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.settings-danger-copy {
+  margin-bottom: var(--space-3);
+  font-size: 0.9rem;
+  color: var(--color-danger-text);
+}

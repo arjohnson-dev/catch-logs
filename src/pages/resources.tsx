@@ -9,6 +9,7 @@ import {
   FaWaveSquare,
 } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
+import FeatureBetaBanner from "@/components/feature-beta-banner";
 
 const RESOURCE_ITEMS = [
   {
@@ -60,13 +61,12 @@ export default function Resources() {
               <FaArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
-          <div className="resources-page-title-row">
-            <h1 className="page-title">Resources</h1>
-            <span className="resources-release-badge">Pre-release</span>
-          </div>
+          <h1 className="page-title">Resources</h1>
         </div>
 
         <div className="resources-stack">
+          <FeatureBetaBanner featureName="Resources" />
+
           <div className="resources-hub-grid">
             {RESOURCE_ITEMS.map((item) => {
               const Icon = item.icon;

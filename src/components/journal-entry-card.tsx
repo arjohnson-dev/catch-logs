@@ -32,6 +32,7 @@ import { getTemperatureIconColorClass } from "@/lib/temperature-ui";
 import { formatVisibility, getWeatherVisual, getWindDirection } from "@/lib/weather-ui";
 import { cn } from "@/lib/utils";
 import { formatFishingSetup } from "@/lib/fishing-gear";
+import { appQueryKeys } from "@/lib/query-keys";
 import type { JournalEntry } from "@/types/domain";
 
 export type JournalEntryCardAction = {
@@ -59,7 +60,7 @@ export default function JournalEntryCard({
   className,
 }: JournalEntryCardProps) {
   const { data: resolvedSpeciesPhotoUrl = null } = useQuery({
-    queryKey: ["journal-entry", "species-photo", entry.fishSpeciesSpecCode],
+    queryKey: appQueryKeys.journalEntrySpeciesPhoto(entry.fishSpeciesSpecCode),
     queryFn: async () => {
       const photoUrlMap = await getFieldGuideSpeciesPhotoUrlMap([entry.fishSpeciesSpecCode]);
       return photoUrlMap.get(entry.fishSpeciesSpecCode) ?? null;

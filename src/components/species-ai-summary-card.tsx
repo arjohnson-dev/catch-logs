@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitPreference } from "@/hooks/use-unit-preference";
+import { appQueryKeys } from "@/lib/query-keys";
 import { supabase } from "@/lib/supabase";
 import { formatMeasurementText } from "@/lib/unit-preferences";
 import type {
@@ -168,7 +169,7 @@ export function SpeciesAiSummaryCard({
   const hasSlug = normalizedSlug.length > 0;
 
   const summaryQuery = useQuery({
-    queryKey: ["field-guide", "species-ai-summary", normalizedSlug, summaryUnitSystem],
+    queryKey: appQueryKeys.fieldGuideSpeciesAiSummary(normalizedSlug, summaryUnitSystem),
     queryFn: () => getSpeciesAiSummary(normalizedSlug, summaryUnitSystem),
     enabled: hasSlug && isAuthenticated,
     staleTime: 1000 * 60 * 30,

@@ -55,6 +55,7 @@ import {
   loadMapBaseLayerPreference,
   loadMapLabelsVisiblePreference,
 } from "@/lib/map-preferences";
+import { appQueryKeys } from "@/lib/query-keys";
 import "leaflet/dist/leaflet.css";
 
 // Fix for default markers in React Leaflet
@@ -214,11 +215,11 @@ export default function MapInterface({
   const initialCenter: [number, number] = [46.8772, -96.7898];
 
   const { data: pins = [], isLoading } = useQuery<PinWithEntries[]>({
-    queryKey: ["pins"],
+    queryKey: appQueryKeys.pins(),
     queryFn: getPinsWithEntries,
   });
   const { data: entries = [] } = useQuery({
-    queryKey: ["entries"],
+    queryKey: appQueryKeys.entries(),
     queryFn: getEntries,
   });
 
@@ -255,7 +256,7 @@ export default function MapInterface({
       });
     },
     onSuccess: (newPin) => {
-      queryClient.invalidateQueries({ queryKey: ["pins"] });
+      queryClient.invalidateQueries({ queryKey: appQueryKeys.pins() });
       onPinDropModeChange(false);
       setShowPinMenu(false);
       // Automatically select the new pin and trigger entry form
@@ -284,7 +285,7 @@ export default function MapInterface({
     },
     onSuccess: (deletedPinIds) => {
       if (deletedPinIds.length === 0) return;
-      queryClient.invalidateQueries({ queryKey: ["pins"] });
+      queryClient.invalidateQueries({ queryKey: appQueryKeys.pins() });
     },
   });
 

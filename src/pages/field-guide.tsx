@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import {
@@ -6,663 +6,41 @@ import {
   FaBookmark,
   FaFishFins,
   FaMagnifyingGlass,
-  FaRegBookmark,
   FaTriangleExclamation,
-  FaWater,
 } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ImageAttribution } from "@/components/image-attribution";
-import { SpeciesAiSummaryCard } from "@/components/species-ai-summary-card";
-import { SpeciesImage } from "@/components/species-image";
-import { useUnitPreference } from "@/hooks/use-unit-preference";
-import {
-  favoriteSpecies,
-  getFieldGuideSpeciesDetail,
-  getMyFavoriteSpecies,
-  getMyFavoriteSpecCodes,
-  getFieldGuideSpeciesList,
-  unfavoriteSpecies,
-} from "@/lib/field-guide";
+import { FieldGuideAttribution } from "@/features/field-guide/components/field-guide-attribution";
+import { FieldGuideDetailPage } from "@/features/field-guide/components/field-guide-detail-page";
+import { FieldGuideSpeciesCard } from "@/features/field-guide/components/field-guide-species-card";
+import { FieldGuideStatusCard } from "@/features/field-guide/components/field-guide-status-card";
+import { filterSpeciesList } from "@/features/field-guide/filter-species";
+import { WATER_TYPE_OPTIONS } from "@/features/field-guide/presentation";
+import { getFieldGuideRouteParams } from "@/features/field-guide/route";
+import { getSpeciesSortTitle } from "@/lib/field-guide-search";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import {
-  formatLength as formatDisplayLength,
-  formatMeasurementText,
-  formatWeight as formatDisplayWeight,
-  type UnitSystem,
-} from "@/lib/unit-preferences";
-import type {
-  FishEnvironment,
-  FishGuideStructuredSection,
-  FishSpeciesDetail,
-  FishSpeciesListItem,
-} from "@/types/field-guide";
+  favoriteSpecies,
+  getFieldGuideSpeciesDetail,
+  getFieldGuideSpeciesList,
+  getMyFavoriteSpecies,
+  getMyFavoriteSpecCodes,
+  unfavoriteSpecies,
+} from "@/lib/field-guide";
+import { appQueryKeys } from "@/lib/query-keys";
+import type { FishSpeciesListItem } from "@/types/field-guide";
 
-const FISHBASE_URL = "https://www.fishbase.org";
-const WATER_TYPE_OPTIONS = [
-  { value: "all", label: "All water types" },
-  { value: "freshwater", label: "Freshwater" },
-  { value: "marine", label: "Marine" },
-  { value: "brackish", label: "Brackish" },
-  { value: "mixed", label: "Mixed water" },
-] as const;
-
-function normalizeText(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\w\s]/g, " ")
-    .replace(/_/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function getSpeciesTitle(species: FishSpeciesListItem | FishSpeciesDetail) {
-  return species.canonicalCommonName ?? species.scientificName;
-}
-
-function getSpeciesSortTitle(species: FishSpeciesListItem | FishSpeciesDetail) {
-  return species.canonicalCommonName ?? species.scientificName;
-}
-
-function getSpeciesSubtitle(species: FishSpeciesListItem | FishSpeciesDetail) {
-  if (!species.canonicalCommonName) {
-    return null;
-  }
-
-  return species.scientificName !== species.canonicalCommonName
-    ? species.scientificName
-    : null;
-}
-
-function truncateText(value: string, maxLength: number) {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  return `${value.slice(0, maxLength).trimEnd()}...`;
-}
-
-function titleCaseEnvironment(environment: FishEnvironment) {
-  switch (environment) {
-    case "freshwater":
-      return "Freshwater";
-    case "marine":
-      return "Marine";
-    case "brackish":
-      return "Brackish";
-    case "mixed":
-      return "Mixed Water";
-    default:
-      return "Unknown";
-  }
-}
-
-function formatTagLabel(value: string) {
-  return value
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function getSpeciesSummaryPreview(species: FishSpeciesListItem | FishSpeciesDetail) {
+function PageHeader({ backTo }: { backTo: string }) {
   return (
-    species.identificationSummary ??
-    species.habitatSummary ??
-    species.behaviorSummary ??
-    species.anglerNotes ??
-    species.distributionSummary
-  );
-}
-
-function formatSummaryText(value: string | null, unitSystem: UnitSystem) {
-  if (!value) {
-    return null;
-  }
-
-  return formatMeasurementText(value, unitSystem);
-}
-
-function getHabitatHint(species: FishSpeciesListItem) {
-  return (
-    species.scopeHabitat ??
-    species.environmentType ??
-    species.distributionSummary
-  );
-}
-
-function normalizeComparableText(value: string | null) {
-  return normalizeText(value ?? "");
-}
-
-function shouldRenderSection(primary: string | null, compareAgainst?: string | null) {
-  if (!primary) {
-    return false;
-  }
-
-  if (!compareAgainst) {
-    return true;
-  }
-
-  return normalizeComparableText(primary) !== normalizeComparableText(compareAgainst);
-}
-
-function scoreSpecies(species: FishSpeciesListItem, query: string) {
-  const normalizedQuery = normalizeText(query);
-  if (!normalizedQuery) return 0;
-
-  const commonName = normalizeText(species.canonicalCommonName ?? "");
-  const scientificName = normalizeText(species.scientificName);
-  const aliases = species.searchAliases.map(normalizeText);
-  const alternateNames = species.alternateCommonNames.map(normalizeText);
-  const family = normalizeText(species.family ?? "");
-  const tags = species.browseTags.map(normalizeText);
-
-  if (commonName === normalizedQuery) return 520;
-  if (scientificName === normalizedQuery) return 500;
-  if (aliases.includes(normalizedQuery)) return 460;
-  if (alternateNames.includes(normalizedQuery)) return 440;
-  if (commonName.startsWith(normalizedQuery)) return 360;
-  if (scientificName.startsWith(normalizedQuery)) return 340;
-  if (aliases.some((value) => value.startsWith(normalizedQuery))) return 320;
-  if (alternateNames.some((value) => value.startsWith(normalizedQuery))) return 300;
-  if (commonName.includes(normalizedQuery)) return 260;
-  if (scientificName.includes(normalizedQuery)) return 240;
-  if (aliases.some((value) => value.includes(normalizedQuery))) return 220;
-  if (alternateNames.some((value) => value.includes(normalizedQuery))) return 200;
-  if (family.includes(normalizedQuery)) return 120;
-  if (tags.some((value) => value.includes(normalizedQuery))) return 80;
-
-  return 0;
-}
-
-function matchesWaterType(species: FishSpeciesListItem, waterType: string) {
-  if (waterType === "all") {
-    return true;
-  }
-
-  if (waterType === "freshwater") {
-    return species.environment === "freshwater";
-  }
-
-  return species.environment === waterType;
-}
-
-function getRouteParams(pathname: string) {
-  const normalizedPath = pathname.split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
-  const isFavoritesRoute = normalizedPath === "/resources/field-guide/favorites";
-  const detailMatch = normalizedPath.match(/^\/resources\/field-guide\/(.+)$/);
-
-  if (!detailMatch || isFavoritesRoute) {
-    return {
-      isFavoritesRoute,
-      detailSlug: null,
-      detailSpecCode: null,
-    };
-  }
-
-  const routeValue = decodeURIComponent(detailMatch[1]);
-  const numericSpecCode = Number.parseInt(routeValue, 10);
-
-  return {
-    isFavoritesRoute,
-    detailSlug: routeValue,
-    detailSpecCode: Number.isNaN(numericSpecCode) ? null : numericSpecCode,
-  };
-}
-
-function Attribution() {
-  return (
-    <p className="resources-attribution">
-      Species data provided by{" "}
-      <a href={FISHBASE_URL} target="_blank" rel="noreferrer" className="text-link">
-        FishBase
-      </a>
-      .
-    </p>
-  );
-}
-
-function ResourceSpeciesCard({
-  species,
-  isFavorite,
-  onOpen,
-  onToggleFavorite,
-}: {
-  species: FishSpeciesListItem;
-  isFavorite: boolean;
-  onOpen: () => void;
-  onToggleFavorite: () => void;
-}) {
-  const { unitSystem } = useUnitPreference();
-  const habitatHint = formatSummaryText(getHabitatHint(species), unitSystem);
-  const summaryPreview = formatSummaryText(getSpeciesSummaryPreview(species), unitSystem);
-
-  return (
-    <Card className="resources-card resources-result-card surface-card surface-card-hover">
-      <CardContent className="p-0">
-        <div className="resources-result-media">
-          <SpeciesImage
-            image={species.primaryImage}
-            commonName={species.canonicalCommonName}
-            scientificName={species.scientificName}
-            imageReference={species.imageReference}
-            className="species-image-shell species-image-shell-card"
-            imgClassName="species-image-media"
-            fallbackClassName="species-image-fallback species-image-fallback-card"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="resources-favorite-button resources-favorite-button-overlay"
-            onClick={onToggleFavorite}
-            aria-label={isFavorite ? "Remove bookmark" : "Add bookmark"}
-            title={isFavorite ? "Remove bookmark" : "Add bookmark"}
-          >
-            {isFavorite ? <FaBookmark size={18} /> : <FaRegBookmark size={18} />}
-          </Button>
-        </div>
-        <button
-          type="button"
-          className="resources-result-main resources-result-main-stacked"
-          onClick={onOpen}
-          aria-label={`Open ${getSpeciesTitle(species)}`}
-        >
-          <div className="resources-result-copy">
-            <div className="resources-result-heading">
-              <h2 className="resources-result-title">{getSpeciesTitle(species)}</h2>
-              <span className="resources-pill resources-pill-environment">
-                {titleCaseEnvironment(species.environment)}
-              </span>
-            </div>
-            {getSpeciesSubtitle(species) && (
-              <p className="resources-result-scientific">{getSpeciesSubtitle(species)}</p>
-            )}
-            <p className="resources-result-meta">{species.family ?? "Family unavailable"}</p>
-            {species.browseTags.length > 0 && (
-              <div className="resources-pill-row">
-                {species.browseTags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="resources-pill">
-                    {formatTagLabel(tag)}
-                  </span>
-                ))}
-              </div>
-            )}
-            {habitatHint && (
-              <p className="resources-result-meta">{truncateText(habitatHint, 120)}</p>
-            )}
-            {species.alternateCommonNames.length > 0 && (
-              <div className="resources-result-aliases">
-                <p className="resources-result-alias-label">Also known as</p>
-                <div className="resources-pill-row">
-                  {species.alternateCommonNames.slice(0, 4).map((name) => (
-                    <span key={name} className="resources-pill">
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {summaryPreview && (
-              <p className="resources-result-summary">
-                {truncateText(summaryPreview, 180)}
-              </p>
-            )}
-          </div>
-        </button>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SpeciesSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <Card className="resources-card surface-card">
-      <CardHeader className="pb-3">
-        <CardTitle className="resources-section-title">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">{children}</CardContent>
-    </Card>
-  );
-}
-
-function StructuredSection({
-  title,
-  data,
-}: {
-  title: string;
-  data: FishGuideStructuredSection;
-}) {
-  if (!data.summary && data.entries.length === 0) {
-    return null;
-  }
-
-  return (
-    <SpeciesSection title={title}>
-      <div className="resources-detail-list">
-        {data.summary && <p>{data.summary}</p>}
-        {data.entries.map((entry) => (
-          <p key={`${entry.label}-${entry.value}`}>
-            <strong>{entry.label}:</strong> {entry.value}
-          </p>
-        ))}
-      </div>
-    </SpeciesSection>
-  );
-}
-
-function renderLength(valueCm: number | null, unitSystem: UnitSystem) {
-  if (!valueCm) {
-    return null;
-  }
-
-  return formatDisplayLength(valueCm, unitSystem);
-}
-
-function renderWeight(valueG: number | null, unitSystem: UnitSystem) {
-  if (!valueG) {
-    return null;
-  }
-
-  return formatDisplayWeight(valueG, unitSystem);
-}
-
-function DetailHeader({
-  species,
-  isFavorite,
-  onToggleFavorite,
-}: {
-  species: FishSpeciesDetail;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
-}) {
-  const [heroImageState, setHeroImageState] = useState<"image" | "fallback">("fallback");
-
-  return (
-    <Card className="resources-card resources-hero-card surface-card">
-      <SpeciesImage
-        image={species.primaryImage}
-        commonName={species.canonicalCommonName}
-        scientificName={species.scientificName}
-        imageReference={species.imageReference}
-        className="species-image-shell species-image-shell-hero"
-        imgClassName="species-image-media"
-        fallbackClassName="species-image-fallback species-image-fallback-hero"
-        priority
-        onRenderStateChange={setHeroImageState}
-      />
-      <CardContent className="resources-species-hero resources-species-hero-body">
-        <div className="resources-species-copy">
-          <div className="resources-species-title-row">
-            <div>
-              <p className="resources-eyebrow">Species Profile</p>
-              <h2 className="resources-species-title">{getSpeciesTitle(species)}</h2>
-              <p className="resources-species-scientific">{species.scientificName}</p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="btn-outline-muted resources-save-button"
-              onClick={onToggleFavorite}
-            >
-              {isFavorite ? <FaBookmark size={16} /> : <FaRegBookmark size={16} />}
-              {isFavorite ? "Bookmarked" : "Bookmark"}
-            </Button>
-          </div>
-          <div className="resources-pill-row">
-            <span className="resources-pill resources-pill-environment">
-              <FaWater size={12} />
-              {titleCaseEnvironment(species.environment)}
-            </span>
-            {species.scopeHabitat && <span className="resources-pill">{species.scopeHabitat}</span>}
-            {species.browseTags.map((tag) => (
-              <span key={tag} className="resources-pill">
-                {formatTagLabel(tag)}
-              </span>
-            ))}
-          </div>
-          {heroImageState === "image" && <ImageAttribution image={species.primaryImage} />}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SpeciesDetailPage({
-  species,
-  isFavorite,
-  onToggleFavorite,
-  onBack,
-}: {
-  species: FishSpeciesDetail;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
-  onBack: () => void;
-}) {
-  const { unitSystem } = useUnitPreference();
-  const hasDistributionSection = Boolean(
-    species.scopeHabitat || species.distributionSummary || species.nativeRegionSummary,
-  );
-  const hasMeasurementSection = Boolean(species.maxLengthCm || species.maxWeightG);
-  const hasQuickFactsSection = Boolean(
-    species.environmentType ||
-      species.scopeHabitat ||
-      species.family ||
-      species.order ||
-      species.maxLengthCm ||
-      species.maxWeightG,
-  );
-  const showIdentificationSection = shouldRenderSection(
-    species.identificationSummary,
-    species.habitatSummary,
-  );
-  const showHabitatSection = shouldRenderSection(
-    species.habitatSummary,
-    species.identificationSummary,
-  );
-  const showBehaviorSection = shouldRenderSection(species.behaviorSummary);
-  const showDietSection = shouldRenderSection(species.dietSummary);
-  const distributionSummary = formatSummaryText(species.distributionSummary, unitSystem);
-  const nativeRegionSummary = formatSummaryText(species.nativeRegionSummary, unitSystem);
-  const identificationSummary = formatSummaryText(species.identificationSummary, unitSystem);
-  const habitatSummary = formatSummaryText(species.habitatSummary, unitSystem);
-  const behaviorSummary = formatSummaryText(species.behaviorSummary, unitSystem);
-  const dietSummary = formatSummaryText(species.dietSummary, unitSystem);
-  const anglerNotes = formatSummaryText(species.anglerNotes, unitSystem);
-  const fallbackSummary = formatSummaryText(getSpeciesSummaryPreview(species), unitSystem);
-
-  return (
-    <div className="page-scroll">
-      <div className="page-content resources-page-content">
-        <div className="page-header">
-          <Button variant="ghost" size="sm" className="legal-back-button" onClick={onBack}>
-            <FaArrowLeft className="w-4 h-4" />
-          </Button>
-          <h1 className="page-title">Field Guide</h1>
-        </div>
-
-        <div className="resources-stack">
-          <DetailHeader
-            species={species}
-            isFavorite={isFavorite}
-            onToggleFavorite={onToggleFavorite}
-          />
-
-          <SpeciesAiSummaryCard
-            slug={species.slug}
-            fallbackSummary={fallbackSummary}
-          />
-
-          <SpeciesSection title="Overview">
-            <div className="resources-detail-list">
-              <p>
-                <strong>Common name:</strong> {species.canonicalCommonName ?? "Not available"}
-              </p>
-              <p>
-                <strong>Scientific name:</strong> {species.scientificName}
-              </p>
-              {species.family && (
-                <p>
-                  <strong>Family:</strong> {species.family}
-                </p>
-              )}
-              {species.genus && (
-                <p>
-                  <strong>Genus:</strong> {species.genus}
-                </p>
-              )}
-              {species.speciesEpithet && (
-                <p>
-                  <strong>Species:</strong> {species.speciesEpithet}
-                </p>
-              )}
-              {species.order && (
-                <p>
-                  <strong>Order:</strong> {species.order}
-                </p>
-              )}
-              <p>
-                <strong>Environment:</strong> {titleCaseEnvironment(species.environment)}
-              </p>
-            </div>
-          </SpeciesSection>
-
-          {hasQuickFactsSection && (
-            <SpeciesSection title="Quick Facts">
-              <div className="resources-detail-list">
-                {species.environmentType && (
-                  <p>
-                    <strong>Environment:</strong> {species.environmentType}
-                  </p>
-                )}
-                {species.scopeHabitat && (
-                  <p>
-                    <strong>Habitat:</strong> {species.scopeHabitat}
-                  </p>
-                )}
-                {species.family && (
-                  <p>
-                    <strong>Family:</strong> {species.family}
-                  </p>
-                )}
-                {species.order && (
-                  <p>
-                    <strong>Order:</strong> {species.order}
-                  </p>
-                )}
-                {species.maxLengthCm && (
-                  <p>
-                    <strong>Maximum length:</strong> {renderLength(species.maxLengthCm, unitSystem)}
-                  </p>
-                )}
-                {species.maxWeightG && (
-                  <p>
-                    <strong>Maximum weight:</strong> {renderWeight(species.maxWeightG, unitSystem)}
-                  </p>
-                )}
-              </div>
-            </SpeciesSection>
-          )}
-
-          {hasDistributionSection && (
-            <SpeciesSection title="Distribution">
-              <div className="resources-detail-list">
-                {species.scopeHabitat && (
-                  <p>
-                    <strong>Habitat:</strong> {species.scopeHabitat}
-                  </p>
-                )}
-                {distributionSummary && (
-                  <p>
-                    <strong>Distribution:</strong> {distributionSummary}
-                  </p>
-                )}
-                {nativeRegionSummary && (
-                  <p>
-                    <strong>Native region:</strong> {nativeRegionSummary}
-                  </p>
-                )}
-              </div>
-            </SpeciesSection>
-          )}
-
-          {showIdentificationSection && (
-            <SpeciesSection title="Identification">
-              <div className="resources-detail-list">
-                <p>{identificationSummary}</p>
-              </div>
-            </SpeciesSection>
-          )}
-
-          {showHabitatSection && (
-            <SpeciesSection title="Habitat">
-              <div className="resources-detail-list">
-                <p>{habitatSummary}</p>
-              </div>
-            </SpeciesSection>
-          )}
-
-          {showBehaviorSection && (
-            <SpeciesSection title="Behavior">
-              <div className="resources-detail-list">
-                <p>{behaviorSummary}</p>
-              </div>
-            </SpeciesSection>
-          )}
-
-          {showDietSection && (
-            <SpeciesSection title="Diet">
-              <div className="resources-detail-list">
-                <p>{dietSummary}</p>
-              </div>
-            </SpeciesSection>
-          )}
-
-          {hasMeasurementSection && (
-            <SpeciesSection title="Size & Weight">
-              <div className="resources-detail-list">
-                {species.maxLengthCm && (
-                  <p>
-                    <strong>Maximum length:</strong> {renderLength(species.maxLengthCm, unitSystem)}
-                  </p>
-                )}
-                {species.maxWeightG && (
-                  <p>
-                    <strong>Maximum weight:</strong> {renderWeight(species.maxWeightG, unitSystem)}
-                  </p>
-                )}
-              </div>
-            </SpeciesSection>
-          )}
-
-          <StructuredSection title="Reproduction" data={species.reproduction} />
-          <StructuredSection title="Spawning" data={species.spawning} />
-
-          {anglerNotes && (
-            <SpeciesSection title="Angler Notes">
-              <div className="resources-detail-list">
-                <p>{anglerNotes}</p>
-              </div>
-            </SpeciesSection>
-          )}
-
-          <Card className="resources-card surface-card">
-            <CardContent className="resources-footer-card">
-              <Attribution />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+    <div className="page-header">
+      <Link to={backTo}>
+        <Button variant="ghost" size="sm" className="legal-back-button">
+          <FaArrowLeft className="w-4 h-4" />
+        </Button>
+      </Link>
+      <h1 className="page-title">Field Guide</h1>
     </div>
   );
 }
@@ -674,13 +52,13 @@ export default function FieldGuide() {
   const [location, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [selectedWaterType, setSelectedWaterType] = useState<string>("all");
-  const { isFavoritesRoute, detailSlug, detailSpecCode } = getRouteParams(location);
+  const { isFavoritesRoute, detailSlug, detailSpecCode } = getFieldGuideRouteParams(location);
   const trimmedSearch = search.trim();
-  const favoriteQueryKey = ["field-guide", "favorite-spec-codes", user?.id ?? null] as const;
-  const favoriteSpeciesQueryKey = ["field-guide", "favorite-species", user?.id ?? null] as const;
+  const favoriteQueryKey = appQueryKeys.fieldGuideFavoriteSpecCodes(user?.id ?? null);
+  const favoriteSpeciesQueryKey = appQueryKeys.fieldGuideFavoriteSpecies(user?.id ?? null);
 
   const speciesListQuery = useQuery({
-    queryKey: ["field-guide", "species-list", trimmedSearch],
+    queryKey: appQueryKeys.fieldGuideSpeciesList(trimmedSearch),
     queryFn: () =>
       getFieldGuideSpeciesList({
         search: trimmedSearch,
@@ -689,7 +67,7 @@ export default function FieldGuide() {
   });
 
   const speciesDetailQuery = useQuery({
-    queryKey: ["field-guide", "species-detail", detailSlug ?? detailSpecCode],
+    queryKey: appQueryKeys.fieldGuideSpeciesDetail(detailSlug ?? detailSpecCode),
     queryFn: () =>
       getFieldGuideSpeciesDetail({
         slug: detailSlug,
@@ -730,8 +108,7 @@ export default function FieldGuide() {
       await queryClient.cancelQueries({ queryKey: favoriteQueryKey });
       await queryClient.cancelQueries({ queryKey: favoriteSpeciesQueryKey });
 
-      const previousCodes =
-        queryClient.getQueryData<number[]>(favoriteQueryKey) ?? [];
+      const previousCodes = queryClient.getQueryData<number[]>(favoriteQueryKey) ?? [];
       const previousSpecies =
         queryClient.getQueryData<FishSpeciesListItem[]>(favoriteSpeciesQueryKey) ?? [];
 
@@ -798,93 +175,37 @@ export default function FieldGuide() {
     });
   };
 
-  const handleDetailBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      window.history.back();
-      return;
-    }
+  const filteredSpecies = useMemo(
+    () =>
+      filterSpeciesList({
+        species,
+        waterType: selectedWaterType,
+        search: trimmedSearch,
+      }),
+    [selectedWaterType, species, trimmedSearch],
+  );
 
-    navigate("/resources/field-guide");
-  };
-
-  const filteredSpecies = useMemo(() => {
-    return species
-      .filter((item) => {
-        if (!matchesWaterType(item, selectedWaterType)) {
-          return false;
-        }
-
-        if (!trimmedSearch) {
-          return true;
-        }
-
-        return scoreSpecies(item, trimmedSearch) > 0;
-      })
-      .sort((left, right) => {
-        if (trimmedSearch) {
-          const rightScore = scoreSpecies(right, trimmedSearch);
-          const leftScore = scoreSpecies(left, trimmedSearch);
-          if (rightScore !== leftScore) {
-            return rightScore - leftScore;
-          }
-        }
-
-        return getSpeciesSortTitle(left).localeCompare(getSpeciesSortTitle(right));
-      });
-  }, [selectedWaterType, species, trimmedSearch]);
-
-  const displayedFavoriteSpecies = useMemo(() => {
-    const favoriteSpecies = favoriteSpeciesListQuery.data ?? [];
-
-    return favoriteSpecies
-      .filter((item) => {
-        if (!matchesWaterType(item, selectedWaterType)) {
-          return false;
-        }
-
-        if (!trimmedSearch) {
-          return true;
-        }
-
-        return scoreSpecies(item, trimmedSearch) > 0;
-      })
-      .sort((left, right) => {
-        if (trimmedSearch) {
-          const rightScore = scoreSpecies(right, trimmedSearch);
-          const leftScore = scoreSpecies(left, trimmedSearch);
-          if (rightScore !== leftScore) {
-            return rightScore - leftScore;
-          }
-        }
-
-        return getSpeciesSortTitle(left).localeCompare(getSpeciesSortTitle(right));
-      });
-  }, [favoriteSpeciesListQuery.data, selectedWaterType, trimmedSearch]);
+  const displayedFavoriteSpecies = useMemo(
+    () =>
+      filterSpeciesList({
+        species: favoriteSpeciesListQuery.data ?? [],
+        waterType: selectedWaterType,
+        search: trimmedSearch,
+      }),
+    [favoriteSpeciesListQuery.data, selectedWaterType, trimmedSearch],
+  );
 
   if (detailSlug !== null || detailSpecCode !== null) {
     if (speciesDetailQuery.isLoading) {
       return (
         <div className="page-scroll">
           <div className="page-content resources-page-content">
-            <div className="page-header">
-              <Link to="/resources">
-                <Button variant="ghost" size="sm" className="legal-back-button">
-                  <FaArrowLeft className="w-4 h-4" />
-                </Button>
-              </Link>
-              <h1 className="page-title">Field Guide</h1>
-            </div>
-            <Card className="resources-card surface-card">
-              <CardContent className="resources-empty-state">
-                <FaFishFins size={20} />
-                <div>
-                  <h2 className="resources-empty-title">Loading species profile</h2>
-                  <p className="resources-empty-copy">
-                    Pulling the latest active species record from the field guide.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <PageHeader backTo="/resources" />
+            <FieldGuideStatusCard
+              icon={<FaFishFins size={20} />}
+              title="Loading species profile"
+              description="Pulling the latest active species record from the field guide."
+            />
           </div>
         </div>
       );
@@ -894,25 +215,12 @@ export default function FieldGuide() {
       return (
         <div className="page-scroll">
           <div className="page-content resources-page-content">
-            <div className="page-header">
-              <Link to="/resources">
-                <Button variant="ghost" size="sm" className="legal-back-button">
-                  <FaArrowLeft className="w-4 h-4" />
-                </Button>
-              </Link>
-              <h1 className="page-title">Field Guide</h1>
-            </div>
-            <Card className="resources-card surface-card">
-              <CardContent className="resources-empty-state">
-                <FaTriangleExclamation size={20} />
-                <div>
-                  <h2 className="resources-empty-title">Species unavailable</h2>
-                  <p className="resources-empty-copy">
-                    The field guide could not load that species profile right now.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <PageHeader backTo="/resources" />
+            <FieldGuideStatusCard
+              icon={<FaTriangleExclamation size={20} />}
+              title="Species unavailable"
+              description="The field guide could not load that species profile right now."
+            />
           </div>
         </div>
       );
@@ -922,51 +230,49 @@ export default function FieldGuide() {
       return (
         <div className="page-scroll">
           <div className="page-content resources-page-content">
-            <div className="page-header">
-              <Link to="/resources">
-                <Button variant="ghost" size="sm" className="legal-back-button">
-                  <FaArrowLeft className="w-4 h-4" />
-                </Button>
-              </Link>
-              <h1 className="page-title">Field Guide</h1>
-            </div>
-            <Card className="resources-card surface-card">
-              <CardContent className="resources-empty-state">
-                <FaBookmark size={20} />
-                <div>
-                  <h2 className="resources-empty-title">Species not found</h2>
-                  <p className="resources-empty-copy">
-                    That active species profile was not found in the field guide.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <PageHeader backTo="/resources" />
+            <FieldGuideStatusCard
+              icon={<FaBookmark size={20} />}
+              title="Species not found"
+              description="That active species profile was not found in the field guide."
+            />
           </div>
         </div>
       );
     }
 
     return (
-      <SpeciesDetailPage
+      <FieldGuideDetailPage
         species={speciesDetailQuery.data}
         isFavorite={favoriteSet.has(speciesDetailQuery.data.specCode)}
         onToggleFavorite={() => toggleFavorite(speciesDetailQuery.data.specCode)}
-        onBack={handleDetailBack}
+        onBack={() => {
+          if (typeof window !== "undefined" && window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+
+          navigate("/resources/field-guide");
+        }}
       />
     );
   }
 
+  const displayedSpecies = isFavoritesRoute ? displayedFavoriteSpecies : filteredSpecies;
+  const resultsCopy = !user?.id && isFavoritesRoute
+    ? "Sign in to access bookmarks"
+    : isFavoritesRoute && favoriteSpeciesListQuery.isLoading
+      ? "Loading bookmarks..."
+      : speciesListQuery.isLoading && !isFavoritesRoute
+        ? "Loading active species..."
+        : !isFavoritesRoute && trimmedSearch.length === 0
+          ? "Start typing to search the field guide"
+          : `${displayedSpecies.length} species ready to browse`;
+
   return (
     <div className="page-scroll">
       <div className="page-content resources-page-content">
-        <div className="page-header">
-          <Link to="/resources">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <h1 className="page-title">Field Guide</h1>
-        </div>
+        <PageHeader backTo="/resources" />
 
         <div className="resources-stack">
           <Card className="resources-card surface-card">
@@ -997,6 +303,7 @@ export default function FieldGuide() {
                   Bookmarks
                 </button>
               </div>
+
               <label className="resources-search-label" htmlFor="field-guide-search">
                 {isFavoritesRoute ? "Search bookmarks" : "Search species"}
               </label>
@@ -1006,7 +313,11 @@ export default function FieldGuide() {
                   id="field-guide-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder={isFavoritesRoute ? "Search your bookmarks" : "Try largemouth bass or Micropterus salmoides"}
+                  placeholder={
+                    isFavoritesRoute
+                      ? "Search your bookmarks"
+                      : "Try largemouth bass or Micropterus salmoides"
+                  }
                   className="field-dark icon-field-input"
                 />
               </div>
@@ -1029,7 +340,6 @@ export default function FieldGuide() {
                     ))}
                   </select>
                 </div>
-
               </div>
             </CardContent>
           </Card>
@@ -1045,118 +355,72 @@ export default function FieldGuide() {
                 <h2 className="resources-results-title">
                   {isFavoritesRoute ? "Bookmarked species" : "Species results"}
                 </h2>
-                <p className="resources-results-copy">
-                  {!user?.id && isFavoritesRoute
-                    ? "Sign in to access bookmarks"
-                    : isFavoritesRoute && favoriteSpeciesListQuery.isLoading
-                      ? "Loading bookmarks..."
-                        : speciesListQuery.isLoading && !isFavoritesRoute
-                          ? "Loading active species..."
-                        : !isFavoritesRoute && trimmedSearch.length === 0
-                          ? "Start typing to search the field guide"
-                          : `${isFavoritesRoute ? displayedFavoriteSpecies.length : filteredSpecies.length} species ready to browse`}
-                </p>
+                <p className="resources-results-copy">{resultsCopy}</p>
               </div>
             </div>
 
             {!user?.id && isFavoritesRoute ? (
-              <Card className="resources-card surface-card">
-                <CardContent className="resources-empty-state">
-                  <FaBookmark size={20} />
-                  <div>
-                    <h2 className="resources-empty-title">Bookmarks require an account</h2>
-                    <p className="resources-empty-copy">
-                      Sign in to save species and find them here later.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <FieldGuideStatusCard
+                icon={<FaBookmark size={20} />}
+                title="Bookmarks require an account"
+                description="Sign in to save species and find them here later."
+              />
             ) : isFavoritesRoute && favoriteSpeciesListQuery.isLoading ? (
-              <Card className="resources-card surface-card">
-                <CardContent className="resources-empty-state">
-                  <FaBookmark size={20} />
-                  <div>
-                    <h2 className="resources-empty-title">Loading bookmarks</h2>
-                    <p className="resources-empty-copy">
-                      Pulling your saved species from the field guide.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <FieldGuideStatusCard
+                icon={<FaBookmark size={20} />}
+                title="Loading bookmarks"
+                description="Pulling your saved species from the field guide."
+              />
             ) : !isFavoritesRoute && speciesListQuery.isLoading ? (
-              <Card className="resources-card surface-card">
-                <CardContent className="resources-empty-state">
-                  <FaFishFins size={20} />
-                  <div>
-                    <h2 className="resources-empty-title">Loading field guide</h2>
-                    <p className="resources-empty-copy">
-                      Fetching active species from Supabase.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <FieldGuideStatusCard
+                icon={<FaFishFins size={20} />}
+                title="Loading field guide"
+                description="Fetching active species from Supabase."
+              />
             ) : (isFavoritesRoute ? favoriteSpeciesListQuery.isError : speciesListQuery.isError) ? (
-              <Card className="resources-card surface-card">
-                <CardContent className="resources-empty-state">
-                  <FaTriangleExclamation size={20} />
-                  <div>
-                    <h2 className="resources-empty-title">
-                      {isFavoritesRoute ? "Couldn't load bookmarks" : "Couldn&apos;t load species"}
-                    </h2>
-                    <p className="resources-empty-copy">
-                      {isFavoritesRoute
-                        ? "Your saved species aren't available right now."
-                        : "The field guide is having trouble reaching Supabase right now."}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <FieldGuideStatusCard
+                icon={<FaTriangleExclamation size={20} />}
+                title={isFavoritesRoute ? "Couldn't load bookmarks" : "Couldn't load species"}
+                description={
+                  isFavoritesRoute
+                    ? "Your saved species aren't available right now."
+                    : "The field guide is having trouble reaching Supabase right now."
+                }
+              />
             ) : !isFavoritesRoute && trimmedSearch.length === 0 ? (
-              <Card className="resources-card surface-card">
-                <CardContent className="resources-empty-state">
-                  <FaMagnifyingGlass size={20} />
-                  <div>
-                    <h2 className="resources-empty-title">Search the field guide</h2>
-                    <p className="resources-empty-copy">
-                      Start typing a species name to see matching results.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (isFavoritesRoute ? displayedFavoriteSpecies : filteredSpecies).length > 0 ? (
+              <FieldGuideStatusCard
+                icon={<FaMagnifyingGlass size={20} />}
+                title="Search the field guide"
+                description="Start typing a species name to see matching results."
+              />
+            ) : displayedSpecies.length > 0 ? (
               <div className="resources-results-grid">
-                {(isFavoritesRoute ? displayedFavoriteSpecies : filteredSpecies).map((item) => (
-                  <ResourceSpeciesCard
-                    key={item.specCode}
-                    species={item}
-                    isFavorite={favoriteSet.has(item.specCode)}
-                    onOpen={() => navigate(`/resources/field-guide/${item.slug}`)}
-                    onToggleFavorite={() => toggleFavorite(item.specCode)}
+                {displayedSpecies.map((speciesItem) => (
+                  <FieldGuideSpeciesCard
+                    key={speciesItem.specCode}
+                    species={speciesItem}
+                    isFavorite={favoriteSet.has(speciesItem.specCode)}
+                    onOpen={() => navigate(`/resources/field-guide/${speciesItem.slug}`)}
+                    onToggleFavorite={() => toggleFavorite(speciesItem.specCode)}
                   />
                 ))}
               </div>
             ) : (
-              <Card className="resources-card surface-card">
-                <CardContent className="resources-empty-state">
-                  <FaMagnifyingGlass size={20} />
-                  <div>
-                    <h2 className="resources-empty-title">
-                      {isFavoritesRoute ? "No bookmarks yet" : "No matches yet"}
-                    </h2>
-                    <p className="resources-empty-copy">
-                      {isFavoritesRoute
-                        ? "Save species from the Field Guide to find them here."
-                        : "Try a broader name or switch categories."}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <FieldGuideStatusCard
+                icon={<FaMagnifyingGlass size={20} />}
+                title={isFavoritesRoute ? "No bookmarks yet" : "No matches yet"}
+                description={
+                  isFavoritesRoute
+                    ? "Save species from the Field Guide to find them here."
+                    : "Try a broader name or switch categories."
+                }
+              />
             )}
           </div>
 
           <Card className="resources-card surface-card">
             <CardContent className="resources-footer-card">
-              <Attribution />
+              <FieldGuideAttribution />
             </CardContent>
           </Card>
         </div>

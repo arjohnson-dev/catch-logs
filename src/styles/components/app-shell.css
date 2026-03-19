@@ -1,0 +1,43 @@
+.app-loading-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg-canvas);
+}
+
+.app-loading-panel {
+  text-align: center;
+}
+
+.app-loading-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  border-bottom-color: var(--color-primary);
+  animation: spin var(--duration-slow) linear infinite;
+}
+
+.app-loading-text {
+  color: var(--color-text-muted);
+}
+
+.app-overlay-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-app-overlay);
+  background: rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(2px);
+}
+
+.app-overlay-panel {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  background: var(--color-overlay-panel);
+  --bg: var(--color-overlay-panel);
+  --surface: var(--color-overlay-surface);
+  --surface-2: var(--color-overlay-surface-2);
+  --surface-3: var(--color-overlay-surface-3);
+}

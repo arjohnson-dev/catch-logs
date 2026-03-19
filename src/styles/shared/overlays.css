@@ -1,0 +1,88 @@
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  background: var(--color-overlay-scrim);
+}
+
+.overlay-backdrop-dashboard {
+  top: var(--app-header-h);
+  bottom: var(--app-footer-h);
+}
+
+.overlay-backdrop-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-backdrop-sheet {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--space-4);
+  backdrop-filter: blur(2px);
+}
+
+.dialog-panel {
+  background: var(--color-black);
+  border: 1px solid var(--color-border-default);
+  border-radius: 0;
+  box-shadow: var(--shadow-lg);
+}
+
+.dialog-panel-loading {
+  padding: var(--space-8);
+}
+
+.dialog-panel-sheet {
+  width: min(100%, 420px);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 0;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.dialog-header-corner {
+  position: relative;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-right: 56px;
+}
+
+.dialog-close-corner {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+.dialog-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-black);
+}
+
+.dialog-title {
+  margin: 0;
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+}
+
+.dialog-body {
+  padding: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .overlay-backdrop-sheet {
+    align-items: center;
+  }
+}

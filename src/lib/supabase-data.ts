@@ -266,8 +266,8 @@ export async function createEntry(input: {
   userId: string;
   fishType: string;
   fishSpeciesSpecCode: number;
-  length?: number;
-  weight?: number;
+  length?: number | null;
+  weight?: number | null;
   lure?: string | null;
   bait?: string | null;
   drag?: number | null;
@@ -280,7 +280,7 @@ export async function createEntry(input: {
   weightOz?: string | null;
   leaderMaterial?: string | null;
   leaderLength?: string | null;
-  notes?: string;
+  notes?: string | null;
   photoUrl?: string | null;
   dateTime: string;
   temperature?: number | null;

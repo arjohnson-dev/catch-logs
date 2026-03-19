@@ -71,7 +71,7 @@ export default function ForgotPassword() {
   if (emailSent) {
     return (
       <div className="center-card-shell">
-        <Card className="center-card">
+        <Card className="center-card surface-card">
           <CardHeader className="center-card-header">
             <CardTitle className="flex items-center justify-center gap-2">
               <FaCircleCheck size={20} className="icon-success" />
@@ -112,7 +112,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="center-card-shell">
-      <Card className="center-card">
+      <Card className="center-card surface-card">
         <CardHeader className="center-card-header">
           <CardTitle className="flex items-center justify-center gap-2">
             <FaEnvelope size={20} className="icon-primary" />

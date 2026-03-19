@@ -51,6 +51,7 @@ import {
 } from "@/lib/legal/third-party-disclaimer";
 import { supabase } from "@/lib/supabase";
 import { sendSupportEmail } from "@/lib/support";
+import { appQueryKeys } from "@/lib/query-keys";
 
 const ACCOUNT_DELETE_PASSPHRASE = "DELETE EVERYTHING";
 const SUPPORT_SUBJECT_OPTIONS = [
@@ -142,7 +143,7 @@ export default function Settings() {
       if (profileError) throw profileError;
 
       await queryClient.invalidateQueries({
-        queryKey: ["supabase", "auth", "user"],
+        queryKey: appQueryKeys.supabaseAuthUser(),
       });
       setIsEditingName(false);
       toast({
@@ -323,7 +324,7 @@ export default function Settings() {
         </div>
 
         <div className="settings-stack">
-          <Card className="settings-card">
+          <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">
@@ -358,7 +359,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="settings-card">
+          <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">
@@ -463,7 +464,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="settings-card">
+          <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">
@@ -477,7 +478,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="settings-card">
+          <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">
@@ -544,7 +545,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="settings-card">
+          <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">
@@ -568,7 +569,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="settings-card">
+          <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">
@@ -681,7 +682,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="settings-card settings-card-danger">
+          <Card className="settings-card surface-card settings-card-danger">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title settings-card-title-danger">
@@ -718,7 +719,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="settings-card">
+          <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
                 <CardTitle className="settings-card-title">

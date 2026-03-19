@@ -43,12 +43,13 @@ import {
 } from "@/components/ui/collapsible";
 import JournalEntryCard from "@/components/journal-entry-card";
 import { type JournalEntry } from "@/types/domain";
-import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import { deleteEntryWithPhoto, getEntries } from "@/lib/supabase-data";
 import JournalEntryEditor from "@/components/journal-entry-editor";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { appQueryKeys, invalidateCatchData } from "@/lib/query-keys";
+import { filterJournalEntries } from "@/features/journal/filter-journal-entries";
 
 interface JournalListProps {
   onClose?: () => void;
@@ -82,7 +83,7 @@ export default function JournalList({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: entries = [], isLoading } = useQuery<JournalEntry[]>({
-    queryKey: ["entries"],
+    queryKey: appQueryKeys.entries(),
     queryFn: getEntries,
   });
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
@@ -127,9 +128,8 @@ export default function JournalList({
     mutationFn: async (entryId: number) => {
       await deleteEntryWithPhoto(entryId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["entries"] });
-      queryClient.invalidateQueries({ queryKey: ["pins"] });
+    onSuccess: async () => {
+      await invalidateCatchData(queryClient);
       toast({
         title: "Entry deleted successfully",
         description: "This cannot be undone.",
@@ -147,103 +147,19 @@ export default function JournalList({
   });
 
   const filteredAndSortedEntries = useMemo(() => {
-    let filtered = [...entries];
-
-    // Apply date range filter
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      filtered = filtered.filter((entry) => new Date(entry.dateTime) >= start);
-    }
-
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((entry) => new Date(entry.dateTime) <= end);
-    }
-
-    const typeTerm = fishTypeFilter.trim().toLowerCase();
-    if (typeTerm) {
-      filtered = filtered.filter((entry) =>
-        entry.fishType.toLowerCase().includes(typeTerm),
-      );
-    }
-
-    const lureTerm = lureFilter.trim().toLowerCase();
-    if (lureTerm) {
-      filtered = filtered.filter((entry) =>
-        (normalizeFishingGearValue(entry.lure) ?? "").toLowerCase().includes(lureTerm),
-      );
-    }
-
-    const baitTerm = baitFilter.trim().toLowerCase();
-    if (baitTerm) {
-      filtered = filtered.filter((entry) =>
-        (normalizeFishingGearValue(entry.bait) ?? "").toLowerCase().includes(baitTerm),
-      );
-    }
-
-    const weatherTerm = weatherFilter.trim().toLowerCase();
-    if (weatherTerm) {
-      filtered = filtered.filter((entry) =>
-        (
-          entry.weatherDescription ??
-          entry.weatherCondition ??
-          ""
-        )
-          .toLowerCase()
-          .includes(weatherTerm),
-      );
-    }
-
-    const minLengthValue = minLength.trim() === "" ? null : Number(minLength);
-    if (minLengthValue !== null && !Number.isNaN(minLengthValue)) {
-      filtered = filtered.filter(
-        (entry) =>
-          entry.length !== null &&
-          entry.length !== undefined &&
-          entry.length >= minLengthValue,
-      );
-    }
-
-    const maxLengthValue = maxLength.trim() === "" ? null : Number(maxLength);
-    if (maxLengthValue !== null && !Number.isNaN(maxLengthValue)) {
-      filtered = filtered.filter(
-        (entry) =>
-          entry.length !== null &&
-          entry.length !== undefined &&
-          entry.length <= maxLengthValue,
-      );
-    }
-
-    const minWeightValue = minWeight.trim() === "" ? null : Number(minWeight);
-    if (minWeightValue !== null && !Number.isNaN(minWeightValue)) {
-      filtered = filtered.filter(
-        (entry) =>
-          entry.weight !== null &&
-          entry.weight !== undefined &&
-          entry.weight >= minWeightValue,
-      );
-    }
-
-    const maxWeightValue = maxWeight.trim() === "" ? null : Number(maxWeight);
-    if (maxWeightValue !== null && !Number.isNaN(maxWeightValue)) {
-      filtered = filtered.filter(
-        (entry) =>
-          entry.weight !== null &&
-          entry.weight !== undefined &&
-          entry.weight <= maxWeightValue,
-      );
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.dateTime).getTime();
-      const dateB = new Date(b.dateTime).getTime();
-      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    return filterJournalEntries(entries, {
+      sortOrder,
+      startDate,
+      endDate,
+      fishType: fishTypeFilter,
+      lure: lureFilter,
+      bait: baitFilter,
+      weather: weatherFilter,
+      minLength,
+      maxLength,
+      minWeight,
+      maxWeight,
     });
-
-    return filtered;
   }, [
     entries,
     sortOrder,
