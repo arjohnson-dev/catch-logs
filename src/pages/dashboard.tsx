@@ -41,6 +41,7 @@ import NotFound from "@/pages/not-found";
 import ResourcesHub from "@/pages/resources";
 import FieldGuide from "@/pages/field-guide";
 import ResourcesPlaceholder from "@/pages/resources-placeholder";
+import TrustedSourcesPage from "@/pages/trusted-sources";
 
 export default function Dashboard() {
   const currentPath = window.location.pathname;
@@ -180,6 +181,10 @@ export default function Dashboard() {
 
     if (normalizedPath === "/resources/field-guide" || normalizedPath.startsWith("/resources/field-guide/")) {
       return <FieldGuide />;
+    }
+
+    if (normalizedPath === "/resources/trusted-sources") {
+      return <TrustedSourcesPage />;
     }
 
     if (normalizedPath === "/resources/fishing-reports") {

@@ -48,7 +48,7 @@ export default function BottomNavigation({
         <Link to="/resources">
           <Button
             variant="ghost"
-            className="touch-target btn-nav"
+            className="touch-target btn-nav btn-nav-resources"
           >
             <FaFishFins size={20} />
             <span className="btn-nav-label">Resources</span>

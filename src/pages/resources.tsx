@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
   FaArrowLeft,
+  FaBookOpen,
   FaChevronRight,
   FaCloudSun,
   FaFishFins,
@@ -11,6 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const RESOURCE_ITEMS = [
+  {
+    title: "Trusted Sources",
+    description: "Review the approved external sources used across CatchLogs.",
+    icon: FaBookOpen,
+    to: "/resources/trusted-sources",
+    isAvailable: true,
+  },
   {
     title: "Field Guide",
     description: "Browse species and learn more about fish.",
@@ -53,7 +61,10 @@ export default function Resources() {
               <FaArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
-          <h1 className="page-title">Resources</h1>
+          <div className="resources-page-title-row">
+            <h1 className="page-title">Resources</h1>
+            <span className="resources-release-badge">Pre-release</span>
+          </div>
         </div>
 
         <div className="resources-stack">

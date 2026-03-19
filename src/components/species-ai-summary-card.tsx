@@ -235,7 +235,7 @@ export function SpeciesAiSummaryCard({
               <SummarySources sources={sources} />
               <p className="resources-ai-summary-disclaimer">
                 Double-check important details and{" "}
-                <Link to="/resources" className="text-link resources-ai-summary-cta">
+                <Link to="/resources/trusted-sources" className="text-link resources-ai-summary-cta">
                   review our whitelist of trusted resources
                 </Link>
                 .
