@@ -32,7 +32,18 @@ type EntryRow = {
   fish_type: string;
   length: number | null;
   weight: number | null;
-  tackle: string;
+  lure: string | null;
+  bait: string | null;
+  tackle_drag: number | null;
+  tackle_rod_length: string | null;
+  tackle_rod_power: string | null;
+  tackle_rod_action: string | null;
+  tackle_line_type: string | null;
+  tackle_line_test: string | null;
+  tackle_bobber_float: string | null;
+  tackle_weight_oz: string | null;
+  tackle_leader_material: string | null;
+  tackle_leader_length: string | null;
   notes: string | null;
   photo_url: string | null;
   date_time: string;
@@ -65,7 +76,18 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     fishType: row.fish_type,
     length: row.length,
     weight: row.weight,
-    tackle: row.tackle,
+    lure: row.lure,
+    bait: row.bait,
+    drag: row.tackle_drag,
+    rodLength: row.tackle_rod_length,
+    rodPower: row.tackle_rod_power,
+    rodAction: row.tackle_rod_action,
+    lineType: row.tackle_line_type,
+    lineTest: row.tackle_line_test,
+    bobberFloat: row.tackle_bobber_float,
+    weightOz: row.tackle_weight_oz,
+    leaderMaterial: row.tackle_leader_material,
+    leaderLength: row.tackle_leader_length,
     notes: row.notes,
     photoUrl: await resolveCatchPhotoUrl(row.photo_url),
     dateTime: row.date_time,
@@ -209,7 +231,18 @@ export async function createEntry(input: {
   fishType: string;
   length?: number;
   weight?: number;
-  tackle: string;
+  lure?: string | null;
+  bait?: string | null;
+  drag?: number | null;
+  rodLength?: string | null;
+  rodPower?: string | null;
+  rodAction?: string | null;
+  lineType?: string | null;
+  lineTest?: string | null;
+  bobberFloat?: string | null;
+  weightOz?: string | null;
+  leaderMaterial?: string | null;
+  leaderLength?: string | null;
   notes?: string;
   photoUrl?: string | null;
   dateTime: string;
@@ -227,7 +260,18 @@ export async function createEntry(input: {
     fish_type: input.fishType,
     length: input.length ?? null,
     weight: input.weight ?? null,
-    tackle: input.tackle,
+    lure: input.lure ?? null,
+    bait: input.bait ?? null,
+    tackle_drag: input.drag ?? null,
+    tackle_rod_length: input.rodLength ?? null,
+    tackle_rod_power: input.rodPower ?? null,
+    tackle_rod_action: input.rodAction ?? null,
+    tackle_line_type: input.lineType ?? null,
+    tackle_line_test: input.lineTest ?? null,
+    tackle_bobber_float: input.bobberFloat ?? null,
+    tackle_weight_oz: input.weightOz ?? null,
+    tackle_leader_material: input.leaderMaterial ?? null,
+    tackle_leader_length: input.leaderLength ?? null,
     notes: input.notes ?? null,
     photo_url: input.photoUrl ?? null,
     date_time: new Date(input.dateTime).toISOString(),
@@ -277,7 +321,18 @@ export async function updateEntry(input: {
   fishType: string;
   length?: number | null;
   weight?: number | null;
-  tackle: string;
+  lure?: string | null;
+  bait?: string | null;
+  drag?: number | null;
+  rodLength?: string | null;
+  rodPower?: string | null;
+  rodAction?: string | null;
+  lineType?: string | null;
+  lineTest?: string | null;
+  bobberFloat?: string | null;
+  weightOz?: string | null;
+  leaderMaterial?: string | null;
+  leaderLength?: string | null;
   notes?: string | null;
   photoUrl?: string | null;
   dateTime: string;
@@ -286,7 +341,18 @@ export async function updateEntry(input: {
     fish_type: input.fishType,
     length: input.length ?? null,
     weight: input.weight ?? null,
-    tackle: input.tackle,
+    lure: input.lure ?? null,
+    bait: input.bait ?? null,
+    tackle_drag: input.drag ?? null,
+    tackle_rod_length: input.rodLength ?? null,
+    tackle_rod_power: input.rodPower ?? null,
+    tackle_rod_action: input.rodAction ?? null,
+    tackle_line_type: input.lineType ?? null,
+    tackle_line_test: input.lineTest ?? null,
+    tackle_bobber_float: input.bobberFloat ?? null,
+    tackle_weight_oz: input.weightOz ?? null,
+    tackle_leader_material: input.leaderMaterial ?? null,
+    tackle_leader_length: input.leaderLength ?? null,
     notes: input.notes ?? null,
     photo_url: input.photoUrl ?? null,
     date_time: new Date(input.dateTime).toISOString(),
@@ -378,6 +444,40 @@ export async function moveEntryToNewCoordinates(input: {
   return await mapEntry(data as EntryRow);
 }
 
+export async function moveEntryToPin(input: {
+  entryId: number;
+  targetPinId: number;
+}): Promise<JournalEntry> {
+  const { data: currentEntry, error: currentError } = await supabase
+    .from("journal_entries")
+    .select("pin_id")
+    .eq("id", input.entryId)
+    .single();
+
+  if (currentError) {
+    throw currentError;
+  }
+
+  const oldPinId = (currentEntry as { pin_id: number }).pin_id;
+
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .update({ pin_id: input.targetPinId })
+    .eq("id", input.entryId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  if (oldPinId !== input.targetPinId) {
+    await deletePinIfEmpty(oldPinId);
+  }
+
+  return await mapEntry(data as EntryRow);
+}
+
 export async function replaceEntryPhoto(input: {
   entryId: number;
   nextPhotoUrl: string | null;
@@ -409,4 +509,188 @@ export async function replaceEntryPhoto(input: {
   if (shouldDeleteCurrent && currentPhoto) {
     await deleteCatchPhoto(currentPhoto);
   }
+}
+
+export interface StatsOverviewData {
+  totalCaught: number;
+  personalBest: {
+    species: string | null;
+    weight: number | null;
+    length: number | null;
+    dateTime: string | null;
+  } | null;
+  bestLocation: {
+    id: number | null;
+    name: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    catches: number;
+  } | null;
+  speciesBreakdown: Array<{
+    species: string;
+    count: number;
+  }>;
+  topLures: Array<{
+    name: string;
+    count: number;
+  }>;
+  topBaits: Array<{
+    name: string;
+    count: number;
+  }>;
+}
+
+export interface StatsSpeciesDetailData {
+  species: string;
+  totalCatches: number;
+  topLures: Array<{
+    name: string;
+    count: number;
+  }>;
+  topBaits: Array<{
+    name: string;
+    count: number;
+  }>;
+  conditions: {
+    avgTemp: number | null;
+    avgWind: number | null;
+    commonCondition: string | null;
+  } | null;
+  monthly: Array<{
+    month: string;
+    monthIndex: number;
+    catches: number;
+  }>;
+  catchTimes: Array<{
+    hour: number;
+    catches: number;
+  }>;
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const next = Number(value);
+  return Number.isFinite(next) ? next : null;
+}
+
+function toSafeNumber(value: unknown): number {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : 0;
+}
+
+export async function getStatsOverview(): Promise<StatsOverviewData> {
+  const { data, error } = await supabase.rpc("get_stats_overview");
+
+  if (error) {
+    throw error;
+  }
+
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const personalBestRaw = (payload.personalBest ?? null) as Record<string, unknown> | null;
+  const bestLocationRaw = (payload.bestLocation ?? null) as Record<string, unknown> | null;
+  const speciesRaw = Array.isArray(payload.speciesBreakdown) ? payload.speciesBreakdown : [];
+  const lureRaw = Array.isArray(payload.topLures) ? payload.topLures : [];
+  const baitRaw = Array.isArray(payload.topBaits) ? payload.topBaits : [];
+
+  return {
+    totalCaught: toSafeNumber(payload.totalCaught),
+    personalBest: personalBestRaw
+      ? {
+          species: typeof personalBestRaw.species === "string" ? personalBestRaw.species : null,
+          weight: toNumberOrNull(personalBestRaw.weight),
+          length: toNumberOrNull(personalBestRaw.length),
+          dateTime:
+            typeof personalBestRaw.dateTime === "string" ? personalBestRaw.dateTime : null,
+        }
+      : null,
+    bestLocation: bestLocationRaw
+      ? {
+          id: toNumberOrNull(bestLocationRaw.id),
+          name: typeof bestLocationRaw.name === "string" ? bestLocationRaw.name : null,
+          latitude: toNumberOrNull(bestLocationRaw.latitude),
+          longitude: toNumberOrNull(bestLocationRaw.longitude),
+          catches: toSafeNumber(bestLocationRaw.catches),
+        }
+      : null,
+    speciesBreakdown: speciesRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        species: typeof item.species === "string" ? item.species : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count >= 0),
+    topLures: lureRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        name: typeof item.name === "string" ? item.name : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+    topBaits: baitRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        name: typeof item.name === "string" ? item.name : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+  };
+}
+
+export async function getStatsSpeciesDetail(species: string): Promise<StatsSpeciesDetailData> {
+  const { data, error } = await supabase.rpc("get_species_stats", { p_species: species });
+
+  if (error) {
+    throw error;
+  }
+
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const conditionsRaw = (payload.conditions ?? null) as Record<string, unknown> | null;
+  const lureRaw = Array.isArray(payload.topLures) ? payload.topLures : [];
+  const baitRaw = Array.isArray(payload.topBaits) ? payload.topBaits : [];
+  const monthlyRaw = Array.isArray(payload.monthly) ? payload.monthly : [];
+  const catchTimesRaw = Array.isArray(payload.catchTimes) ? payload.catchTimes : [];
+
+  return {
+    species: typeof payload.species === "string" ? payload.species : species,
+    totalCatches: toSafeNumber(payload.totalCatches),
+    topLures: lureRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        name: typeof item.name === "string" ? item.name : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+    topBaits: baitRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        name: typeof item.name === "string" ? item.name : "Unknown",
+        count: toSafeNumber(item.count),
+      }))
+      .filter((item) => item.count > 0),
+    conditions: conditionsRaw
+      ? {
+          avgTemp: toNumberOrNull(conditionsRaw.avgTemp),
+          avgWind: toNumberOrNull(conditionsRaw.avgWind),
+          commonCondition:
+            typeof conditionsRaw.commonCondition === "string"
+              ? conditionsRaw.commonCondition
+              : null,
+        }
+      : null,
+    monthly: monthlyRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        month: typeof item.month === "string" ? item.month : "Jan",
+        monthIndex: toSafeNumber(item.monthIndex),
+        catches: toSafeNumber(item.catches),
+      }))
+      .sort((a, b) => a.monthIndex - b.monthIndex),
+    catchTimes: catchTimesRaw
+      .map((item) => item as Record<string, unknown>)
+      .map((item) => ({
+        hour: toSafeNumber(item.hour),
+        catches: toSafeNumber(item.catches),
+      }))
+      .filter((item) => item.hour >= 0 && item.hour <= 23),
+  };
 }

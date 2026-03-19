@@ -25,9 +25,11 @@ import {
 import { GiFishingHook } from "react-icons/gi";
 import type { IconType } from "react-icons";
 import { Button } from "@/components/ui/button";
+import { formatCatchGearSummary } from "@/lib/catch-gear";
 import { getTemperatureIconColorClass } from "@/lib/temperature-ui";
 import { formatVisibility, getWeatherVisual, getWindDirection } from "@/lib/weather-ui";
 import { cn } from "@/lib/utils";
+import { formatFishingSetup } from "@/lib/fishing-gear";
 import type { JournalEntry } from "@/types/domain";
 
 export type JournalEntryCardAction = {
@@ -60,6 +62,8 @@ export default function JournalEntryCard({
     Boolean(entry.weatherCondition) ||
     hasValue(entry.cloudCoverage) ||
     hasValue(entry.visibility);
+  const fishingSetup = formatFishingSetup(entry);
+  const gearSummary = formatCatchGearSummary(entry);
 
   return (
     <div className={cn("surface-card surface-card-hover p-3", className)}>
@@ -85,7 +89,7 @@ export default function JournalEntryCard({
             </div>
             <div className="flex items-center space-x-1 min-w-0">
               <GiFishingHook className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{entry.tackle || "-"}</span>
+              <span className="truncate">{fishingSetup || "-"}</span>
             </div>
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex items-center space-x-1">
@@ -169,6 +173,16 @@ export default function JournalEntryCard({
 
       {entry.notes && (
         <p className="text-[13px] text-[#cccccc] mt-2 line-clamp-2">{entry.notes}</p>
+      )}
+
+      {gearSummary.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[#b7c0ce]">
+          {gearSummary.map((item) => (
+            <span key={item} className="rounded-full border border-[#2d3748] bg-[#141922] px-2 py-1">
+              {item}
+            </span>
+          ))}
+        </div>
       )}
 
       {actions.length > 0 && (

@@ -23,6 +23,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import {
+  BOBBER_FLOAT_OPTIONS,
+  LEADER_LENGTH_OPTIONS,
+  LEADER_MATERIAL_OPTIONS,
+  LINE_TEST_OPTIONS,
+  LINE_TYPE_OPTIONS,
+  ROD_ACTION_OPTIONS,
+  ROD_LENGTH_OPTIONS,
+  ROD_POWER_OPTIONS,
+  normalizeCatchGearDrag,
+  normalizeCatchGearText,
+} from "@/lib/catch-gear";
+import { normalizeFishingGearValue } from "@/lib/fishing-gear";
+import { getProfileGearDefaults } from "@/lib/profile-gear";
 import { uploadCatchPhoto } from "@/lib/storage";
 import { useAuth } from "@/hooks/useAuth";
 import { createEntry, getEntries, getPinById } from "@/lib/supabase-data";
@@ -32,7 +46,18 @@ const entrySchema = z.object({
   fishType: z.string().min(1, "Fish type is required"),
   length: z.number().positive("Length must be greater than 0").optional(),
   weight: z.number().positive("Weight must be greater than 0").optional(),
-  tackle: z.string().optional(),
+  lure: z.string().optional(),
+  bait: z.string().optional(),
+  drag: z.number().min(0).max(1).optional(),
+  rodLength: z.string().optional(),
+  rodPower: z.string().optional(),
+  rodAction: z.string().optional(),
+  lineType: z.string().optional(),
+  lineTest: z.string().optional(),
+  bobberFloat: z.string().optional(),
+  weightOz: z.string().optional(),
+  leaderMaterial: z.string().optional(),
+  leaderLength: z.string().optional(),
   notes: z.string().optional(),
   dateTime: z.string().min(1, "Date and time are required"),
 });
@@ -41,14 +66,22 @@ type EntryFormData = z.infer<typeof entrySchema>;
 
 interface JournalEntryFormProps {
   pinId: number;
-  defaultTackle?: string;
+  defaultLure?: string;
+  defaultBait?: string;
   onClose: () => void;
   onComplete: () => void;
   fullScreen?: boolean;
 }
 
 
-export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, onComplete, fullScreen = false }: JournalEntryFormProps) {
+export default function JournalEntryForm({
+  pinId,
+  defaultLure = "",
+  defaultBait = "",
+  onClose,
+  onComplete,
+  fullScreen = false,
+}: JournalEntryFormProps) {
   const { user } = useAuth();
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -66,7 +99,18 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
       fishType: "",
       length: undefined,
       weight: undefined,
-      tackle: defaultTackle,
+      lure: defaultLure,
+      bait: defaultBait,
+      drag: undefined,
+      rodLength: "",
+      rodPower: "",
+      rodAction: "",
+      lineType: "",
+      lineTest: "",
+      bobberFloat: "",
+      weightOz: "",
+      leaderMaterial: "",
+      leaderLength: "",
       notes: "",
       dateTime: (() => {
         const now = new Date();
@@ -78,8 +122,36 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
   });
 
   useEffect(() => {
-    form.setValue("tackle", defaultTackle);
-  }, [defaultTackle, form]);
+    form.setValue("lure", defaultLure);
+    form.setValue("bait", defaultBait);
+  }, [defaultBait, defaultLure, form]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let cancelled = false;
+    void getProfileGearDefaults(user.id)
+      .then((gearDefaults) => {
+        if (cancelled) return;
+        form.setValue("drag", gearDefaults.drag);
+        form.setValue("rodLength", gearDefaults.rodLength);
+        form.setValue("rodPower", gearDefaults.rodPower);
+        form.setValue("rodAction", gearDefaults.rodAction);
+        form.setValue("lineType", gearDefaults.lineType);
+        form.setValue("lineTest", gearDefaults.lineTest);
+        form.setValue("bobberFloat", gearDefaults.bobberFloat);
+        form.setValue("weightOz", gearDefaults.weight);
+        form.setValue("leaderMaterial", gearDefaults.leaderMaterial);
+        form.setValue("leaderLength", gearDefaults.leaderLength);
+      })
+      .catch(() => {
+        // Leave gear empty when defaults are unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form, user?.id]);
 
   const fishTypeInput = useWatch({
     control: form.control,
@@ -99,11 +171,6 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
     mutationFn: async (data: EntryFormData) => {
       if (!user?.id) {
         throw new Error("You must be logged in to save an entry.");
-      }
-
-      const chosenTackle = (data.tackle || "").trim();
-      if (!chosenTackle) {
-        throw new Error("Please enter a tackle value before saving this entry.");
       }
 
       const pin = await getPinById(pinId);
@@ -129,7 +196,18 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
         fishType: data.fishType,
         length: data.length,
         weight: data.weight,
-        tackle: chosenTackle,
+        lure: normalizeFishingGearValue(data.lure),
+        bait: normalizeFishingGearValue(data.bait),
+        drag: normalizeCatchGearDrag(data.drag),
+        rodLength: normalizeCatchGearText(data.rodLength),
+        rodPower: normalizeCatchGearText(data.rodPower),
+        rodAction: normalizeCatchGearText(data.rodAction),
+        lineType: normalizeCatchGearText(data.lineType),
+        lineTest: normalizeCatchGearText(data.lineTest),
+        bobberFloat: normalizeCatchGearText(data.bobberFloat),
+        weightOz: normalizeCatchGearText(data.weightOz),
+        leaderMaterial: normalizeCatchGearText(data.leaderMaterial),
+        leaderLength: normalizeCatchGearText(data.leaderLength),
         notes: data.notes,
         photoUrl,
         dateTime: data.dateTime,
@@ -418,24 +496,268 @@ export default function JournalEntryForm({ pinId, defaultTackle = "", onClose, o
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="tackle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Tackle</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Wacky rig, spinnerbait, jerkbait..."
-                      className="field-dark"
-                      {...field}
-                      value={field.value || ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="rodLength"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Rod Length</FormLabel>
+                      <FormControl>
+                        <select
+                          className="field-dark h-10 rounded-md px-3 text-sm"
+                          {...field}
+                        >
+                          <option value="">Select length</option>
+                          {ROD_LENGTH_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="rodPower"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Rod Power</FormLabel>
+                      <FormControl>
+                        <select className="field-dark h-10 rounded-md px-3 text-sm" {...field}>
+                          <option value="">Select power</option>
+                          {ROD_POWER_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="rodAction"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Rod Action</FormLabel>
+                      <FormControl>
+                        <select className="field-dark h-10 rounded-md px-3 text-sm" {...field}>
+                          <option value="">Select action</option>
+                          {ROD_ACTION_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="drag"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">
+                        Drag {typeof field.value === "number" ? `(${field.value.toFixed(2)})` : ""}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          className="field-dark h-10 px-0"
+                          value={field.value ?? 0.5}
+                          onChange={(e) => field.onChange(Number.parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="lineType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Line Type</FormLabel>
+                      <FormControl>
+                        <select className="field-dark h-10 rounded-md px-3 text-sm" {...field}>
+                          <option value="">Select line type</option>
+                          {LINE_TYPE_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lineTest"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Line Test</FormLabel>
+                      <FormControl>
+                        <select className="field-dark h-10 rounded-md px-3 text-sm" {...field}>
+                          <option value="">Select test</option>
+                          {LINE_TEST_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="bobberFloat"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Bobber/Float</FormLabel>
+                      <FormControl>
+                        <select className="field-dark h-10 rounded-md px-3 text-sm" {...field}>
+                          <option value="">Select bobber/float</option>
+                          {BOBBER_FLOAT_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="weightOz"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Weight (oz)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="field-dark"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="leaderMaterial"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Leader Material</FormLabel>
+                      <FormControl>
+                        <select className="field-dark h-10 rounded-md px-3 text-sm" {...field}>
+                          <option value="">Select material</option>
+                          {LEADER_MATERIAL_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="leaderLength"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Leader Length</FormLabel>
+                      <FormControl>
+                        <select className="field-dark h-10 rounded-md px-3 text-sm" {...field}>
+                          <option value="">Select length</option>
+                          {LEADER_LENGTH_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="lure"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Lure</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Spinnerbait, jerkbait, jig..."
+                        className="field-dark"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bait"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Bait</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Minnow, worm, craw..."
+                        className="field-dark"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

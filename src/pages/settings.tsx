@@ -335,23 +335,25 @@ export default function Settings() {
               </p>
             </CardHeader>
             <CardContent>
-              <div className="settings-actions">
-                <Button
+              <div className="unit-toggle" role="tablist" aria-label="Measurement units">
+                <button
                   type="button"
-                  className={unitSystem === "imperial" ? "btn-primary" : "btn-outline-muted"}
-                  variant={unitSystem === "imperial" ? "default" : "outline"}
+                  role="tab"
+                  aria-selected={unitSystem === "imperial"}
+                  className={unitSystem === "imperial" ? "unit-toggle-button unit-toggle-button-active" : "unit-toggle-button"}
                   onClick={() => setUnitSystem("imperial")}
                 >
                   Imperial
-                </Button>
-                <Button
+                </button>
+                <button
                   type="button"
-                  className={unitSystem === "metric" ? "btn-primary" : "btn-outline-muted"}
-                  variant={unitSystem === "metric" ? "default" : "outline"}
+                  role="tab"
+                  aria-selected={unitSystem === "metric"}
+                  className={unitSystem === "metric" ? "unit-toggle-button unit-toggle-button-active" : "unit-toggle-button"}
                   onClick={() => setUnitSystem("metric")}
                 >
                   Metric
-                </Button>
+                </button>
               </div>
             </CardContent>
           </Card>

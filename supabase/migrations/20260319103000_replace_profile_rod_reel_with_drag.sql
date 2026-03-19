@@ -1,6 +1,6 @@
 /*
- * File:        src/pages/stats.tsx
- * Description: <brief description of the purpose of this file>
+ * File:        supabase/migrations/20260319103000_replace_profile_rod_reel_with_drag.sql
+ * Description: Replace profile rod/reel defaults with a drag slider value.
  *
  * Author:      Andrew Johnson
  * Company:     CatchLogs LLC
@@ -12,6 +12,9 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import StatsPage from "@/stats/StatsPage";
+alter table public.profiles
+  add column if not exists tackle_drag numeric(3,2) not null default 0.5;
 
-export default StatsPage;
+alter table public.profiles
+  drop column if exists tackle_rod,
+  drop column if exists tackle_reel;

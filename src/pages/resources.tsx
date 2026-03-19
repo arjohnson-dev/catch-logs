@@ -9,7 +9,6 @@ import {
   FaWaveSquare,
 } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 const RESOURCE_ITEMS = [
   {

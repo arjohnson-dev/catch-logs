@@ -12,7 +12,7 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FaArrowsUpDownLeftRight,
@@ -43,9 +43,11 @@ import {
 } from "@/components/ui/collapsible";
 import JournalEntryCard from "@/components/journal-entry-card";
 import { type JournalEntry } from "@/types/domain";
+import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import { deleteEntryWithPhoto, getEntries } from "@/lib/supabase-data";
 import JournalEntryEditor from "@/components/journal-entry-editor";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 
 interface JournalListProps {
@@ -61,7 +63,9 @@ export default function JournalList({
   onTakeMeThere,
   fullScreen = false,
 }: JournalListProps) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
+  const entryRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const clearHighlightTimeoutRef = useRef<number | null>(null);
   const goToPin = (pinId: number) => {
     window.location.assign(`/?pinId=${pinId}`);
   };
@@ -82,12 +86,14 @@ export default function JournalList({
     queryFn: getEntries,
   });
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [highlightedEntryId, setHighlightedEntryId] = useState<number | null>(null);
 
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [fishTypeFilter, setFishTypeFilter] = useState("");
-  const [tackleFilter, setTackleFilter] = useState("");
+  const [lureFilter, setLureFilter] = useState("");
+  const [baitFilter, setBaitFilter] = useState("");
   const [weatherFilter, setWeatherFilter] = useState("");
   const [minLength, setMinLength] = useState("");
   const [maxLength, setMaxLength] = useState("");
@@ -97,7 +103,8 @@ export default function JournalList({
   const [pendingStartDate, setPendingStartDate] = useState("");
   const [pendingEndDate, setPendingEndDate] = useState("");
   const [pendingFishTypeFilter, setPendingFishTypeFilter] = useState("");
-  const [pendingTackleFilter, setPendingTackleFilter] = useState("");
+  const [pendingLureFilter, setPendingLureFilter] = useState("");
+  const [pendingBaitFilter, setPendingBaitFilter] = useState("");
   const [pendingWeatherFilter, setPendingWeatherFilter] = useState("");
   const [pendingMinLength, setPendingMinLength] = useState("");
   const [pendingMaxLength, setPendingMaxLength] = useState("");
@@ -107,6 +114,14 @@ export default function JournalList({
   const [timeSortOpen, setTimeSortOpen] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [sizeOpen, setSizeOpen] = useState(false);
+  const focusedEntryId = useMemo(() => {
+    const queryStart = location.indexOf("?");
+    const search = queryStart >= 0 ? location.slice(queryStart) : window.location.search;
+    const entryIdParam = new URLSearchParams(search).get("entryId");
+    if (!entryIdParam) return null;
+    const parsed = Number.parseInt(entryIdParam, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }, [location]);
 
   const deleteMutation = useMutation({
     mutationFn: async (entryId: number) => {
@@ -154,10 +169,17 @@ export default function JournalList({
       );
     }
 
-    const tackleTerm = tackleFilter.trim().toLowerCase();
-    if (tackleTerm) {
+    const lureTerm = lureFilter.trim().toLowerCase();
+    if (lureTerm) {
       filtered = filtered.filter((entry) =>
-        (entry.tackle ?? "").toLowerCase().includes(tackleTerm),
+        (normalizeFishingGearValue(entry.lure) ?? "").toLowerCase().includes(lureTerm),
+      );
+    }
+
+    const baitTerm = baitFilter.trim().toLowerCase();
+    if (baitTerm) {
+      filtered = filtered.filter((entry) =>
+        (normalizeFishingGearValue(entry.bait) ?? "").toLowerCase().includes(baitTerm),
       );
     }
 
@@ -228,7 +250,8 @@ export default function JournalList({
     startDate,
     endDate,
     fishTypeFilter,
-    tackleFilter,
+    lureFilter,
+    baitFilter,
     weatherFilter,
     minLength,
     maxLength,
@@ -241,7 +264,8 @@ export default function JournalList({
     startDate !== "" ||
     endDate !== "" ||
     fishTypeFilter !== "" ||
-    tackleFilter !== "" ||
+    lureFilter !== "" ||
+    baitFilter !== "" ||
     weatherFilter !== "" ||
     minLength !== "" ||
     maxLength !== "" ||
@@ -253,7 +277,8 @@ export default function JournalList({
     pendingStartDate !== startDate ||
     pendingEndDate !== endDate ||
     pendingFishTypeFilter !== fishTypeFilter ||
-    pendingTackleFilter !== tackleFilter ||
+    pendingLureFilter !== lureFilter ||
+    pendingBaitFilter !== baitFilter ||
     pendingWeatherFilter !== weatherFilter ||
     pendingMinLength !== minLength ||
     pendingMaxLength !== maxLength ||
@@ -265,7 +290,8 @@ export default function JournalList({
     setStartDate(pendingStartDate);
     setEndDate(pendingEndDate);
     setFishTypeFilter(pendingFishTypeFilter);
-    setTackleFilter(pendingTackleFilter);
+    setLureFilter(pendingLureFilter);
+    setBaitFilter(pendingBaitFilter);
     setWeatherFilter(pendingWeatherFilter);
     setMinLength(pendingMinLength);
     setMaxLength(pendingMaxLength);
@@ -278,7 +304,8 @@ export default function JournalList({
     setStartDate("");
     setEndDate("");
     setFishTypeFilter("");
-    setTackleFilter("");
+    setLureFilter("");
+    setBaitFilter("");
     setWeatherFilter("");
     setMinLength("");
     setMaxLength("");
@@ -288,13 +315,66 @@ export default function JournalList({
     setPendingStartDate("");
     setPendingEndDate("");
     setPendingFishTypeFilter("");
-    setPendingTackleFilter("");
+    setPendingLureFilter("");
+    setPendingBaitFilter("");
     setPendingWeatherFilter("");
     setPendingMinLength("");
     setPendingMaxLength("");
     setPendingMinWeight("");
     setPendingMaxWeight("");
   };
+
+  useEffect(() => {
+    if (clearHighlightTimeoutRef.current !== null) {
+      window.clearTimeout(clearHighlightTimeoutRef.current);
+      clearHighlightTimeoutRef.current = null;
+    }
+
+    if (!focusedEntryId) {
+      clearHighlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedEntryId(null);
+        clearHighlightTimeoutRef.current = null;
+      }, 0);
+      return;
+    }
+
+    const targetEntryExists = filteredAndSortedEntries.some(
+      (entry) => entry.id === focusedEntryId,
+    );
+
+    if (!targetEntryExists) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const target = entryRefs.current[focusedEntryId];
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedEntryId(focusedEntryId);
+    }, 80);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (clearHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(clearHighlightTimeoutRef.current);
+        clearHighlightTimeoutRef.current = null;
+      }
+    };
+  }, [focusedEntryId, filteredAndSortedEntries]);
+
+  useEffect(() => {
+    if (highlightedEntryId === null) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setHighlightedEntryId((current) =>
+        current === highlightedEntryId ? null : current,
+      );
+    }, 2500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [highlightedEntryId]);
 
   if (isLoading) {
     if (fullScreen) {
@@ -410,7 +490,7 @@ export default function JournalList({
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pt-3">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-white mb-2">
                             Sort Order
@@ -495,12 +575,23 @@ export default function JournalList({
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-white mb-2">
-                            Tackle
+                            Lure
                           </label>
                           <Input
                             placeholder="e.g. Jig"
-                            value={pendingTackleFilter}
-                            onChange={(e) => setPendingTackleFilter(e.target.value)}
+                            value={pendingLureFilter}
+                            onChange={(e) => setPendingLureFilter(e.target.value)}
+                            className="field-dark"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Bait
+                          </label>
+                          <Input
+                            placeholder="e.g. Worm"
+                            value={pendingBaitFilter}
+                            onChange={(e) => setPendingBaitFilter(e.target.value)}
                             className="field-dark"
                           />
                         </div>
@@ -611,59 +702,69 @@ export default function JournalList({
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {filteredAndSortedEntries.map((entry: JournalEntry) => (
-                <JournalEntryCard
+                <div
                   key={entry.id}
-                  entry={entry}
-                  actions={[
-                    {
-                      id: "take-me-there",
-                      label: "Take me there",
-                      icon: FaMapLocationDot,
-                      onClick: () => {
-                        handleClose();
-                        if (onTakeMeThere) {
-                          onTakeMeThere(entry.pinId);
-                        } else {
-                          goToPin(entry.pinId);
-                        }
+                  ref={(node) => {
+                    entryRefs.current[entry.id] = node;
+                  }}
+                  id={`journal-entry-${entry.id}`}
+                  className={cn(
+                    highlightedEntryId === entry.id && "journal-entry-focus",
+                  )}
+                >
+                  <JournalEntryCard
+                    entry={entry}
+                    actions={[
+                      {
+                        id: "take-me-there",
+                        label: "Take me there",
+                        icon: FaMapLocationDot,
+                        onClick: () => {
+                          handleClose();
+                          if (onTakeMeThere) {
+                            onTakeMeThere(entry.pinId);
+                          } else {
+                            goToPin(entry.pinId);
+                          }
+                        },
                       },
-                    },
-                    {
-                      id: "edit",
-                      label: "Edit",
-                      icon: FaPenToSquare,
-                      onClick: () => setEditingEntry(entry),
-                    },
-                    {
-                      id: "move-on-map",
-                      label: "Move on map",
-                      icon: FaArrowsUpDownLeftRight,
-                      onClick: () => {
-                        handleClose();
-                        if (onMoveEntryRequest) {
-                          onMoveEntryRequest(entry.id);
-                        } else {
-                          goToMoveEntry(entry.id);
-                        }
+                      {
+                        id: "edit",
+                        label: "Edit",
+                        icon: FaPenToSquare,
+                        onClick: () => setEditingEntry(entry),
                       },
-                    },
-                    {
-                      id: "delete",
-                      label: "Delete",
-                      icon: FaTrashCan,
-                      tone: "danger",
-                      disabled: deleteMutation.isPending,
-                      onClick: () => {
-                        const accepted = window.confirm(
-                          "Delete this entry and its image permanently?",
-                        );
-                        if (accepted) {
-                          deleteMutation.mutate(entry.id);
-                        }
+                      {
+                        id: "move-on-map",
+                        label: "Move on map",
+                        icon: FaArrowsUpDownLeftRight,
+                        onClick: () => {
+                          handleClose();
+                          if (onMoveEntryRequest) {
+                            onMoveEntryRequest(entry.id);
+                          } else {
+                            goToMoveEntry(entry.id);
+                          }
+                        },
                       },
-                    },
-                  ]}
-                />
+                      {
+                        id: "delete",
+                        label: "Delete",
+                        icon: FaTrashCan,
+                        tone: "danger",
+                        disabled: deleteMutation.isPending,
+                        onClick: () => {
+                          const accepted = window.confirm(
+                            "Delete this entry and its image permanently?",
+                          );
+                          if (accepted) {
+                            deleteMutation.mutate(entry.id);
+                          }
+                        },
+                      },
+                    ]}
+                  />
+                </div>
               ))}
             </div>
           )}

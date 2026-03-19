@@ -22,14 +22,16 @@ import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import catchLogsIcon from "@assets/catchlogs-icon.png";
-import { moveEntryToNewCoordinates } from "@/lib/supabase-data";
+import { moveEntryToNewCoordinates, moveEntryToPin } from "@/lib/supabase-data";
 import { getMyFavoriteSpecCodes } from "@/lib/field-guide";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
-  loadSessionTackle,
-  saveSessionTackle,
-} from "@/lib/session-tackle";
+  loadSessionBait,
+  loadSessionLure,
+  saveSessionBait,
+  saveSessionLure,
+} from "@/lib/session-gear";
 import JournalPage from "@/pages/journal";
 import NewEntryPage from "@/pages/new-entry";
 import Settings from "@/pages/settings";
@@ -67,19 +69,23 @@ export default function Dashboard() {
   const [selectedPinId, setSelectedPinId] = useState<number | null>(initialPinIdFromUrl);
   const [showPinSummary, setShowPinSummary] = useState(Boolean(initialPinIdFromUrl));
   const [moveEntryId, setMoveEntryId] = useState<number | null>(initialMoveEntryIdFromUrl);
-  const [sessionTackleByUser, setSessionTackleByUser] = useState<Record<string, string>>({});
+  const [sessionLureByUser, setSessionLureByUser] = useState<Record<string, string>>({});
+  const [sessionBaitByUser, setSessionBaitByUser] = useState<Record<string, string>>({});
   const [isPinDropMode, setIsPinDropMode] = useState(false);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const userId = user?.id ?? null;
+  const sessionLure = userId
+    ? (sessionLureByUser[userId] ?? loadSessionLure(userId))
+    : "";
+  const sessionBait = userId
+    ? (sessionBaitByUser[userId] ?? loadSessionBait(userId))
+    : "";
   useQuery({
     queryKey: ["field-guide", "favorite-spec-codes", userId],
     queryFn: getMyFavoriteSpecCodes,
     enabled: Boolean(userId),
     staleTime: 1000 * 60 * 5,
   });
-  const sessionTackle = userId
-    ? (sessionTackleByUser[userId] ?? loadSessionTackle(userId))
-    : "";
   const normalizedPath = (() => {
     const pathOnly = location.split("?")[0].split("#")[0];
     if (pathOnly === "/auth") return "/";
@@ -95,24 +101,41 @@ export default function Dashboard() {
     }
   }, [initialPinIdFromUrl, initialMoveEntryIdFromUrl]);
 
-  const handleSessionTackleChange = (value: string) => {
+  const handleSessionLureChange = (value: string) => {
     if (!userId) return;
-    setSessionTackleByUser((prev) => ({
+    setSessionLureByUser((prev) => ({
       ...prev,
       [userId]: value,
     }));
-    saveSessionTackle(userId, value);
+    saveSessionLure(userId, value);
+  };
+
+  const handleSessionBaitChange = (value: string) => {
+    if (!userId) return;
+    setSessionBaitByUser((prev) => ({
+      ...prev,
+      [userId]: value,
+    }));
+    saveSessionBait(userId, value);
   };
 
   const handlePinSelect = (pinId: number, isNew = false) => {
+    if (moveEntryId !== null) {
+      handleMoveEntryToExistingPin(moveEntryId, pinId);
+      return;
+    }
+
     setSelectedPinId(pinId);
     if (isNew) {
       const params = new URLSearchParams({
         pinId: String(pinId),
         newPin: "1",
       });
-      if (sessionTackle.trim()) {
-        params.set("tackle", sessionTackle.trim());
+      if (sessionLure.trim()) {
+        params.set("lure", sessionLure.trim());
+      }
+      if (sessionBait.trim()) {
+        params.set("bait", sessionBait.trim());
       }
       navigate(`/entries/new?${params.toString()}`);
     } else {
@@ -126,8 +149,11 @@ export default function Dashboard() {
     const params = new URLSearchParams({
       pinId: String(selectedPinId),
     });
-    if (sessionTackle.trim()) {
-      params.set("tackle", sessionTackle.trim());
+    if (sessionLure.trim()) {
+      params.set("lure", sessionLure.trim());
+    }
+    if (sessionBait.trim()) {
+      params.set("bait", sessionBait.trim());
     }
     navigate(`/entries/new?${params.toString()}`);
   };
@@ -163,6 +189,31 @@ export default function Dashboard() {
       toast({
         title: "Entry moved",
         description: "The entry location was updated.",
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Could not move entry";
+      toast({
+        title: "Move failed",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMoveEntryToExistingPin = async (entryId: number, targetPinId: number) => {
+    try {
+      await moveEntryToPin({
+        entryId,
+        targetPinId,
+      });
+      queryClient.invalidateQueries({ queryKey: ["pins"] });
+      queryClient.invalidateQueries({ queryKey: ["entries"] });
+      setMoveEntryId(null);
+      setSelectedPinId(targetPinId);
+      setShowPinSummary(true);
+      toast({
+        title: "Entry moved",
+        description: "The entry was moved to the selected pin.",
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Could not move entry";
@@ -279,8 +330,10 @@ export default function Dashboard() {
             onPinDropModeChange={setIsPinDropMode}
             moveEntryId={moveEntryId}
             onEntryMove={handleEntryMove}
-            sessionTackle={sessionTackle}
-            onSessionTackleChange={handleSessionTackleChange}
+            sessionLure={sessionLure}
+            sessionBait={sessionBait}
+            onSessionLureChange={handleSessionLureChange}
+            onSessionBaitChange={handleSessionBaitChange}
           />
         </div>
       </div>
