@@ -66,7 +66,12 @@ type SupportSubjectOption = (typeof SUPPORT_SUBJECT_OPTIONS)[number] | "";
 
 export default function Settings() {
   const { user } = useAuth();
-  const { unitSystem, setUnitSystem } = useUnitPreference();
+  const {
+    unitSystem,
+    setUnitSystem,
+    windSpeedDisplay,
+    setWindSpeedDisplay,
+  } = useUnitPreference();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -356,6 +361,18 @@ export default function Settings() {
                   Metric
                 </button>
               </div>
+              <label className="settings-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={windSpeedDisplay === "knots"}
+                  onChange={(event) =>
+                    setWindSpeedDisplay(event.target.checked ? "knots" : "system")
+                  }
+                />
+                <span className="settings-meta">
+                  Show wind speed in knots by default
+                </span>
+              </label>
             </CardContent>
           </Card>
 

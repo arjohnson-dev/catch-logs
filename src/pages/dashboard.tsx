@@ -45,6 +45,7 @@ import ResourcesHub from "@/pages/resources";
 import FieldGuide from "@/pages/field-guide";
 import ResourcesPlaceholder from "@/pages/resources-placeholder";
 import TrustedSourcesPage from "@/pages/trusted-sources";
+import WeatherPage from "@/pages/weather";
 
 export default function Dashboard() {
   const currentPath = window.location.pathname;
@@ -246,13 +247,8 @@ export default function Dashboard() {
       );
     }
 
-    if (normalizedPath === "/resources/weather") {
-      return (
-        <ResourcesPlaceholder
-          title="Weather & Conditions"
-          description="View weather-related context relevant to fishing."
-        />
-      );
+    if (normalizedPath === "/weather" || normalizedPath === "/resources/weather") {
+      return <WeatherPage />;
     }
 
     if (normalizedPath === "/resources/regulations") {

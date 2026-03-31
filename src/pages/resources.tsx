@@ -3,7 +3,6 @@ import {
   FaArrowLeft,
   FaBookOpen,
   FaChevronRight,
-  FaCloudSun,
   FaFishFins,
   FaScaleBalanced,
   FaWaveSquare,
@@ -31,13 +30,6 @@ const RESOURCE_ITEMS = [
     description: "Check current local fishing activity and conditions.",
     icon: FaWaveSquare,
     to: "/resources/fishing-reports",
-    isAvailable: false,
-  },
-  {
-    title: "Weather & Conditions",
-    description: "View weather-related context relevant to fishing.",
-    icon: FaCloudSun,
-    to: "/resources/weather",
     isAvailable: false,
   },
   {

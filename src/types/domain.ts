@@ -53,6 +53,8 @@ export interface JournalEntry {
   speciesPhotoUrl?: string | null;
   dateTime: string;
   temperature?: number | null;
+  pressure?: number | null;
+  precipitationProbability?: number | null;
   windSpeed?: number | null;
   windDirection?: number | null;
   cloudCoverage?: number | null;
