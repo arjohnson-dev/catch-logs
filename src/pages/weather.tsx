@@ -68,6 +68,7 @@ type WeatherMetricKey =
   | "windSpeed";
 
 type ForecastChartPoint = {
+  xValue: string;
   xLabel: string;
   tooltipLabel: string;
   value: number | null;
@@ -277,6 +278,7 @@ function buildHourlyChartData(
   windSpeedDisplay: "knots" | "system",
 ): ForecastChartPoint[] {
   return points.map((point) => ({
+    xValue: point.time,
     xLabel: format(parseISO(point.time), "ha"),
     tooltipLabel: format(parseISO(point.time), "EEE h a"),
     value:
@@ -300,6 +302,7 @@ function buildDailyChartData(
   windSpeedDisplay: "knots" | "system",
 ): ForecastChartPoint[] {
   return points.map((point) => ({
+    xValue: point.date,
     xLabel: format(parseISO(point.date), "EEE"),
     tooltipLabel: format(parseISO(point.date), "EEEE, MMM d"),
     value:
@@ -381,8 +384,12 @@ function WeatherMetricChart({
             <LineChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
               <CartesianGrid stroke="rgba(255, 255, 255, 0.06)" vertical={false} />
               <XAxis
-                dataKey="xLabel"
+                dataKey="xValue"
                 ticks={xAxisTicks}
+                tickFormatter={(value) => {
+                  const match = data.find((point) => point.xValue === value);
+                  return match?.xLabel ?? "";
+                }}
                 tick={{ fill: "#8a8f98", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
@@ -624,21 +631,40 @@ function SunArcCard({
   );
 }
 
-function buildXAxisTicks(data: ForecastChartPoint[], forecastRange: ForecastRange) {
-  if (forecastRange !== "24h") {
+function buildXAxisTicks(
+  data: ForecastChartPoint[],
+  forecastRange: ForecastRange,
+  isCompact: boolean,
+) {
+  if (data.length <= 2) {
     return undefined;
   }
 
+  let step = 1;
+
+  if (forecastRange === "12h") {
+    step = isCompact ? 3 : 2;
+  } else if (forecastRange === "24h") {
+    step = isCompact ? 6 : 4;
+  } else if (forecastRange === "10d") {
+    step = isCompact ? 3 : 1;
+  }
+
   const ticks = data
-    .filter((_, index) => index % 4 === 0)
-    .map((point) => point.xLabel);
-  const lastTick = data.at(-1)?.xLabel;
+    .filter((_, index) => index % step === 0)
+    .map((point) => point.xValue);
+  const firstTick = data[0]?.xValue;
+  const lastTick = data.at(-1)?.xValue;
+
+  if (firstTick && !ticks.includes(firstTick)) {
+    ticks.unshift(firstTick);
+  }
 
   if (lastTick && !ticks.includes(lastTick)) {
     ticks.push(lastTick);
   }
 
-  return ticks;
+  return Array.from(new Set(ticks));
 }
 
 export default function WeatherPage() {
@@ -666,7 +692,23 @@ export default function WeatherPage() {
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
   const [screen, setScreen] = useState<WeatherScreen>("overview");
   const [forecastRange, setForecastRange] = useState<ForecastRange>("12h");
+  const [isCompactChartViewport, setIsCompactChartViewport] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 640,
+  );
   const manualSelectionRef = useRef(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsCompactChartViewport(window.innerWidth < 640);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     const nextState = getStoredLocationState(userId);
@@ -1244,8 +1286,12 @@ export default function WeatherPage() {
                             showDirectionArrows={metric.key === "windSpeed"}
                             showHighLow={metric.key === "temperature" && forecastRange === "10d"}
                             yAxisWidth={metric.key === "pressure" ? (unitSystem === "metric" ? 52 : 46) : 40}
-                            xAxisInterval={forecastRange === "24h" ? "preserveStartEnd" : 0}
-                            xAxisTicks={buildXAxisTicks(metric.data, forecastRange)}
+                            xAxisInterval={0}
+                            xAxisTicks={buildXAxisTicks(
+                              metric.data,
+                              forecastRange,
+                              isCompactChartViewport,
+                            )}
                           />
                         ))}
                       </>
