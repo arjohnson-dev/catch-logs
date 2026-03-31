@@ -15,21 +15,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
-  FaCloud,
-  FaEye,
   FaFish,
+  FaLocationArrow,
   FaRuler,
-  FaTemperatureHalf,
   FaWeightHanging,
-  FaWind,
 } from "react-icons/fa6";
 import { GiFishingHook } from "react-icons/gi";
 import type { IconType } from "react-icons";
 import { Button } from "@/components/ui/button";
+import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { formatCatchGearSummary } from "@/lib/catch-gear";
 import { getFieldGuideSpeciesPhotoUrlMap, UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE } from "@/lib/field-guide";
-import { getTemperatureIconColorClass } from "@/lib/temperature-ui";
-import { formatVisibility, getWeatherVisual, getWindDirection } from "@/lib/weather-ui";
+import {
+  convertWindSpeedForDisplay,
+  getWindSpeedUnitLabel,
+} from "@/lib/unit-preferences";
+import { getWeatherVisual, getWindDirection } from "@/lib/weather-ui";
 import { cn } from "@/lib/utils";
 import { formatFishingSetup } from "@/lib/fishing-gear";
 import { appQueryKeys } from "@/lib/query-keys";
@@ -59,6 +60,7 @@ export default function JournalEntryCard({
   actions = [],
   className,
 }: JournalEntryCardProps) {
+  const { unitSystem, windSpeedDisplay } = useUnitPreference();
   const { data: resolvedSpeciesPhotoUrl = null } = useQuery({
     queryKey: appQueryKeys.journalEntrySpeciesPhoto(entry.fishSpeciesSpecCode),
     queryFn: async () => {
@@ -73,12 +75,30 @@ export default function JournalEntryCard({
   const displayPhotoUrl = entry.photoUrl ?? entry.speciesPhotoUrl ?? resolvedSpeciesPhotoUrl ?? null;
   const hasWeather =
     hasValue(entry.temperature) ||
+    hasValue(entry.pressure) ||
+    hasValue(entry.precipitationProbability) ||
     hasValue(entry.windSpeed) ||
-    Boolean(entry.weatherCondition) ||
     hasValue(entry.cloudCoverage) ||
-    hasValue(entry.visibility);
+    hasValue(entry.windDirection);
   const fishingSetup = formatFishingSetup(entry);
   const gearSummary = formatCatchGearSummary(entry);
+  const displayTemperature = hasValue(entry.temperature)
+    ? `${Math.round(
+        unitSystem === "metric"
+          ? ((entry.temperature - 32) * 5) / 9
+          : entry.temperature,
+      )}°${unitSystem === "metric" ? "C" : "F"}`
+    : "--";
+  const displayPressure = hasValue(entry.pressure)
+    ? unitSystem === "metric"
+      ? `${Math.round(entry.pressure)} hPa`
+      : `${(entry.pressure * 0.0295299830714).toFixed(2)} inHg`
+    : "--";
+  const displayWindSpeed = hasValue(entry.windSpeed)
+    ? `${Math.round(
+        convertWindSpeedForDisplay(entry.windSpeed, unitSystem, windSpeedDisplay) ?? entry.windSpeed,
+      )} ${getWindSpeedUnitLabel(unitSystem, windSpeedDisplay)}`
+    : "--";
 
   return (
     <div className={cn("surface-card surface-card-hover p-3", className)}>
@@ -130,57 +150,46 @@ export default function JournalEntryCard({
 
       {hasWeather ? (
         <div className="mt-2">
-          <div className="flex items-center gap-3 text-xs text-[#999999] min-w-0">
-            {hasValue(entry.temperature) && (
-              <div className="flex items-center space-x-1 whitespace-nowrap">
-                <FaTemperatureHalf
-                  className={`h-3 w-3 ${getTemperatureIconColorClass(entry.temperature)}`}
-                />
-                <span>{entry.temperature}°F</span>
-              </div>
-            )}
-            {hasValue(entry.windSpeed) && (
-              <div className="flex items-center space-x-1 whitespace-nowrap">
-                <FaWind className="h-3 w-3 text-gray-400" />
-                <span>{entry.windSpeed} mph</span>
-                {hasValue(entry.windDirection) && (
-                  <span className="text-[#777777]">
-                    ({getWindDirection(entry.windDirection)})
-                  </span>
-                )}
-              </div>
-            )}
-            {entry.weatherCondition && (
-              <div className="flex items-center space-x-1 min-w-0">
-                {(() => {
-                  const { Icon: WeatherIcon, colorClass } = getWeatherVisual(
-                    entry.weatherCondition,
-                  );
-                  return <WeatherIcon className={`h-3 w-3 ${colorClass}`} />;
-                })()}
-                <span className="capitalize truncate">
-                  {entry.weatherDescription || entry.weatherCondition}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {(hasValue(entry.cloudCoverage) || hasValue(entry.visibility)) && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5 text-xs text-[#777777]">
-              {hasValue(entry.cloudCoverage) && (
-                <div className="flex items-center space-x-1">
-                  <FaCloud className="h-3 w-3" />
-                  <span>{entry.cloudCoverage}% clouds</span>
-                </div>
-              )}
-              {hasValue(entry.visibility) && entry.visibility < 10000 && (
-                <div className="flex items-center space-x-1">
-                  <FaEye className="h-3 w-3" />
-                  <span>{formatVisibility(entry.visibility)} vis</span>
-                </div>
-              )}
+          {entry.weatherCondition ? (
+            <div className="mb-2 flex items-center gap-1.5 text-xs text-[#999999] min-w-0">
+              {(() => {
+                const { Icon: WeatherIcon, colorClass } = getWeatherVisual(
+                  entry.weatherCondition,
+                );
+                return <WeatherIcon className={`h-3 w-3 ${colorClass}`} />;
+              })()}
+              <span className="capitalize truncate">
+                {entry.weatherDescription || entry.weatherCondition}
+              </span>
             </div>
-          )}
+          ) : null}
+
+          <div className="grid grid-cols-2 gap-1.5 text-xs">
+            <div className="rounded-md border border-[#2d3748] bg-[#141922] px-2 py-1.5">
+              <div className="text-[#8f98a8]">Temp</div>
+              <div className="mt-0.5 font-semibold text-white">{displayTemperature}</div>
+            </div>
+            <div className="rounded-md border border-[#2d3748] bg-[#141922] px-2 py-1.5">
+              <div className="text-[#8f98a8]">Pressure</div>
+              <div className="mt-0.5 font-semibold text-white">{displayPressure}</div>
+            </div>
+            <div className="rounded-md border border-[#2d3748] bg-[#141922] px-2 py-1.5">
+              <div className="text-[#8f98a8]">Cloud Cover</div>
+              <div className="mt-0.5 font-semibold text-white">
+                {hasValue(entry.cloudCoverage) ? `${Math.round(entry.cloudCoverage)}%` : "--"}
+              </div>
+            </div>
+            <div className="rounded-md border border-[#2d3748] bg-[#141922] px-2 py-1.5">
+              <div className="text-[#8f98a8]">Wind Speed</div>
+              <div className="mt-0.5 font-semibold text-white">{displayWindSpeed}</div>
+            </div>
+            <div className="rounded-md border border-[#2d3748] bg-[#141922] px-2 py-1.5">
+              <div className="text-[#8f98a8]">Wind Dir</div>
+              <div className="mt-0.5 font-semibold text-white">
+                {hasValue(entry.windDirection) ? getWindDirection(entry.windDirection) : "--"}
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="mt-2 text-xs text-[#777777]">Weather data unavailable</div>

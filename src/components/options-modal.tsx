@@ -91,7 +91,12 @@ export default function OptionsModal({
   onLogout,
 }: OptionsModalProps) {
   const currentYear = new Date().getFullYear();
-  const { unitSystem, setUnitSystem } = useUnitPreference();
+  const {
+    unitSystem,
+    setUnitSystem,
+    windSpeedDisplay,
+    setWindSpeedDisplay,
+  } = useUnitPreference();
   const { toast } = useToast();
   const [mapBaseLayer, setMapBaseLayer] = useState<MapBaseLayerId>(() =>
     loadMapBaseLayerPreference(user.id),
@@ -306,6 +311,18 @@ export default function OptionsModal({
                 Metric
               </button>
             </div>
+            <label className="options-modal-map-option">
+              <Checkbox
+                id="options-wind-speed-knots"
+                checked={windSpeedDisplay === "knots"}
+                onCheckedChange={(checked) =>
+                  setWindSpeedDisplay(checked === true ? "knots" : "system")
+                }
+              />
+              <span className="settings-meta !m-0 leading-none">
+                Show wind speed in knots
+              </span>
+            </label>
           </div>
           <div className="options-modal-map-section">
             <Collapsible open={isGearOpen} onOpenChange={setIsGearOpen}>

@@ -20,6 +20,8 @@ export const appQueryKeys = {
     ["field-guide", "favorite-species", userId] as const,
   fieldGuideSpeciesAiSummary: (slug: string, unitSystem: string) =>
     ["field-guide", "species-ai-summary", slug, unitSystem] as const,
+  weatherAiSummary: (latitude: number | null, longitude: number | null, label: string) =>
+    ["weather", "ai-summary", latitude, longitude, label] as const,
   statsOverview: () => ["stats", "overview"] as const,
   statsSpecies: (species: string) => ["stats", "species", species] as const,
 };

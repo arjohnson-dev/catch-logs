@@ -50,6 +50,8 @@ type EntryRow = {
   photo_url: string | null;
   date_time: string;
   temperature: number | null;
+  pressure_msl: number | null;
+  precipitation_probability: number | null;
   wind_speed: number | null;
   wind_direction: number | null;
   cloud_coverage: number | null;
@@ -96,6 +98,8 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     speciesPhotoUrl: null,
     dateTime: row.date_time,
     temperature: row.temperature,
+    pressure: row.pressure_msl,
+    precipitationProbability: row.precipitation_probability,
     windSpeed: row.wind_speed,
     windDirection: row.wind_direction,
     cloudCoverage: row.cloud_coverage,
@@ -228,6 +232,27 @@ export async function getPinById(pinId: number): Promise<Pin | null> {
   return mapPin(data as PinRow);
 }
 
+export async function getPinsByIds(pinIds: number[]): Promise<Map<number, Pin>> {
+  const uniquePinIds = Array.from(new Set(pinIds)).filter((pinId) => Number.isFinite(pinId));
+  if (uniquePinIds.length === 0) {
+    return new Map<number, Pin>();
+  }
+
+  const { data, error } = await supabase
+    .from("fishing_pins")
+    .select("*")
+    .in("id", uniquePinIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return new Map((data as PinRow[]).map((row) => {
+    const pin = mapPin(row);
+    return [pin.id, pin] as const;
+  }));
+}
+
 export async function deletePin(pinId: number): Promise<void> {
   const { error } = await supabase.from("fishing_pins").delete().eq("id", pinId);
   if (error) {
@@ -284,6 +309,8 @@ export async function createEntry(input: {
   photoUrl?: string | null;
   dateTime: string;
   temperature?: number | null;
+  pressure?: number | null;
+  precipitationProbability?: number | null;
   windSpeed?: number | null;
   windDirection?: number | null;
   cloudCoverage?: number | null;
@@ -314,6 +341,8 @@ export async function createEntry(input: {
     photo_url: input.photoUrl ?? null,
     date_time: new Date(input.dateTime).toISOString(),
     temperature: input.temperature ?? null,
+    pressure_msl: input.pressure ?? null,
+    precipitation_probability: input.precipitationProbability ?? null,
     wind_speed: input.windSpeed ?? null,
     wind_direction: input.windDirection ?? null,
     cloud_coverage: input.cloudCoverage ?? null,
@@ -409,6 +438,38 @@ export async function updateEntry(input: {
     throw error;
   }
   return (await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)]))[0];
+}
+
+export async function updateEntryWeatherSnapshot(input: {
+  entryId: number;
+  temperature?: number | null;
+  pressure?: number | null;
+  precipitationProbability?: number | null;
+  windSpeed?: number | null;
+  windDirection?: number | null;
+  cloudCoverage?: number | null;
+  visibility?: number | null;
+  weatherCondition?: string | null;
+  weatherDescription?: string | null;
+}): Promise<void> {
+  const { error } = await supabase
+    .from("journal_entries")
+    .update({
+      temperature: input.temperature ?? null,
+      pressure_msl: input.pressure ?? null,
+      precipitation_probability: input.precipitationProbability ?? null,
+      wind_speed: input.windSpeed ?? null,
+      wind_direction: input.windDirection ?? null,
+      cloud_coverage: input.cloudCoverage ?? null,
+      visibility: input.visibility ?? null,
+      weather_condition: input.weatherCondition ?? null,
+      weather_description: input.weatherDescription ?? null,
+    })
+    .eq("id", input.entryId);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function deleteEntryWithPhoto(entryId: number): Promise<void> {

@@ -300,6 +300,8 @@ export default function JournalEntryForm({
         ...normalizedEntry,
         photoUrl,
         temperature: weather?.temperature ?? null,
+        pressure: weather?.pressure ?? null,
+        precipitationProbability: weather?.precipitationProbability ?? null,
         windSpeed: weather?.windSpeed ?? null,
         windDirection: weather?.windDirection ?? null,
         cloudCoverage: weather?.cloudCoverage ?? null,

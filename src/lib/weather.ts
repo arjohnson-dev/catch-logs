@@ -12,14 +12,50 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-type WeatherSnapshot = {
+import type { UnitSystem } from "@/lib/unit-preferences";
+
+export type WeatherSnapshot = {
   temperature?: number | null;
   windSpeed?: number | null;
   windDirection?: number | null;
   cloudCoverage?: number | null;
+  pressure?: number | null;
+  precipitationProbability?: number | null;
   visibility?: number | null;
   weatherCondition?: string | null;
   weatherDescription?: string | null;
+  sunrise?: string | null;
+  sunset?: string | null;
+  observedTime?: string | null;
+};
+
+export type WeatherForecastHourlyPoint = {
+  time: string;
+  temperature: number | null;
+  temperatureLow: number | null;
+  temperatureHigh: number | null;
+  pressure: number | null;
+  cloudCoverage: number | null;
+  precipitationProbability: number | null;
+  windSpeed: number | null;
+  windDirection: number | null;
+};
+
+export type WeatherForecastDailyPoint = {
+  date: string;
+  temperature: number | null;
+  temperatureLow: number | null;
+  temperatureHigh: number | null;
+  pressure: number | null;
+  cloudCoverage: number | null;
+  precipitationProbability: number | null;
+  windSpeed: number | null;
+  windDirection: number | null;
+};
+
+export type WeatherForecast = {
+  hourly: WeatherForecastHourlyPoint[];
+  daily: WeatherForecastDailyPoint[];
 };
 
 type HourlyResponse = {
@@ -29,8 +65,23 @@ type HourlyResponse = {
     windspeed_10m?: number[];
     winddirection_10m?: number[];
     cloudcover?: number[];
+    pressure_msl?: number[];
+    precipitation_probability?: number[];
     visibility?: number[];
     weathercode?: number[];
+  };
+  daily?: {
+    time?: string[];
+    temperature_2m_mean?: number[];
+    temperature_2m_min?: number[];
+    temperature_2m_max?: number[];
+    pressure_msl_mean?: number[];
+    cloudcover_mean?: number[];
+    precipitation_probability_max?: number[];
+    windspeed_10m_mean?: number[];
+    winddirection_10m_dominant?: number[];
+    sunrise?: string[];
+    sunset?: string[];
   };
 };
 
@@ -113,6 +164,7 @@ export async function getWeatherForLocationAndTime(
   latitude: number,
   longitude: number,
   isoDateTime: string,
+  unitSystem: UnitSystem = "imperial",
 ): Promise<WeatherSnapshot | null> {
   const entryDate = new Date(isoDateTime);
   if (Number.isNaN(entryDate.getTime())) {
@@ -135,10 +187,20 @@ export async function getWeatherForLocationAndTime(
   url.searchParams.set("end_date", entryDay);
   url.searchParams.set(
     "hourly",
-    "temperature_2m,windspeed_10m,winddirection_10m,cloudcover,visibility,weathercode",
+    [
+      "temperature_2m",
+      "windspeed_10m",
+      "winddirection_10m",
+      "cloudcover",
+      "pressure_msl",
+      "precipitation_probability",
+      "visibility",
+      "weathercode",
+    ].join(","),
   );
-  url.searchParams.set("temperature_unit", "fahrenheit");
-  url.searchParams.set("windspeed_unit", "mph");
+  url.searchParams.set("daily", ["sunrise", "sunset"].join(","));
+  url.searchParams.set("temperature_unit", unitSystem === "metric" ? "celsius" : "fahrenheit");
+  url.searchParams.set("wind_speed_unit", unitSystem === "metric" ? "kmh" : "mph");
   url.searchParams.set("timezone", "auto");
 
   const weather = await fetchHourlyWeather(url);
@@ -157,8 +219,139 @@ export async function getWeatherForLocationAndTime(
     windSpeed: hourly.windspeed_10m?.[index] ?? null,
     windDirection: hourly.winddirection_10m?.[index] ?? null,
     cloudCoverage: hourly.cloudcover?.[index] ?? null,
+    pressure: hourly.pressure_msl?.[index] ?? null,
+    precipitationProbability: hourly.precipitation_probability?.[index] ?? null,
     visibility: hourly.visibility?.[index] ?? null,
     weatherCondition: description ? description.toLowerCase() : null,
     weatherDescription: description,
+    sunrise: weather.daily?.sunrise?.[0] ?? null,
+    sunset: weather.daily?.sunset?.[0] ?? null,
+    observedTime: hourly.time?.[index] ?? null,
+  };
+}
+
+export async function getCurrentWeatherForLocation(
+  latitude: number,
+  longitude: number,
+  unitSystem: UnitSystem = "imperial",
+): Promise<WeatherSnapshot | null> {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(latitude));
+  url.searchParams.set("longitude", String(longitude));
+  url.searchParams.set(
+    "hourly",
+    [
+      "temperature_2m",
+      "windspeed_10m",
+      "winddirection_10m",
+      "cloudcover",
+      "pressure_msl",
+      "precipitation_probability",
+      "visibility",
+      "weathercode",
+    ].join(","),
+  );
+  url.searchParams.set("daily", ["sunrise", "sunset"].join(","));
+  url.searchParams.set("temperature_unit", unitSystem === "metric" ? "celsius" : "fahrenheit");
+  url.searchParams.set("wind_speed_unit", unitSystem === "metric" ? "kmh" : "mph");
+  url.searchParams.set("timezone", "auto");
+  url.searchParams.set("forecast_days", "1");
+
+  const weather = await fetchHourlyWeather(url);
+  const hourly = weather?.hourly;
+  const times = hourly?.time;
+  if (!times || times.length === 0) {
+    return null;
+  }
+
+  const index = findNearestIndex(new Date().toISOString(), times);
+  const code = hourly.weathercode?.[index];
+  const description = weatherCodeToDescription(code);
+
+  return {
+    temperature: hourly.temperature_2m?.[index] ?? null,
+    windSpeed: hourly.windspeed_10m?.[index] ?? null,
+    windDirection: hourly.winddirection_10m?.[index] ?? null,
+    cloudCoverage: hourly.cloudcover?.[index] ?? null,
+    pressure: hourly.pressure_msl?.[index] ?? null,
+    precipitationProbability: hourly.precipitation_probability?.[index] ?? null,
+    visibility: hourly.visibility?.[index] ?? null,
+    weatherCondition: description ? description.toLowerCase() : null,
+    weatherDescription: description,
+    sunrise: weather.daily?.sunrise?.[0] ?? null,
+    sunset: weather.daily?.sunset?.[0] ?? null,
+    observedTime: hourly.time?.[index] ?? null,
+  };
+}
+
+export async function getWeatherForecastForLocation(
+  latitude: number,
+  longitude: number,
+  unitSystem: UnitSystem = "imperial",
+): Promise<WeatherForecast | null> {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(latitude));
+  url.searchParams.set("longitude", String(longitude));
+  url.searchParams.set(
+    "hourly",
+    [
+      "temperature_2m",
+      "pressure_msl",
+      "cloudcover",
+      "precipitation_probability",
+      "windspeed_10m",
+      "winddirection_10m",
+    ].join(","),
+  );
+  url.searchParams.set(
+    "daily",
+    [
+      "temperature_2m_mean",
+      "temperature_2m_min",
+      "temperature_2m_max",
+      "pressure_msl_mean",
+      "cloudcover_mean",
+      "precipitation_probability_max",
+      "windspeed_10m_mean",
+      "winddirection_10m_dominant",
+    ].join(","),
+  );
+  url.searchParams.set("temperature_unit", unitSystem === "metric" ? "celsius" : "fahrenheit");
+  url.searchParams.set("wind_speed_unit", unitSystem === "metric" ? "kmh" : "mph");
+  url.searchParams.set("timezone", "auto");
+  url.searchParams.set("forecast_days", "10");
+  url.searchParams.set("forecast_hours", "24");
+
+  const weather = await fetchHourlyWeather(url);
+  const hourlyTimes = weather?.hourly?.time;
+  const dailyTimes = weather?.daily?.time;
+
+  if (!hourlyTimes?.length || !dailyTimes?.length) {
+    return null;
+  }
+
+  return {
+    hourly: hourlyTimes.map((time, index) => ({
+      time,
+      temperature: weather.hourly?.temperature_2m?.[index] ?? null,
+      temperatureLow: weather.hourly?.temperature_2m?.[index] ?? null,
+      temperatureHigh: weather.hourly?.temperature_2m?.[index] ?? null,
+      pressure: weather.hourly?.pressure_msl?.[index] ?? null,
+      cloudCoverage: weather.hourly?.cloudcover?.[index] ?? null,
+      precipitationProbability: weather.hourly?.precipitation_probability?.[index] ?? null,
+      windSpeed: weather.hourly?.windspeed_10m?.[index] ?? null,
+      windDirection: weather.hourly?.winddirection_10m?.[index] ?? null,
+    })),
+    daily: dailyTimes.map((date, index) => ({
+      date,
+      temperature: weather.daily?.temperature_2m_mean?.[index] ?? null,
+      temperatureLow: weather.daily?.temperature_2m_min?.[index] ?? null,
+      temperatureHigh: weather.daily?.temperature_2m_max?.[index] ?? null,
+      pressure: weather.daily?.pressure_msl_mean?.[index] ?? null,
+      cloudCoverage: weather.daily?.cloudcover_mean?.[index] ?? null,
+      precipitationProbability: weather.daily?.precipitation_probability_max?.[index] ?? null,
+      windSpeed: weather.daily?.windspeed_10m_mean?.[index] ?? null,
+      windDirection: weather.daily?.winddirection_10m_dominant?.[index] ?? null,
+    })),
   };
 }

@@ -5,7 +5,7 @@
   bottom: 0;
   z-index: var(--z-bottom-nav);
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   height: var(--app-footer-h);
   background: rgba(0, 0, 0, 0.8);
   border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -30,8 +30,4 @@
 
 .btn-nav-label {
   font-size: 12px;
-}
-
-.btn-nav-resources.btn-nav-resources {
-  color: var(--color-warning);
 }

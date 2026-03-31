@@ -1,0 +1,2 @@
+[functions.generate-weather-summary]
+verify_jwt = false

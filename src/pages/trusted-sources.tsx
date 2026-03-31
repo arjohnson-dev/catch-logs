@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import {
   FaArrowLeft,
   FaBookOpen,
+  FaCloudSun,
   FaFishFins,
   FaLandmark,
   FaShieldHalved,
@@ -41,6 +42,22 @@ const TRUSTED_SOURCE_ITEMS = [
     domain: "fws.gov",
     baseUrl: "https://www.fws.gov",
     icon: FaShieldHalved,
+  },
+  {
+    key: "national_weather_service",
+    name: "National Weather Service",
+    type: "Government",
+    domain: "weather.gov",
+    baseUrl: "https://www.weather.gov/documentation/services-web-api",
+    icon: FaLandmark,
+  },
+  {
+    key: "open_meteo",
+    name: "Open-Meteo",
+    type: "Weather API",
+    domain: "open-meteo.com",
+    baseUrl: "https://open-meteo.com",
+    icon: FaCloudSun,
   },
 ] as const;
 
