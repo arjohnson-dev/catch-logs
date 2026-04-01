@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FaBookOpen, FaFish } from "react-icons/fa6";
+import { FaBookOpen } from "react-icons/fa6";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -76,7 +76,6 @@ export default function SpeciesDetailPage({ species }: Props) {
               </Button>
             </Link>
           )}
-          <FaFish className="stats-species-header-icon" style={{ color }} />
         </div>
       </div>
 

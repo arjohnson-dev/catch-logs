@@ -630,6 +630,7 @@ export default function JournalList({
                 >
                   <JournalEntryCard
                     entry={entry}
+                    onViewFieldGuide={(path) => navigate(path)}
                     actions={[
                       {
                         id: "take-me-there",

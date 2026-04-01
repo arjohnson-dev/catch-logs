@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import FeatureBetaBanner from "@/components/feature-beta-banner";
 import { WeatherAiSummaryCard } from "@/components/weather-ai-summary-card";
 import { WeatherLocationAutocomplete } from "@/components/weather-location-autocomplete";
 import { useAuth } from "@/hooks/useAuth";
@@ -1081,6 +1082,8 @@ export default function WeatherPage() {
         </div>
 
         <div className="resources-stack">
+          <FeatureBetaBanner featureName="Weather" />
+
           {!isLocationScreen ? (
             <Card className="resources-card surface-card">
               <CardHeader className="pb-3">

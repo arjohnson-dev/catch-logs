@@ -41,7 +41,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { useToast } from "@/hooks/use-toast";
 import { deleteCurrentAccount } from "@/lib/account";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,12 +65,6 @@ type SupportSubjectOption = (typeof SUPPORT_SUBJECT_OPTIONS)[number] | "";
 
 export default function Settings() {
   const { user } = useAuth();
-  const {
-    unitSystem,
-    setUnitSystem,
-    windSpeedDisplay,
-    setWindSpeedDisplay,
-  } = useUnitPreference();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -329,53 +322,6 @@ export default function Settings() {
         </div>
 
         <div className="settings-stack">
-          <Card className="settings-card surface-card">
-            <CardHeader>
-              <div className="settings-card-header">
-                <CardTitle className="settings-card-title">
-                  Units
-                </CardTitle>
-              </div>
-              <p className="settings-meta">
-                Choose how measurements are displayed across the app. Imperial is the default.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="unit-toggle" role="tablist" aria-label="Measurement units">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={unitSystem === "imperial"}
-                  className={unitSystem === "imperial" ? "unit-toggle-button unit-toggle-button-active" : "unit-toggle-button"}
-                  onClick={() => setUnitSystem("imperial")}
-                >
-                  Imperial
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={unitSystem === "metric"}
-                  className={unitSystem === "metric" ? "unit-toggle-button unit-toggle-button-active" : "unit-toggle-button"}
-                  onClick={() => setUnitSystem("metric")}
-                >
-                  Metric
-                </button>
-              </div>
-              <label className="settings-checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={windSpeedDisplay === "knots"}
-                  onChange={(event) =>
-                    setWindSpeedDisplay(event.target.checked ? "knots" : "system")
-                  }
-                />
-                <span className="settings-meta">
-                  Show wind speed in knots by default
-                </span>
-              </label>
-            </CardContent>
-          </Card>
-
           <Card className="settings-card surface-card">
             <CardHeader>
               <div className="settings-card-header">
