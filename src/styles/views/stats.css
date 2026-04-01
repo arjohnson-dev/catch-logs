@@ -174,11 +174,6 @@
   color: var(--color-text-inverse);
 }
 
-.stats-species-header-icon {
-  width: 18px;
-  height: 18px;
-}
-
 .stats-conditions-grid {
   display: grid;
   gap: var(--space-2);

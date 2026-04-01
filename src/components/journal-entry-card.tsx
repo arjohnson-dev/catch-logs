@@ -15,6 +15,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
+  FaBookOpen,
   FaFish,
   FaLocationArrow,
   FaRuler,
@@ -25,7 +26,11 @@ import type { IconType } from "react-icons";
 import { Button } from "@/components/ui/button";
 import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { formatCatchGearSummary } from "@/lib/catch-gear";
-import { getFieldGuideSpeciesPhotoUrlMap, UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE } from "@/lib/field-guide";
+import {
+  getFieldGuideSpeciesDetail,
+  getFieldGuideSpeciesPhotoUrlMap,
+  UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE,
+} from "@/lib/field-guide";
 import {
   convertWindSpeedForDisplay,
   getWindSpeedUnitLabel,
@@ -49,6 +54,7 @@ interface JournalEntryCardProps {
   entry: JournalEntry;
   actions?: JournalEntryCardAction[];
   className?: string;
+  onViewFieldGuide?: ((path: string) => void) | null;
 }
 
 function hasValue(value: number | null | undefined): value is number {
@@ -59,6 +65,7 @@ export default function JournalEntryCard({
   entry,
   actions = [],
   className,
+  onViewFieldGuide = null,
 }: JournalEntryCardProps) {
   const { unitSystem, windSpeedDisplay } = useUnitPreference();
   const { data: resolvedSpeciesPhotoUrl = null } = useQuery({
@@ -70,6 +77,14 @@ export default function JournalEntryCard({
     enabled:
       !entry.photoUrl &&
       entry.fishSpeciesSpecCode !== UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE,
+    staleTime: 1000 * 60 * 60,
+  });
+  const { data: fieldGuideSpecies = null } = useQuery({
+    queryKey: appQueryKeys.fieldGuideSpeciesLink(entry.fishSpeciesSpecCode),
+    queryFn: () => getFieldGuideSpeciesDetail({ specCode: entry.fishSpeciesSpecCode }),
+    enabled:
+      entry.fishSpeciesSpecCode !== UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE &&
+      onViewFieldGuide !== null,
     staleTime: 1000 * 60 * 60,
   });
   const displayPhotoUrl = entry.photoUrl ?? entry.speciesPhotoUrl ?? resolvedSpeciesPhotoUrl ?? null;
@@ -99,6 +114,12 @@ export default function JournalEntryCard({
         convertWindSpeedForDisplay(entry.windSpeed, unitSystem, windSpeedDisplay) ?? entry.windSpeed,
       )} ${getWindSpeedUnitLabel(unitSystem, windSpeedDisplay)}`
     : "--";
+  const canViewFieldGuide =
+    entry.fishSpeciesSpecCode !== UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE &&
+    onViewFieldGuide !== null;
+  const fieldGuidePath = fieldGuideSpecies?.slug
+    ? `/resources/field-guide/${fieldGuideSpecies.slug}`
+    : `/resources/field-guide/${entry.fishSpeciesSpecCode}`;
 
   return (
     <div className={cn("surface-card surface-card-hover p-3", className)}>
@@ -137,12 +158,30 @@ export default function JournalEntryCard({
               </div>
             </div>
           </div>
-          <div className="text-right flex-shrink-0 pl-1">
+          <div className="text-right flex-shrink-0 pl-1 space-y-1.5">
             <div className="text-[11px] leading-tight text-[#999999]">
               {format(new Date(entry.dateTime), "MMM dd")}
             </div>
             <div className="text-[11px] leading-tight text-[#999999]">
               {format(new Date(entry.dateTime), "h:mm a")}
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="btn-outline-info h-8 px-2.5 text-[11px]"
+                onClick={() => onViewFieldGuide?.(fieldGuidePath)}
+                disabled={!canViewFieldGuide}
+                aria-label={
+                  canViewFieldGuide
+                    ? `View ${entry.fishType} in the field guide`
+                    : `${entry.fishType} is unavailable in the field guide`
+                }
+              >
+                <FaBookOpen className="mr-1.5 h-3.5 w-3.5" />
+                See in Field Guide
+              </Button>
             </div>
           </div>
         </div>

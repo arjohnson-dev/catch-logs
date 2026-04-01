@@ -576,10 +576,10 @@ export async function getFieldGuideSpeciesDetail(input: {
     .eq("is_active", true);
 
   const query =
-    input.slug && input.slug.trim().length > 0
-      ? schemaQuery.eq("slug", input.slug.trim())
-      : input.specCode !== null && input.specCode !== undefined
-        ? schemaQuery.eq("spec_code", input.specCode)
+    input.specCode !== null && input.specCode !== undefined
+      ? schemaQuery.eq("spec_code", input.specCode)
+      : input.slug && input.slug.trim().length > 0
+        ? schemaQuery.eq("slug", input.slug.trim())
         : null;
 
   if (!query) {
