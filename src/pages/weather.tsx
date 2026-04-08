@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -8,12 +7,12 @@ import {
 } from "react";
 import { addDays, format, parseISO, startOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
+import { APIProvider } from "@vis.gl/react-google-maps";
 import { Link } from "wouter";
 import {
   FaArrowLeft,
   FaBookmark,
   FaLocationArrow,
-  FaMagnifyingGlass,
 } from "react-icons/fa6";
 import {
   CartesianGrid,
@@ -42,7 +41,6 @@ import {
   reverseGeocodeWeatherLocation,
   saveActiveWeatherLocation,
   saveSavedWeatherLocations,
-  searchWeatherLocations,
   type WeatherLocation,
 } from "@/lib/weather-locations";
 import {
@@ -684,8 +682,6 @@ export default function WeatherPage() {
     storedLocationState.selectedSource,
   );
   const [searchInput, setSearchInput] = useState("");
-  const [googleSelectedLocation, setGoogleSelectedLocation] = useState<WeatherLocation | null>(null);
-  const deferredSearchInput = useDeferredValue(searchInput.trim());
   const [locationPermissionState, setLocationPermissionState] = useState<
     PermissionState | "unsupported" | "unknown"
   >("unknown");
@@ -697,6 +693,7 @@ export default function WeatherPage() {
     () => typeof window !== "undefined" && window.innerWidth < 640,
   );
   const manualSelectionRef = useRef(false);
+  const selectedLocationRef = useRef<WeatherLocation | null>(storedLocationState.activeLocation);
 
   useEffect(() => {
     const handleResize = () => {
@@ -723,6 +720,10 @@ export default function WeatherPage() {
   useEffect(() => {
     saveSavedWeatherLocations(savedLocations, userId);
   }, [savedLocations, userId]);
+
+  useEffect(() => {
+    selectedLocationRef.current = selectedLocation;
+  }, [selectedLocation]);
 
   const applySelectedLocation = useCallback(
     (
@@ -755,12 +756,17 @@ export default function WeatherPage() {
         return false;
       }
 
-      setIsRequestingLocation(true);
+      const isManualRequest = Boolean(options?.manual);
+      if (isManualRequest) {
+        setIsRequestingLocation(true);
+      }
       setLocationStatusMessage(null);
 
       return await new Promise<boolean>((resolve) => {
         const applyPosition = (position: GeolocationPosition) => {
-          setIsRequestingLocation(false);
+          if (isManualRequest) {
+            setIsRequestingLocation(false);
+          }
           setLocationPermissionState("granted");
           setLocationStatusMessage(null);
 
@@ -781,51 +787,66 @@ export default function WeatherPage() {
         };
 
         const handleFailure = (error: GeolocationPositionError) => {
-          setIsRequestingLocation(false);
+          if (isManualRequest) {
+            setIsRequestingLocation(false);
+          }
 
           if (error.code === error.PERMISSION_DENIED) {
             setLocationPermissionState("denied");
             setLocationStatusMessage(
               "Location access is turned off. Showing Fargo, ND until you choose another location.",
             );
-            if (!selectedLocation) {
+            if (!selectedLocationRef.current) {
               applySelectedLocation(FARGO_DEFAULT_LOCATION, "search");
             }
           } else {
             setLocationStatusMessage(
               "Unable to get your current location right now. You can search for a place instead.",
             );
+
+            if (!selectedLocationRef.current) {
+              applySelectedLocation(FARGO_DEFAULT_LOCATION, "search");
+            }
           }
 
           resolve(false);
         };
 
-        const highAccuracyOptions: PositionOptions = {
+        const fastOptions: PositionOptions = {
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 1000 * 60 * 10,
+        };
+
+        const preciseOptions: PositionOptions = {
           enableHighAccuracy: true,
-          timeout: 20000,
+          timeout: 8000,
           maximumAge: 0,
         };
 
-        const fallbackOptions: PositionOptions = {
-          enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 60000,
-        };
+        if (isManualRequest) {
+          navigator.geolocation.getCurrentPosition(
+            applyPosition,
+            () => {
+              navigator.geolocation.getCurrentPosition(
+                applyPosition,
+                handleFailure,
+                fastOptions,
+              );
+            },
+            preciseOptions,
+          );
+          return;
+        }
 
         navigator.geolocation.getCurrentPosition(
           applyPosition,
-          () => {
-            navigator.geolocation.getCurrentPosition(
-              applyPosition,
-              handleFailure,
-              fallbackOptions,
-            );
-          },
-          highAccuracyOptions,
+          handleFailure,
+          fastOptions,
         );
       });
     },
-    [applySelectedLocation, selectedLocation],
+    [applySelectedLocation],
   );
 
   useEffect(() => {
@@ -856,7 +877,7 @@ export default function WeatherPage() {
           setLocationStatusMessage(
             "Location access is turned off. Showing Fargo, ND until you choose another location.",
           );
-          if (!selectedLocation) {
+          if (!selectedLocationRef.current) {
             applySelectedLocation(FARGO_DEFAULT_LOCATION, "search");
           }
           return;
@@ -875,7 +896,7 @@ export default function WeatherPage() {
             setLocationStatusMessage(
               "Location access is turned off. Showing Fargo, ND until you choose another location.",
             );
-            if (!selectedLocation) {
+            if (!selectedLocationRef.current) {
               applySelectedLocation(FARGO_DEFAULT_LOCATION, "search");
             }
           }
@@ -895,15 +916,8 @@ export default function WeatherPage() {
         permissionStatus.onchange = null;
       }
     };
-  }, [applySelectedLocation, requestDeviceLocation, selectedLocation]);
+  }, [applySelectedLocation, requestDeviceLocation]);
 
-  const searchQuery = useQuery({
-    queryKey: ["weather", "location-search", deferredSearchInput],
-    queryFn: () => searchWeatherLocations(deferredSearchInput),
-    enabled: deferredSearchInput.length >= 2,
-    staleTime: 1000 * 60 * 30,
-    retry: false,
-  });
   const isLocationScreen = screen === "location";
   const currentWeatherQuery = useQuery({
     queryKey: [
@@ -980,7 +994,6 @@ export default function WeatherPage() {
   ) => {
     applySelectedLocation(location, source, { manual: true });
     setSearchInput("");
-    setGoogleSelectedLocation(null);
     setScreen("overview");
   };
 
@@ -988,22 +1001,9 @@ export default function WeatherPage() {
     const didResolveLocation = await requestDeviceLocation({ manual: true });
     if (didResolveLocation) {
       setSearchInput("");
-      setGoogleSelectedLocation(null);
       setScreen("overview");
     }
   };
-
-  const locationResults = useMemo(() => {
-    const fallbackResults = searchQuery.data ?? [];
-    if (!googleSelectedLocation) {
-      return fallbackResults;
-    }
-
-    return [
-      googleSelectedLocation,
-      ...fallbackResults.filter((location) => location.id !== googleSelectedLocation.id),
-    ];
-  }, [googleSelectedLocation, searchQuery.data]);
   const currentWeather = currentWeatherQuery.data;
   const currentWeatherVisual = getWeatherVisual(
     currentWeather?.weatherCondition ?? currentWeather?.weatherDescription ?? null,
@@ -1315,195 +1315,127 @@ export default function WeatherPage() {
           {isLocationScreen ? (
             <Card className="resources-card surface-card">
               <CardHeader className="pb-3">
-                <CardTitle className="resources-section-title">Location Menu</CardTitle>
+                <CardTitle className="resources-section-title">Location</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="resources-detail-list">
                   <p>
-                    Weather should start from your current location when permission is already
-                    granted. You can also search for a place and save it for future sessions.
+                    Search for a place, or jump back into your saved locations below.
                   </p>
                 </div>
 
                 <div className="resources-weather-search-form">
                   <label className="resources-search-label" htmlFor="weather-location-search">
-                    Search for a city or area
+                    Search location
                   </label>
-                  <div className="resources-weather-search-row">
-                    <WeatherLocationAutocomplete
-                      apiKey={GOOGLE_MAPS_API_KEY}
-                      id="weather-location-search"
-                      value={searchInput}
-                      onChange={(event) => {
-                        setSearchInput(event.target.value);
-                        setGoogleSelectedLocation(null);
-                      }}
-                      onPlaceSelect={(location) => {
-                        setGoogleSelectedLocation(location);
-                        setSearchInput(
-                          [location.name, location.admin1].filter(Boolean).join(", "),
-                        );
-                      }}
-                      placeholder="Fargo, ND"
-                      className="field-dark"
-                      autoComplete="off"
-                    />
-                    <Button
+                  <div className="resources-weather-location-list">
+                    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                      <WeatherLocationAutocomplete
+                        id="weather-location-search"
+                        value={searchInput}
+                        onChange={(event) => {
+                          setSearchInput(event.target.value);
+                        }}
+                        onPlaceSelect={(location) => {
+                          applySelectedLocation(location, "search", { manual: true });
+                          setSearchInput(
+                            [location.name, location.admin1].filter(Boolean).join(", "),
+                          );
+                          setScreen("overview");
+                        }}
+                        placeholder="Search city, town, or region"
+                        className="field-dark"
+                        autoComplete="off"
+                      />
+                    </APIProvider>
+                    <p className="resources-weather-search-caption">
+                      Suggestions update as you type using Google Places.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="resources-weather-saved-section">
+                  <div className="resources-weather-saved-header">
+                    <h2 className="resources-section-title">Saved Locations</h2>
+                  </div>
+
+                  <div className="resources-weather-location-list">
+                    <button
                       type="button"
-                      variant="outline"
-                      className="btn-outline-muted"
+                      className={
+                        selectedSource === "device"
+                          ? "resources-weather-location-row is-active"
+                          : "resources-weather-location-row"
+                      }
                       onClick={() => {
                         void handleUseMyLocation();
                       }}
                       disabled={isRequestingLocation}
                     >
-                      <FaLocationArrow className="h-4 w-4" />
-                      {isRequestingLocation ? "Locating..." : "Use My Location"}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
+                      <span className="resources-weather-location-row-icon">
+                        <FaLocationArrow size={16} />
+                      </span>
+                      <span className="resources-weather-location-row-copy">
+                        <span className="resources-weather-location-row-title">
+                          {isRequestingLocation ? "Finding current location..." : "Use my current location"}
+                        </span>
+                        <span className="resources-weather-location-row-meta">
+                          {locationPermissionState === "denied"
+                            ? "Location access is off in this browser."
+                            : "Default weather location for this device."}
+                        </span>
+                      </span>
+                    </button>
 
-          {isLocationScreen && (deferredSearchInput.length >= 2 || Boolean(googleSelectedLocation)) ? (
-            <Card className="resources-card surface-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="resources-section-title">Search Results</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {searchQuery.isError ? (
-                  <div className="resources-empty-state">
-                    <FaMagnifyingGlass size={20} />
-                    <div>
-                      <h2 className="resources-empty-title">Search unavailable</h2>
-                      <p className="resources-empty-copy">
-                        {searchQuery.error instanceof Error
-                          ? searchQuery.error.message
-                          : "We could not search for locations right now."}
-                      </p>
-                    </div>
-                  </div>
-                ) : locationResults.length === 0 && !searchQuery.isFetching ? (
-                  <div className="resources-empty-state">
-                    <FaMagnifyingGlass size={20} />
-                    <div>
-                      <h2 className="resources-empty-title">No matches found</h2>
-                      <p className="resources-empty-copy">
-                        Try a broader city name, state abbreviation, or nearby town.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="resources-weather-location-list">
-                    {locationResults.map((location) => (
-                      <div key={location.id} className="resources-trusted-source">
-                        <div className="resources-trusted-source-heading">
-                          <div className="resources-trusted-source-icon">
-                            <FaLocationArrow size={18} />
-                          </div>
-                          <div className="resources-trusted-source-copy">
-                            <h3 className="resources-trusted-source-title">{location.name}</h3>
-                            <p className="resources-trusted-source-meta">
-                              {formatWeatherLocationSubtitle(location) ||
-                                formatWeatherLocationCoordinates(location)}
-                            </p>
-                            {formatWeatherLocationSubtitle(location) && (
-                              <p className="resources-trusted-source-description">
-                                {formatWeatherLocationCoordinates(location)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="resources-weather-location-actions">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="btn-outline-info"
-                            onClick={() => handleSelectLocationFromMenu(location, "search")}
-                          >
-                            Select
-                          </Button>
-                          {!savedLocationIds.has(location.id) && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="btn-outline-muted"
-                              onClick={() => handleSaveLocation(location)}
-                            >
-                              Save
-                            </Button>
-                          )}
+                    {savedLocations.length === 0 ? (
+                      <div className="resources-empty-state resources-weather-saved-empty">
+                        <FaBookmark size={20} />
+                        <div>
+                          <h2 className="resources-empty-title">No saved locations yet</h2>
+                          <p className="resources-empty-copy">
+                            Pick a place from search and it will be ready here next time.
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {isLocationScreen ? (
-            <Card className="resources-card surface-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="resources-section-title">Saved Locations</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {savedLocations.length === 0 ? (
-                  <div className="resources-empty-state">
-                    <FaBookmark size={20} />
-                    <div>
-                      <h2 className="resources-empty-title">No saved locations yet</h2>
-                      <p className="resources-empty-copy">
-                        Save a searched location here so you can jump back to it next session.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="resources-weather-location-list">
-                    {savedLocations.map((location) => (
-                      <div key={location.id} className="resources-trusted-source">
-                        <div className="resources-trusted-source-heading">
-                          <div className="resources-trusted-source-icon">
-                            <FaBookmark size={18} />
-                          </div>
-                          <div className="resources-trusted-source-copy">
-                            <h3 className="resources-trusted-source-title">{location.name}</h3>
-                            <p className="resources-trusted-source-meta">
-                              {formatWeatherLocationSubtitle(location) ||
-                                formatWeatherLocationCoordinates(location)}
-                            </p>
-                            {formatWeatherLocationSubtitle(location) && (
-                              <p className="resources-trusted-source-description">
-                                {formatWeatherLocationCoordinates(location)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="resources-weather-location-actions">
-                          <Button
+                    ) : (
+                      savedLocations.map((location) => (
+                        <div key={location.id} className="resources-weather-location-row-shell">
+                          <button
                             type="button"
-                            variant="outline"
-                            className="btn-outline-info"
+                            className={
+                              areWeatherLocationsEqual(selectedLocation, location)
+                                ? "resources-weather-location-row is-active"
+                                : "resources-weather-location-row"
+                            }
                             onClick={() => handleSelectLocationFromMenu(location, "saved")}
                           >
-                            Select
-                          </Button>
+                            <span className="resources-weather-location-row-icon">
+                              <FaBookmark size={16} />
+                            </span>
+                            <span className="resources-weather-location-row-copy">
+                              <span className="resources-weather-location-row-title">
+                                {location.name}
+                              </span>
+                              <span className="resources-weather-location-row-meta">
+                                {formatWeatherLocationSubtitle(location) ||
+                                  formatWeatherLocationCoordinates(location)}
+                              </span>
+                            </span>
+                          </button>
+
                           <Button
                             type="button"
-                            variant="outline"
-                            className="btn-outline-muted"
+                            variant="ghost"
+                            className="resources-weather-location-row-action"
                             onClick={() => handleRemoveSavedLocation(location)}
                           >
                             Remove
                           </Button>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           ) : null}
