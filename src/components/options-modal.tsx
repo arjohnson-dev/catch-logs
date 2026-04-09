@@ -18,6 +18,7 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaGear,
+  FaHeadset,
   FaXmark,
 } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ interface OptionsModalProps {
   isLoggingOut: boolean;
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenSupport: () => void;
   onLogout: () => void;
 }
 
@@ -88,6 +90,7 @@ export default function OptionsModal({
   isLoggingOut,
   onClose,
   onOpenSettings,
+  onOpenSupport,
   onLogout,
 }: OptionsModalProps) {
   const currentYear = new Date().getFullYear();
@@ -548,6 +551,14 @@ export default function OptionsModal({
           >
             <FaGear size={16} />
             Profile Settings
+          </Button>
+          <Button
+            variant="outline"
+            className="btn-outline-muted btn-full options-modal-button"
+            onClick={onOpenSupport}
+          >
+            <FaHeadset size={16} />
+            Contact Support
           </Button>
           <Button
             variant="outline"

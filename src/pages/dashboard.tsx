@@ -17,7 +17,7 @@ import MapInterface from "@/components/map-interface";
 import PinSummary from "@/components/pin-summary";
 import BottomNavigation from "@/components/bottom-navigation";
 import OptionsModal from "@/components/options-modal";
-import { FaGear } from "react-icons/fa6";
+import { FaBars } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -307,7 +307,7 @@ export default function Dashboard() {
                 aria-label="Open settings"
                 title="Settings"
               >
-                <FaGear size={20} />
+                <FaBars size={20} />
               </Button>
             )}
           </div>
@@ -359,6 +359,10 @@ export default function Dashboard() {
           onOpenSettings={() => {
             setShowOptionsModal(false);
             navigate("/settings");
+          }}
+          onOpenSupport={() => {
+            setShowOptionsModal(false);
+            navigate("/support");
           }}
           onLogout={handleLogout}
         />
