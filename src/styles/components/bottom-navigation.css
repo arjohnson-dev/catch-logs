@@ -24,9 +24,15 @@
   align-items: center;
   justify-content: center;
   color: var(--color-text-inverse);
+  transition: color 180ms ease, background-color 180ms ease;
 }
 
-.btn-nav-map.btn-nav-map svg {
-  width: 1.625rem;
-  height: 1.625rem;
+.btn-nav.btn-nav svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.btn-nav.btn-nav.is-active {
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.08);
 }

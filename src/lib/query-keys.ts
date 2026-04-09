@@ -22,6 +22,8 @@ export const appQueryKeys = {
     ["field-guide", "species-ai-summary", slug, unitSystem] as const,
   weatherAiSummary: (latitude: number | null, longitude: number | null, label: string) =>
     ["weather", "ai-summary", latitude, longitude, label] as const,
+  lunarPhase: (latitude: number | null, longitude: number | null, days: number) =>
+    ["weather", "lunar-phase", latitude, longitude, days] as const,
   statsOverview: () => ["stats", "overview"] as const,
   statsSpecies: (species: string) => ["stats", "species", species] as const,
 };

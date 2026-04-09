@@ -801,9 +801,10 @@ export default function JournalList({
                   variant="ghost"
                   className="btn-ghost-muted"
                   onClick={() => navigate("/journal")}
+                  aria-label="Back to journal"
+                  title="Back to journal"
                 >
-                  <FaArrowLeft className="h-4 w-4 mr-2" />
-                  Back
+                  <FaArrowLeft className="h-4 w-4" />
                 </Button>
                 <h2 className="text-base font-medium text-white flex-1">
                   Filters

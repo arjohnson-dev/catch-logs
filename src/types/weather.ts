@@ -12,3 +12,16 @@ export interface GenerateWeatherSummaryResponse {
   };
   error?: string;
 }
+
+export interface LunarPhaseData {
+  date: string;
+  value: number;
+  phaseName: string;
+  illuminationPercent: number;
+}
+
+export interface LunarPhaseFunctionResponse {
+  ok: boolean;
+  phases?: LunarPhaseData[];
+  error?: string;
+}

@@ -95,6 +95,33 @@ export default function Dashboard() {
     const withoutTrailingSlash = pathOnly.replace(/\/+$/, "");
     return withoutTrailingSlash.length > 0 ? withoutTrailingSlash : "/";
   })();
+  const activeBottomNavSection = (() => {
+    if (normalizedPath === "/" || normalizedPath === "/map") {
+      return "map" as const;
+    }
+
+    if (
+      normalizedPath === "/journal" ||
+      normalizedPath === "/journal/filters" ||
+      normalizedPath === "/entries/new"
+    ) {
+      return "journal" as const;
+    }
+
+    if (normalizedPath === "/stats") {
+      return "stats" as const;
+    }
+
+    if (normalizedPath === "/weather" || normalizedPath === "/resources/weather") {
+      return "weather" as const;
+    }
+
+    if (normalizedPath === "/resources" || normalizedPath.startsWith("/resources/")) {
+      return "resources" as const;
+    }
+
+    return null;
+  })();
   const isMapView = normalizedPath === "/" || normalizedPath === "/map";
   const isOverlayOpen = !isMapView;
 
@@ -346,6 +373,7 @@ export default function Dashboard() {
       <BottomNavigation
         onMapClick={handleMapClick}
         onJournalClick={handleJournalClick}
+        activeSection={activeBottomNavSection}
       />
 
       {/* Pin Summary */}

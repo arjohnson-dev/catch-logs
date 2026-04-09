@@ -899,7 +899,8 @@
 }
 
 .resources-weather-lunar-current-label,
-.resources-weather-lunar-current-value {
+.resources-weather-lunar-current-value,
+.resources-weather-lunar-current-percent {
   margin: 0;
 }
 
@@ -914,6 +915,12 @@
   color: var(--color-text-strong);
   font-size: 1rem;
   font-weight: 600;
+}
+
+.resources-weather-lunar-current-percent {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .resources-weather-lunar-forecast {
@@ -963,7 +970,8 @@
 }
 
 .resources-weather-lunar-forecast-date,
-.resources-weather-lunar-forecast-phase {
+.resources-weather-lunar-forecast-phase,
+.resources-weather-lunar-forecast-percent {
   margin: 0;
 }
 
@@ -977,6 +985,12 @@
   color: var(--color-text-secondary);
   font-size: 0.8rem;
   line-height: 1.35;
+}
+
+.resources-weather-lunar-forecast-percent {
+  color: var(--color-sky-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .resources-weather-sun-card {
@@ -1003,7 +1017,7 @@
 
 .resources-weather-sun-arc-fill {
   fill: none;
-  stroke: rgba(241, 217, 138, 0.9);
+  stroke: url(#resources-weather-sun-arc-gradient);
   stroke-width: 2.5;
   stroke-linecap: round;
 }
@@ -1013,7 +1027,7 @@
 }
 
 .resources-weather-sun-marker {
-  fill: #f1d98a;
+  fill: #f38234;
   stroke: rgba(13, 13, 14, 0.9);
   stroke-width: 2;
 }
@@ -1047,8 +1061,15 @@
 }
 
 .resources-weather-sun-time-value {
-  color: var(--color-text-strong);
   font-size: 0.94rem;
+}
+
+.resources-weather-sun-time-value-sunrise {
+  color: #8b5cf6;
+}
+
+.resources-weather-sun-time-value-sunset {
+  color: #ef4444;
 }
 
 .resources-weather-location-card-actions {

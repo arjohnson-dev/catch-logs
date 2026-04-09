@@ -22,55 +22,66 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
+type BottomNavSection = "map" | "journal" | "stats" | "weather" | "resources";
+
 interface BottomNavigationProps {
   onMapClick: () => void;
   onJournalClick: () => void;
+  activeSection: BottomNavSection | null;
 }
 
 export default function BottomNavigation({
   onMapClick,
   onJournalClick,
+  activeSection,
 }: BottomNavigationProps) {
+  const getButtonClassName = (section: BottomNavSection) =>
+    activeSection === section ? "touch-target btn-nav is-active" : "touch-target btn-nav";
+
   return (
     <nav className="mobile-bottom-nav">
       <div className="bottom-nav-grid">
+        <Button
+          variant="ghost"
+          className={getButtonClassName("map")}
+          onClick={onMapClick}
+          aria-label="Map"
+          title="Map"
+          aria-current={activeSection === "map" ? "page" : undefined}
+        >
+          <FaMapLocationDot size={20} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          className={getButtonClassName("journal")}
+          onClick={onJournalClick}
+          aria-label="Journal"
+          title="Journal"
+          aria-current={activeSection === "journal" ? "page" : undefined}
+        >
+          <FaBookOpen size={20} />
+        </Button>
+
         <Link to="/stats">
           <Button
             variant="ghost"
-            className="touch-target btn-nav"
+            className={getButtonClassName("stats")}
             aria-label="Stats"
             title="Stats"
+            aria-current={activeSection === "stats" ? "page" : undefined}
           >
             <FaChartColumn size={20} />
           </Button>
         </Link>
 
-        <Button
-          variant="ghost"
-          className="touch-target btn-nav"
-          onClick={onJournalClick}
-          aria-label="Journal"
-          title="Journal"
-        >
-          <FaBookOpen size={20} />
-        </Button>
-
-        <Button
-          variant="ghost"
-          className="touch-target btn-nav btn-nav-map"
-          onClick={onMapClick}
-          aria-label="Map"
-          title="Map"
-        >
-          <FaMapLocationDot size={26} />
-        </Button>
-
         <Link to="/weather">
           <Button
             variant="ghost"
-            className="touch-target btn-nav btn-nav-weather"
+            className={getButtonClassName("weather")}
             aria-label="Weather"
             title="Weather"
+            aria-current={activeSection === "weather" ? "page" : undefined}
           >
             <FaCloudSun size={20} />
           </Button>
@@ -79,9 +90,10 @@ export default function BottomNavigation({
         <Link to="/resources">
           <Button
             variant="ghost"
-            className="touch-target btn-nav btn-nav-resources"
+            className={getButtonClassName("resources")}
             aria-label="Resources"
             title="Resources"
+            aria-current={activeSection === "resources" ? "page" : undefined}
           >
             <FaEllipsisVertical size={20} />
           </Button>

@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { addDays, format, parseISO, startOfDay } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { APIProvider } from "@vis.gl/react-google-maps";
 import {
@@ -32,6 +32,7 @@ import { WeatherLocationAutocomplete } from "@/components/weather-location-autoc
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { useToast } from "@/hooks/use-toast";
+import { appQueryKeys } from "@/lib/query-keys";
 import {
   areWeatherLocationsEqual,
   createDeviceWeatherLocation,
@@ -56,6 +57,7 @@ import {
   getWindSpeedUnitLabel,
   type UnitSystem,
 } from "@/lib/unit-preferences";
+import type { LunarPhaseData, LunarPhaseFunctionResponse } from "@/types/weather";
 
 type SelectedLocationSource = "device" | "search" | "saved";
 type WeatherScreen = "overview" | "location";
@@ -84,10 +86,11 @@ type WeatherMetricConfig = {
   yAxisUnit: string;
 };
 
-type LunarCycleDay = {
-  date: Date;
-  phaseLabel: string;
-};
+const LUNAR_PHASE_UNAVAILABLE_MESSAGE = "Lunar phase data is unavailable right now.";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const lunarPhaseUrl = supabaseUrl
+  ? `${supabaseUrl}/functions/v1/lunar-phase`
+  : null;
 
 const FARGO_DEFAULT_LOCATION: WeatherLocation = {
   id: "default:fargo-nd",
@@ -99,69 +102,6 @@ const FARGO_DEFAULT_LOCATION: WeatherLocation = {
   timezone: "America/Chicago",
 };
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
-
-const SYNODIC_MONTH = 29.530588853;
-const KNOWN_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14, 0);
-
-function getMoonPhaseData(date: Date) {
-  const normalized = startOfDay(date);
-  const daysSinceReference =
-    (normalized.getTime() - KNOWN_NEW_MOON) / (1000 * 60 * 60 * 24);
-  const lunarAge =
-    ((daysSinceReference % SYNODIC_MONTH) + SYNODIC_MONTH) % SYNODIC_MONTH;
-  const phaseAngle = (lunarAge / SYNODIC_MONTH) * 360;
-  const illumination = (1 - Math.cos((phaseAngle * Math.PI) / 180)) / 2;
-
-  if (lunarAge < 1.84566) {
-    return {
-      phaseLabel: "New Moon",
-    };
-  }
-  if (lunarAge < 5.53699) {
-    return {
-      phaseLabel: "Waxing Crescent",
-    };
-  }
-  if (lunarAge < 9.22831) {
-    return {
-      phaseLabel: "First Quarter",
-    };
-  }
-  if (lunarAge < 12.91963) {
-    return {
-      phaseLabel: "Waxing Gibbous",
-    };
-  }
-  if (lunarAge < 16.61096) {
-    return {
-      phaseLabel: "Full Moon",
-    };
-  }
-  if (lunarAge < 20.30228) {
-    return {
-      phaseLabel: "Waning Gibbous",
-    };
-  }
-  if (lunarAge < 23.99361) {
-    return {
-      phaseLabel: "Last Quarter",
-    };
-  }
-
-  return {
-    phaseLabel: "Waning Crescent",
-  };
-}
-
-function buildLunarForecast(startDate = new Date(), days = 5) {
-  return Array.from({ length: days }, (_, index) => {
-    const date = addDays(startOfDay(startDate), index);
-    return {
-      date,
-      ...getMoonPhaseData(date),
-    } satisfies LunarCycleDay;
-  });
-}
 
 function getStoredLocationState(userId?: string | null) {
   const savedLocations = loadSavedWeatherLocations(userId);
@@ -664,9 +604,66 @@ function WeatherMetricChart({
   );
 }
 
-function LunarCycleCard() {
-  const currentPhase = getMoonPhaseData(new Date());
-  const lunarForecast = useMemo(() => buildLunarForecast(), []);
+async function getLunarPhaseForecast(latitude: number, longitude: number, days = 5) {
+  if (!lunarPhaseUrl) {
+    throw new Error("Missing VITE_SUPABASE_URL");
+  }
+
+  const response = await fetch(lunarPhaseUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=UTF-8",
+    },
+    body: JSON.stringify({
+      latitude,
+      longitude,
+      days,
+    }),
+  });
+
+  let data: unknown = null;
+  try {
+    data = await response.json();
+  } catch {
+    if (!response.ok) {
+      throw new Error(LUNAR_PHASE_UNAVAILABLE_MESSAGE);
+    }
+  }
+
+  if (!response.ok) {
+    const payload = data as LunarPhaseFunctionResponse | null;
+    throw new Error(payload?.error ?? LUNAR_PHASE_UNAVAILABLE_MESSAGE);
+  }
+
+  const payload = data as LunarPhaseFunctionResponse | null;
+  if (!payload || payload.ok !== true || !Array.isArray(payload.phases)) {
+    throw new Error(payload?.error ?? LUNAR_PHASE_UNAVAILABLE_MESSAGE);
+  }
+
+  return payload.phases.filter((phase): phase is LunarPhaseData => (
+    Boolean(phase) &&
+    typeof phase.date === "string" &&
+    typeof phase.phaseName === "string" &&
+    typeof phase.value === "number" &&
+    typeof phase.illuminationPercent === "number"
+  ));
+}
+
+function LunarCycleCard({
+  latitude,
+  longitude,
+}: {
+  latitude: number;
+  longitude: number;
+}) {
+  const lunarForecastQuery = useQuery({
+    queryKey: appQueryKeys.lunarPhase(latitude, longitude, 5),
+    queryFn: () => getLunarPhaseForecast(latitude, longitude, 5),
+    staleTime: 1000 * 60 * 60 * 6,
+    retry: false,
+  });
+  const lunarForecast = lunarForecastQuery.data ?? [];
+  const currentPhase = lunarForecast[0] ?? null;
 
   return (
     <Card className="resources-card surface-card">
@@ -674,39 +671,41 @@ function LunarCycleCard() {
         <CardTitle className="resources-section-title">Lunar Calendar</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="resources-weather-lunar-current">
-          <span className="resources-weather-lunar-current-icon" aria-hidden="true">
-            <LunarPhaseIcon phaseLabel={currentPhase?.phaseLabel} />
-          </span>
-          <div>
-            <p className="resources-weather-lunar-current-label">Current Phase</p>
-            <p className="resources-weather-lunar-current-value">
-              {currentPhase?.phaseLabel ?? "--"}
-            </p>
-          </div>
-        </div>
-
-        <div className="resources-weather-lunar-forecast" aria-label="Upcoming lunar forecast">
-          <p className="resources-weather-lunar-forecast-label">Lunar Forecast</p>
-          <div className="resources-weather-lunar-forecast-row">
-            {lunarForecast.map((day) => (
-              <div
-                key={day.date.toISOString()}
-                className="resources-weather-lunar-forecast-day"
-              >
-                <span className="resources-weather-lunar-forecast-icon" aria-hidden="true">
-                  <LunarPhaseIcon phaseLabel={day.phaseLabel} />
-                </span>
-                <span className="resources-weather-lunar-forecast-date">
-                  {format(day.date, "MMM d")}
-                </span>
-                <span className="resources-weather-lunar-forecast-phase">
-                  {day.phaseLabel}
-                </span>
+        {lunarForecastQuery.isLoading ? (
+          <p className="resources-weather-status-copy">
+            Loading lunar phase data for this location...
+          </p>
+        ) : !currentPhase ? (
+          <p className="resources-weather-status-copy">
+            {LUNAR_PHASE_UNAVAILABLE_MESSAGE}
+          </p>
+        ) : (
+          <>
+            <div className="resources-weather-lunar-current">
+              <span className="resources-weather-lunar-current-icon" aria-hidden="true">
+                <LunarPhaseIcon phaseLabel={currentPhase.phaseName} />
+              </span>
+              <div>
+                <p className="resources-weather-lunar-current-label">Current Phase</p>
+                <p className="resources-weather-lunar-current-value">
+                  {currentPhase.phaseName}
+                </p>
+                <p className="resources-weather-lunar-current-percent">
+                  {`${currentPhase.illuminationPercent}% illuminated on ${format(parseISO(currentPhase.date), "MMM d")}`}
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+
+            <div className="resources-weather-lunar-forecast" aria-label="Upcoming lunar forecast">
+              <p className="resources-weather-lunar-forecast-label">Lunar Forecast</p>
+              <div className="resources-weather-lunar-forecast-row">
+                {lunarForecast.map((day) => (
+                  <LunarForecastDay key={day.date} day={day} />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         <p className="resources-weather-lunar-attribution">
           Lunar icons by{" "}
@@ -729,6 +728,29 @@ function LunarCycleCard() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+function LunarForecastDay({
+  day,
+}: {
+  day: LunarPhaseData;
+}) {
+  return (
+    <div className="resources-weather-lunar-forecast-day">
+      <span className="resources-weather-lunar-forecast-icon" aria-hidden="true">
+        <LunarPhaseIcon phaseLabel={day.phaseName} />
+      </span>
+      <span className="resources-weather-lunar-forecast-date">
+        {format(parseISO(day.date), "MMM d")}
+      </span>
+      <span className="resources-weather-lunar-forecast-phase">
+        {day.phaseName}
+      </span>
+      <span className="resources-weather-lunar-forecast-percent">
+        {`${day.illuminationPercent}%`}
+      </span>
+    </div>
   );
 }
 
@@ -790,6 +812,12 @@ function SunArcCard({
         <div className="resources-weather-sun-card">
           <div className="resources-weather-sun-graphic" aria-hidden="true">
             <svg viewBox="0 0 240 108" className="resources-weather-sun-svg">
+              <defs>
+                <linearGradient id="resources-weather-sun-arc-gradient" x1="38" y1="92" x2="202" y2="92" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#8b5cf6" />
+                  <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+              </defs>
               <path
                 d="M38 92 A82 82 0 0 1 202 92"
                 className="resources-weather-sun-arc"
@@ -814,11 +842,15 @@ function SunArcCard({
           <div className="resources-weather-sun-times">
             <div className="resources-weather-sun-time">
               <span className="resources-weather-sun-time-label">Sunrise</span>
-              <strong className="resources-weather-sun-time-value">{formatSunTime(sunrise)}</strong>
+              <strong className="resources-weather-sun-time-value resources-weather-sun-time-value-sunrise">
+                {formatSunTime(sunrise)}
+              </strong>
             </div>
             <div className="resources-weather-sun-time resources-weather-sun-time-end">
               <span className="resources-weather-sun-time-label">Sunset</span>
-              <strong className="resources-weather-sun-time-value">{formatSunTime(sunset)}</strong>
+              <strong className="resources-weather-sun-time-value resources-weather-sun-time-value-sunset">
+                {formatSunTime(sunset)}
+              </strong>
             </div>
           </div>
         </div>
@@ -1535,7 +1567,10 @@ export default function WeatherPage() {
                 </CardContent>
               </Card>
 
-              <LunarCycleCard />
+              <LunarCycleCard
+                latitude={selectedLocation.latitude}
+                longitude={selectedLocation.longitude}
+              />
 
               <SunArcCard
                 sunrise={currentWeather?.sunrise}
