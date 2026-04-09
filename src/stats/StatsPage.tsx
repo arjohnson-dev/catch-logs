@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FaArrowLeft } from "react-icons/fa6";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import FeatureBetaBanner from "@/components/feature-beta-banner";
@@ -32,13 +31,7 @@ export default function StatsPage() {
             >
               <FaArrowLeft className="w-4 h-4" />
             </Button>
-          ) : (
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="legal-back-button">
-                <FaArrowLeft className="w-4 h-4" />
-              </Button>
-            </Link>
-          )}
+          ) : null}
           <h1 className="page-title">Your Stats</h1>
         </div>
 

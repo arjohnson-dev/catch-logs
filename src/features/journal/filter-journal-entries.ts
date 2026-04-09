@@ -1,18 +1,66 @@
+import { normalizeCatchGearText } from "@/lib/catch-gear";
 import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import type { JournalEntry } from "@/types/domain";
 
+export type JournalSortOrder =
+  | "newest"
+  | "oldest"
+  | "length-asc"
+  | "length-desc"
+  | "weight-asc"
+  | "weight-desc";
+
 export interface JournalEntryFilters {
-  sortOrder: "newest" | "oldest";
+  sortOrder: JournalSortOrder;
   startDate: string;
   endDate: string;
-  fishType: string;
-  lure: string;
-  bait: string;
-  weather: string;
+  fishType: string[];
+  lure: string[];
+  bait: string[];
+  rod: string[];
+  line: string[];
+  float: string[];
+  leader: string[];
   minLength: string;
   maxLength: string;
   minWeight: string;
   maxWeight: string;
+}
+
+export function buildRodFilterValue(
+  entry: Pick<JournalEntry, "rodLength" | "rodPower" | "rodAction">,
+) {
+  return [entry.rodLength, entry.rodPower, entry.rodAction]
+    .map(normalizeCatchGearText)
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+}
+
+export function buildLineFilterValue(
+  entry: Pick<JournalEntry, "lineType" | "lineTest">,
+) {
+  return [entry.lineType, entry.lineTest]
+    .map(normalizeCatchGearText)
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+}
+
+export function buildFloatFilterValue(
+  entry: Pick<JournalEntry, "bobberFloat">,
+) {
+  const floatValue = normalizeCatchGearText(entry.bobberFloat);
+  return floatValue === "None" ? "" : (floatValue ?? "");
+}
+
+export function buildLeaderFilterValue(
+  entry: Pick<JournalEntry, "leaderMaterial" | "leaderLength">,
+) {
+  const leader = [entry.leaderMaterial, entry.leaderLength]
+    .map(normalizeCatchGearText)
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+
+  return leader === "None" ? "" : leader;
 }
 
 function parseOptionalNumber(value: string) {
@@ -23,6 +71,37 @@ function parseOptionalNumber(value: string) {
 
   const parsed = Number(normalizedValue);
   return Number.isNaN(parsed) ? null : parsed;
+}
+
+function compareOptionalNumber(
+  leftValue: number | null | undefined,
+  rightValue: number | null | undefined,
+  direction: "asc" | "desc",
+) {
+  const leftMissing = leftValue === null || leftValue === undefined;
+  const rightMissing = rightValue === null || rightValue === undefined;
+
+  if (leftMissing && rightMissing) {
+    return 0;
+  }
+
+  if (leftMissing) {
+    return 1;
+  }
+
+  if (rightMissing) {
+    return -1;
+  }
+
+  return direction === "asc" ? leftValue - rightValue : rightValue - leftValue;
+}
+
+function normalizeSelectedValues(values: string[]) {
+  return new Set(
+    values
+      .map((value) => value.trim().toLowerCase())
+      .filter((value) => value.length > 0),
+  );
 }
 
 export function filterJournalEntries(
@@ -43,31 +122,56 @@ export function filterJournalEntries(
     filtered = filtered.filter((entry) => new Date(entry.dateTime) <= end);
   }
 
-  const fishTypeTerm = filters.fishType.trim().toLowerCase();
-  if (fishTypeTerm) {
-    filtered = filtered.filter((entry) => entry.fishType.toLowerCase().includes(fishTypeTerm));
-  }
-
-  const lureTerm = filters.lure.trim().toLowerCase();
-  if (lureTerm) {
+  const fishTypeTerms = normalizeSelectedValues(filters.fishType);
+  if (fishTypeTerms.size > 0) {
     filtered = filtered.filter((entry) =>
-      (normalizeFishingGearValue(entry.lure) ?? "").toLowerCase().includes(lureTerm),
+      fishTypeTerms.has(entry.fishType.trim().toLowerCase()),
     );
   }
 
-  const baitTerm = filters.bait.trim().toLowerCase();
-  if (baitTerm) {
+  const lureTerms = normalizeSelectedValues(filters.lure);
+  if (lureTerms.size > 0) {
     filtered = filtered.filter((entry) =>
-      (normalizeFishingGearValue(entry.bait) ?? "").toLowerCase().includes(baitTerm),
+      lureTerms.has(
+        (normalizeFishingGearValue(entry.lure) ?? "").toLowerCase(),
+      ),
     );
   }
 
-  const weatherTerm = filters.weather.trim().toLowerCase();
-  if (weatherTerm) {
+  const baitTerms = normalizeSelectedValues(filters.bait);
+  if (baitTerms.size > 0) {
     filtered = filtered.filter((entry) =>
-      (entry.weatherDescription ?? entry.weatherCondition ?? "")
-        .toLowerCase()
-        .includes(weatherTerm),
+      baitTerms.has(
+        (normalizeFishingGearValue(entry.bait) ?? "").toLowerCase(),
+      ),
+    );
+  }
+
+  const rodTerms = normalizeSelectedValues(filters.rod);
+  if (rodTerms.size > 0) {
+    filtered = filtered.filter((entry) =>
+      rodTerms.has(buildRodFilterValue(entry).toLowerCase()),
+    );
+  }
+
+  const lineTerms = normalizeSelectedValues(filters.line);
+  if (lineTerms.size > 0) {
+    filtered = filtered.filter((entry) =>
+      lineTerms.has(buildLineFilterValue(entry).toLowerCase()),
+    );
+  }
+
+  const floatTerms = normalizeSelectedValues(filters.float);
+  if (floatTerms.size > 0) {
+    filtered = filtered.filter((entry) =>
+      floatTerms.has(buildFloatFilterValue(entry).toLowerCase()),
+    );
+  }
+
+  const leaderTerms = normalizeSelectedValues(filters.leader);
+  if (leaderTerms.size > 0) {
+    filtered = filtered.filter((entry) =>
+      leaderTerms.has(buildLeaderFilterValue(entry).toLowerCase()),
     );
   }
 
@@ -112,9 +216,28 @@ export function filterJournalEntries(
   }
 
   filtered.sort((left, right) => {
-    const leftDate = new Date(left.dateTime).getTime();
-    const rightDate = new Date(right.dateTime).getTime();
-    return filters.sortOrder === "newest" ? rightDate - leftDate : leftDate - rightDate;
+    switch (filters.sortOrder) {
+      case "newest": {
+        const leftDate = new Date(left.dateTime).getTime();
+        const rightDate = new Date(right.dateTime).getTime();
+        return rightDate - leftDate;
+      }
+      case "oldest": {
+        const leftDate = new Date(left.dateTime).getTime();
+        const rightDate = new Date(right.dateTime).getTime();
+        return leftDate - rightDate;
+      }
+      case "length-asc":
+        return compareOptionalNumber(left.length, right.length, "asc");
+      case "length-desc":
+        return compareOptionalNumber(left.length, right.length, "desc");
+      case "weight-asc":
+        return compareOptionalNumber(left.weight, right.weight, "asc");
+      case "weight-desc":
+        return compareOptionalNumber(left.weight, right.weight, "desc");
+      default:
+        return 0;
+    }
   });
 
   return filtered;

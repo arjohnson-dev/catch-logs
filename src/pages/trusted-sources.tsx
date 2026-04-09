@@ -1,65 +1,118 @@
 import { Link } from "wouter";
-import {
-  FaArrowLeft,
-  FaBookOpen,
-  FaCloudSun,
-  FaFishFins,
-  FaLandmark,
-  FaShieldHalved,
-} from "react-icons/fa6";
+import { FaArrowLeft } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const TRUSTED_SOURCE_ITEMS = [
   {
-    key: "fishbase",
-    name: "FishBase",
-    type: "Reference",
-    domain: "fishbase.se",
-    baseUrl: "https://www.fishbase.se",
-    icon: FaFishFins,
+    key: "arcgis",
+    category: "Mapping & Geospatial",
+    name: "ArcGIS Online (Esri)",
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/",
+    details:
+      "Satellite imagery and labels overlay tiles used by the map interface.",
   },
   {
-    key: "noaa_fisheries",
-    name: "NOAA Fisheries",
-    type: "Government",
-    domain: "fisheries.noaa.gov",
-    baseUrl: "https://www.fisheries.noaa.gov",
-    icon: FaLandmark,
+    key: "openstreetmap",
+    category: "Mapping & Geospatial",
+    name: "OpenStreetMap Foundation",
+    url: "https://www.openstreetmap.org/",
+    details: "Basemap tiles and Nominatim geocoding/reverse-geocoding sources.",
   },
   {
-    key: "usgs_nas",
-    name: "USGS Nonindigenous Aquatic Species",
-    type: "Government",
-    domain: "nas.er.usgs.gov",
-    baseUrl: "https://nas.er.usgs.gov",
-    icon: FaLandmark,
-  },
-  {
-    key: "usfws",
-    name: "U.S. Fish & Wildlife Service",
-    type: "Government",
-    domain: "fws.gov",
-    baseUrl: "https://www.fws.gov",
-    icon: FaShieldHalved,
-  },
-  {
-    key: "national_weather_service",
-    name: "National Weather Service",
-    type: "Government",
-    domain: "weather.gov",
-    baseUrl: "https://www.weather.gov/documentation/services-web-api",
-    icon: FaLandmark,
+    key: "google_places",
+    category: "Mapping & Geospatial",
+    name: "Google Maps Platform (Places)",
+    url: "https://developers.google.com/maps/documentation/places/web-service",
+    details: "Autocomplete and place details used in weather location search.",
   },
   {
     key: "open_meteo",
+    category: "Weather Data",
     name: "Open-Meteo",
-    type: "Weather API",
-    domain: "open-meteo.com",
-    baseUrl: "https://open-meteo.com",
-    icon: FaCloudSun,
+    url: "https://open-meteo.com/",
+    details: "Forecast, archive, and geocoding weather/location APIs.",
+  },
+  {
+    key: "national_weather_service",
+    category: "Weather Data",
+    name: "National Weather Service",
+    url: "https://www.weather.gov/documentation/services-web-api",
+    details: "Reference weather source used in approved data guidance.",
+  },
+  {
+    key: "fishbase",
+    category: "Reference Data",
+    name: "FishBase",
+    url: "https://www.fishbase.se",
+    details: "Species reference data and hosted species image assets.",
+  },
+  {
+    key: "noaa_fisheries",
+    category: "Reference Data",
+    name: "NOAA Fisheries",
+    url: "https://www.fisheries.noaa.gov",
+    details: "Government fisheries reference information.",
+  },
+  {
+    key: "usgs_nas",
+    category: "Reference Data",
+    name: "USGS Nonindigenous Aquatic Species",
+    url: "https://nas.er.usgs.gov",
+    details: "Government aquatic species reference information.",
+  },
+  {
+    key: "usfws",
+    category: "Reference Data",
+    name: "U.S. Fish & Wildlife Service",
+    url: "https://www.fws.gov",
+    details: "Government wildlife and conservation reference information.",
+  },
+  {
+    key: "supabase",
+    category: "Infrastructure",
+    name: "Supabase",
+    url: "https://supabase.com/",
+    details:
+      "Authentication, database, storage, and edge-function infrastructure.",
+  },
+  {
+    key: "cdnjs",
+    category: "Infrastructure",
+    name: "cdnjs (Cloudflare)",
+    url: "https://cdnjs.cloudflare.com/",
+    details: "CDN-hosted Leaflet marker image assets.",
+  },
+  {
+    key: "flaticon",
+    category: "Media Assets",
+    name: "Flaticon",
+    url: "https://www.flaticon.com/",
+    details: "Weather icon assets used in attribution entries.",
+  },
+  {
+    key: "freepik",
+    category: "Media Assets",
+    name: "Freepik",
+    url: "https://www.freepik.com/",
+    details: "Source/author attribution for icon assets.",
   },
 ] as const;
+
+const TRUSTED_SOURCES_BY_CATEGORY = Array.from(
+  TRUSTED_SOURCE_ITEMS.reduce((map, source) => {
+    const existing = map.get(source.category) ?? [];
+    existing.push(source);
+    map.set(source.category, existing);
+    return map;
+  }, new Map<string, Array<(typeof TRUSTED_SOURCE_ITEMS)[number]>>()),
+)
+  .map(([category, sources]) => ({
+    category,
+    sources: [...sources].sort((left, right) =>
+      left.name.localeCompare(right.name),
+    ),
+  }))
+  .sort((left, right) => left.category.localeCompare(right.category));
 
 export default function TrustedSourcesPage() {
   return (
@@ -75,62 +128,43 @@ export default function TrustedSourcesPage() {
         </div>
 
         <div className="resources-stack">
-          <Card className="resources-card resources-hero-card surface-card">
-            <CardContent className="resources-hero-content">
-              <div className="resources-hero-icon">
-                <FaBookOpen size={28} />
-              </div>
-              <div>
-                <p className="resources-eyebrow">CatchLogs Sources</p>
-                <h2 className="resources-hero-title">Approved source whitelist</h2>
-                <p className="resources-hero-copy">
-                  CatchLogs relies on hand-picked, curated external sources across the
-                  application. We selected these sources because they are broadly trusted,
-                  stable, and intended to provide objective reference information.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="resources-card surface-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="resources-section-title">Current approved sources</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="resources-detail-list">
-                {TRUSTED_SOURCE_ITEMS.map((source) => {
-                  const Icon = source.icon;
-
-                  return (
-                    <div key={source.key} className="resources-trusted-source">
-                      <div className="resources-trusted-source-heading">
-                        <div className="resources-trusted-source-icon">
-                          <Icon size={18} />
-                        </div>
-                        <div className="resources-trusted-source-copy">
-                          <h3 className="resources-trusted-source-title">{source.name}</h3>
-                          <p className="resources-trusted-source-meta">
-                            {source.type} · {source.domain}
-                          </p>
-                        </div>
-                      </div>
+          <p className="settings-meta">
+            Every source listed here is vetted for credibility and relevance to
+            anglers, and represents the current approved third-party set used by
+            CatchLogs, organized by category.
+          </p>
+          <div className="space-y-6">
+            {TRUSTED_SOURCES_BY_CATEGORY.map((group) => (
+              <section key={group.category}>
+                <h2 className="resources-section-title">{group.category}</h2>
+                <div className="resources-category-sources resources-detail-list mt-2">
+                  {group.sources.map((source) => (
+                    <article
+                      key={source.key}
+                      className="resources-trusted-source"
+                    >
+                      <h3 className="resources-trusted-source-title">
+                        {source.name}
+                      </h3>
+                      <p className="resources-trusted-source-description">
+                        {source.details}
+                      </p>
                       <p className="resources-trusted-source-link-row">
                         <a
-                          href={source.baseUrl}
+                          href={source.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-link"
+                          className="text-link break-all"
                         >
-                          Visit {source.name}
+                          {source.url}
                         </a>
                       </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
       </div>
     </div>

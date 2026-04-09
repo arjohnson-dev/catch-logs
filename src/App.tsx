@@ -37,7 +37,7 @@ function Router() {
     return (
       <div className="app-loading-shell">
         <div className="app-loading-panel">
-          <div className="app-loading-spinner" />
+          <div className="app-loading-spinner loading-spinner" />
           <p className="app-loading-text">Loading CatchLogs...</p>
         </div>
       </div>

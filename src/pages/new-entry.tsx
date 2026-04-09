@@ -41,7 +41,7 @@ export default function NewEntryPage() {
         <div className="page-content entry-page-content">
           <div className="dialog-panel dialog-panel-loading">
             <p className="text-white">Missing pin for new entry.</p>
-            <Button className="btn-outline-muted mt-3" variant="outline" onClick={() => navigate("/")}>
+            <Button className="btn-outline-muted mt-3" variant="outline" onClick={() => navigate("/map")}>
               <FaArrowLeft className="mr-2 h-4 w-4" />
               Back to map
             </Button>
@@ -60,11 +60,11 @@ export default function NewEntryPage() {
         console.error("Failed to delete pin:", error);
       }
     }
-    navigate("/");
+    navigate("/map");
   };
 
   const handleComplete = () => {
-    window.location.assign(`/?pinId=${pinId}`);
+    window.location.assign(`/map?pinId=${pinId}`);
   };
 
   return (

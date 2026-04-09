@@ -260,6 +260,52 @@ export async function deletePin(pinId: number): Promise<void> {
   }
 }
 
+export async function updatePinName(input: {
+  pinId: number;
+  name: string;
+}): Promise<Pin> {
+  const nextName = input.name.trim();
+  if (!nextName) {
+    throw new Error("Pin name is required");
+  }
+
+  const { data, error } = await supabase
+    .from("fishing_pins")
+    .update({ name: nextName })
+    .eq("id", input.pinId)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapPin(data as PinRow);
+}
+
+export async function deletePinWithEntries(pinId: number): Promise<void> {
+  const { data: entryRows, error: entriesError } = await supabase
+    .from("journal_entries")
+    .select("photo_url")
+    .eq("pin_id", pinId);
+
+  if (entriesError) {
+    throw entriesError;
+  }
+
+  const photoUrls = Array.from(
+    new Set(
+      ((entryRows as Array<{ photo_url?: string | null }> | null) ?? [])
+        .map((row) => row.photo_url ?? null)
+        .filter((photoUrl): photoUrl is string => Boolean(photoUrl)),
+    ),
+  );
+
+  await Promise.all(photoUrls.map((photoUrl) => deleteCatchPhoto(photoUrl)));
+
+  await deletePin(pinId);
+}
+
 export async function deletePinIfEmpty(pinId: number): Promise<boolean> {
   const { count, error: countError } = await supabase
     .from("journal_entries")

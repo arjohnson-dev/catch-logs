@@ -27,6 +27,206 @@
   animation: journal-entry-focus-pulse 2.4s ease-out;
 }
 
+.journal-filters-button.journal-filters-button {
+  align-self: flex-start;
+}
+
+.journal-filters-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 2px 8px;
+  margin-left: var(--space-2);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.journal-date-range .rdrCalendarWrapper,
+.journal-date-range .rdrDateRangeWrapper,
+.journal-date-range .rdrMonth,
+.journal-date-range .rdrDefinedRangesWrapper,
+.journal-date-range .rdrStaticRanges,
+.journal-date-range .rdrInputRanges {
+  background: #111111;
+  color: #ffffff;
+}
+
+.journal-date-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+.journal-date-calendars-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+.journal-date-single-calendar {
+  border: 1px solid #2a2a2a;
+  padding: var(--space-2);
+  background: #101010;
+}
+
+.journal-date-single-calendar .rdrCalendarWrapper,
+.journal-date-single-calendar .rdrMonth {
+  width: 100%;
+}
+
+.journal-date-range input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.journal-date-range input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.journal-date-range .rdrCalendarWrapper,
+.journal-date-range .rdrDateRangeWrapper,
+.journal-date-range .rdrMonths,
+.journal-date-range .rdrMonth {
+  max-width: 100%;
+}
+
+.journal-date-range .rdrMonths {
+  overflow-x: hidden;
+}
+
+.journal-date-range .rdrDefinedRangesWrapper {
+  border-right: 1px solid #2f2f2f;
+}
+
+.journal-date-range .rdrStaticRange,
+.journal-date-range .rdrInputRange {
+  background: #111111;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.journal-date-range .rdrStaticRangeLabel,
+.journal-date-range .rdrInputRangeInput,
+.journal-date-range .rdrInputRangeInput::placeholder {
+  color: #e5e7eb;
+}
+
+.journal-date-range .rdrStaticRange:hover .rdrStaticRangeLabel,
+.journal-date-range .rdrStaticRange:focus .rdrStaticRangeLabel {
+  background: #1f2937;
+}
+
+.journal-date-range .rdrStaticRange.rdrStaticRangeSelected,
+.journal-date-range .rdrStaticRange.rdrStaticRangeSelected:hover {
+  background: #1e3a8a;
+}
+
+.journal-date-range
+  .rdrStaticRange.rdrStaticRangeSelected
+  .rdrStaticRangeLabel {
+  color: #ffffff;
+}
+
+.journal-date-range .rdrMonthAndYearWrapper {
+  padding-top: 0;
+}
+
+.journal-date-range .rdrDateDisplayWrapper {
+  background: #111111;
+}
+
+.journal-date-range .rdrDateDisplayItem {
+  background: #0f172a;
+  border: 1px solid #334155;
+  box-shadow: none;
+}
+
+.journal-date-range .rdrDateDisplayItem input {
+  color: #e5e7eb;
+}
+
+.journal-date-range .rdrDateDisplayItem input::placeholder {
+  color: #94a3b8;
+}
+
+.journal-date-range .rdrDateDisplayItemActive {
+  border-color: #2563eb;
+}
+
+.journal-date-range .rdrDateDisplayItemActive input {
+  color: #ffffff;
+}
+
+.journal-date-range .rdrMonthName,
+.journal-date-range .rdrWeekDay,
+.journal-date-range .rdrDayNumber span {
+  color: #ffffff;
+}
+
+.journal-date-range .rdrWeekDay {
+  color: #9ca3af;
+}
+
+.journal-date-range .rdrDayDisabled {
+  background-color: #171717;
+}
+
+.journal-date-range .rdrDayDisabled .rdrDayNumber span {
+  color: #6b7280;
+}
+
+.journal-date-range .rdrDayHovered .rdrDayNumber span,
+.journal-date-range .rdrDayPassive .rdrDayNumber span {
+  color: #d1d5db;
+}
+
+.journal-date-range .rdrDayPassive {
+  pointer-events: auto;
+}
+
+.journal-date-range .rdrMonthAndYearPickers select {
+  color: #e5e7eb;
+}
+
+.journal-date-range .rdrNextPrevButton {
+  background: #1f2937;
+}
+
+.journal-date-range .rdrNextPrevButton:hover {
+  background: #374151;
+}
+
+.journal-range-slider-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.journal-range-slider-values {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.journal-range-slider {
+  width: 100%;
+  accent-color: #2563eb;
+}
+
+@media (min-width: 768px) {
+  .journal-date-fields-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .journal-date-calendars-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 1024px) {
   .journal-list-panel {
     inset: var(--space-8);

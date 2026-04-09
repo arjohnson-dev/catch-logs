@@ -5,6 +5,12 @@
   border-radius: 0 !important;
 }
 
+.loading-spinner,
+.loading-spinner::before,
+.loading-spinner::after {
+  border-radius: 9999px !important;
+}
+
 html,
 body,
 #root {

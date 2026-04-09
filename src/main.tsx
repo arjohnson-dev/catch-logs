@@ -18,6 +18,8 @@ import "@fontsource/source-sans-pro/700.css";
 import "@fontsource/source-serif-pro/400.css";
 import "@fontsource/source-serif-pro/600.css";
 import "@fontsource/source-serif-pro/700.css";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles/app.css";

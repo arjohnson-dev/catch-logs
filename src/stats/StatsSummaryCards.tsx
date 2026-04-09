@@ -1,5 +1,6 @@
 import { FaChartLine, FaTrophy } from "react-icons/fa6";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUnitPreference } from "@/hooks/use-unit-preference";
 import type { StatsOverviewData } from "@/lib/supabase-data";
 import { formatLength, formatStatDate, formatWeight } from "@/stats/helpers";
 
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export default function StatsSummaryCards({ overview }: Props) {
+  const { unitSystem } = useUnitPreference();
   const personalBest = overview.personalBest;
 
   return (
@@ -35,11 +37,16 @@ export default function StatsSummaryCards({ overview }: Props) {
         <CardContent>
           {personalBest ? (
             <div className="stats-metric-stack">
-              <p className="stats-metric-primary">{personalBest.species ?? "Unknown Species"}</p>
-              <p className="stats-metric-subtle">
-                {formatWeight(personalBest.weight)} | {formatLength(personalBest.length)}
+              <p className="stats-metric-primary">
+                {personalBest.species ?? "Unknown Species"}
               </p>
-              <p className="stats-metric-subtle">{formatStatDate(personalBest.dateTime)}</p>
+              <p className="stats-metric-subtle">
+                {formatWeight(personalBest.weight, unitSystem)} |{" "}
+                {formatLength(personalBest.length, unitSystem)}
+              </p>
+              <p className="stats-metric-subtle">
+                {formatStatDate(personalBest.dateTime)}
+              </p>
             </div>
           ) : (
             <p className="stats-metric-subtle">No catches logged yet.</p>
@@ -49,4 +56,3 @@ export default function StatsSummaryCards({ overview }: Props) {
     </div>
   );
 }
-
