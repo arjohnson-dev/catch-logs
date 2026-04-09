@@ -28,6 +28,7 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaCrosshairs,
+  FaLayerGroup,
   FaLocationArrow,
   FaMapLocationDot,
   FaMinus,
@@ -54,6 +55,8 @@ import { DEFAULT_MAP_BASE_LAYER, MAP_BASE_LAYERS } from "@/lib/map-layers";
 import {
   loadMapBaseLayerPreference,
   loadMapLabelsVisiblePreference,
+  saveMapBaseLayerPreference,
+  saveMapLabelsVisiblePreference,
 } from "@/lib/map-preferences";
 import { appQueryKeys } from "@/lib/query-keys";
 import "leaflet/dist/leaflet.css";
@@ -209,8 +212,15 @@ export default function MapInterface({
   );
   const hasCenteredOnInitialLocation = useRef(false);
   const [showPinMenu, setShowPinMenu] = useState(false);
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [isGearPanelVisible, setIsGearPanelVisible] = useState(() =>
     user?.id ? loadSessionGearVisibility(user.id) : true,
+  );
+  const [mapBaseLayer, setMapBaseLayer] = useState(() =>
+    user?.id ? loadMapBaseLayerPreference(user.id) : DEFAULT_MAP_BASE_LAYER,
+  );
+  const [showMapLabels, setShowMapLabels] = useState(() =>
+    user?.id ? loadMapLabelsVisiblePreference(user.id) : true,
   );
   const initialCenter: [number, number] = [46.8772, -96.7898];
 
@@ -417,13 +427,6 @@ export default function MapInterface({
     }
   }, [cleanupEmptyPinsMutation, pins]);
 
-  const mapBaseLayer = user?.id
-    ? loadMapBaseLayerPreference(user.id)
-    : DEFAULT_MAP_BASE_LAYER;
-  const showMapLabels = user?.id
-    ? loadMapLabelsVisiblePreference(user.id)
-    : true;
-
   const selectedBaseLayer =
     MAP_BASE_LAYERS.find((layer) => layer.id === mapBaseLayer) ??
     MAP_BASE_LAYERS.find((layer) => layer.id === DEFAULT_MAP_BASE_LAYER) ??
@@ -439,17 +442,42 @@ export default function MapInterface({
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setMapBaseLayer(user?.id ? loadMapBaseLayerPreference(user.id) : DEFAULT_MAP_BASE_LAYER);
+      setShowMapLabels(user?.id ? loadMapLabelsVisiblePreference(user.id) : true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [user?.id]);
+
   const handleGearPanelVisibilityChange = (visible: boolean) => {
     setIsGearPanelVisible(visible);
     if (!user?.id) return;
     saveSessionGearVisibility(user.id, visible);
   };
 
+  const handleMapBaseLayerChange = (value: string) => {
+    const selectedLayer = MAP_BASE_LAYERS.find((layer) => layer.id === value);
+    if (!selectedLayer) return;
+    setMapBaseLayer(selectedLayer.id);
+    if (!user?.id) return;
+    saveMapBaseLayerPreference(user.id, selectedLayer.id);
+  };
+
+  const handleMapLabelsChange = (visible: boolean) => {
+    setShowMapLabels(visible);
+    if (!user?.id) return;
+    saveMapLabelsVisiblePreference(user.id, visible);
+  };
+
   if (isLoading) {
     return (
       <div className="map-loading">
         <div className="text-center">
-          <div className="app-loading-spinner" />
+          <div className="app-loading-spinner loading-spinner" />
           <p className="map-loading-text">Loading map...</p>
         </div>
       </div>
@@ -502,6 +530,7 @@ export default function MapInterface({
         {userLocation && (
           <Marker
             position={userLocation}
+            zIndexOffset={-1000}
             icon={
               new L.Icon({
                 iconUrl:
@@ -530,6 +559,7 @@ export default function MapInterface({
             <Marker
               key={pin.id}
               position={[pin.latitude, pin.longitude]}
+              zIndexOffset={1000}
               icon={isSelected ? selectedPinIcon : redPinIcon}
               eventHandlers={{
                 click: () => onPinSelect(pin.id),
@@ -541,6 +571,56 @@ export default function MapInterface({
 
       {/* Map Controls - positioned for mobile viewport */}
       <div className="map-controls">
+        <div className="map-control-stack">
+          {showLayerMenu && (
+            <div className="map-layer-menu">
+              <p className="map-layer-menu-title">Map Layers</p>
+              <div
+                role="radiogroup"
+                aria-label="Map base layer"
+                className="map-layer-menu-list"
+              >
+                {MAP_BASE_LAYERS.map((layer) => (
+                  <label key={layer.id} className="map-layer-menu-option">
+                    <input
+                      type="radio"
+                      name="map-base-layer"
+                      value={layer.id}
+                      checked={mapBaseLayer === layer.id}
+                      onChange={(e) => handleMapBaseLayerChange(e.target.value)}
+                      className="h-4 w-4 accent-blue-500"
+                    />
+                    <span className="settings-meta !m-0 leading-none">
+                      {layer.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <label className="map-layer-menu-option">
+                <input
+                  type="checkbox"
+                  checked={showMapLabels}
+                  onChange={(e) => handleMapLabelsChange(e.target.checked)}
+                  className="h-4 w-4 accent-blue-500"
+                />
+                <span className="settings-meta !m-0 leading-none">
+                  Show Labels
+                </span>
+              </label>
+            </div>
+          )}
+          <Button
+            variant="secondary"
+            size="icon"
+            className="touch-target btn-map-control"
+            onClick={() => setShowLayerMenu((prev) => !prev)}
+            title="Map layers"
+            aria-label="Map layers"
+            aria-expanded={showLayerMenu}
+          >
+            <FaLayerGroup size={16} />
+          </Button>
+        </div>
         <Button
           variant="secondary"
           size="icon"

@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import type { UnitSystem } from "@/lib/unit-preferences";
 
 const SPECIES_COLORS = [
   "#2563eb",
@@ -19,13 +20,29 @@ export function getSpeciesColor(species: string, index: number): string {
   return SPECIES_COLORS[(hash + index) % SPECIES_COLORS.length];
 }
 
-export function formatWeight(value: number | null): string {
+export function formatWeight(
+  value: number | null,
+  unitSystem: UnitSystem,
+): string {
   if (value === null || Number.isNaN(value)) return "No weight";
+
+  if (unitSystem === "metric") {
+    return `${(value * 0.45359237).toFixed(2)} kg`;
+  }
+
   return `${value.toFixed(1)} lbs`;
 }
 
-export function formatLength(value: number | null): string {
+export function formatLength(
+  value: number | null,
+  unitSystem: UnitSystem,
+): string {
   if (value === null || Number.isNaN(value)) return "No length";
+
+  if (unitSystem === "metric") {
+    return `${(value * 2.54).toFixed(1)} cm`;
+  }
+
   return `${value.toFixed(1)}"`;
 }
 
@@ -39,4 +56,3 @@ export function formatStatDate(value: string | null): string {
 export function formatHour(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
-

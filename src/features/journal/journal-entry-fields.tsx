@@ -26,6 +26,7 @@ import {
   ROD_LENGTH_OPTIONS,
   ROD_POWER_OPTIONS,
 } from "@/lib/catch-gear";
+import { useUnitPreference } from "@/hooks/use-unit-preference";
 import type { JournalEntryFormValues } from "@/features/journal/entry-form-schema";
 
 type MeasurementOrder = "before-gear" | "after-gear";
@@ -39,6 +40,9 @@ interface JournalEntryFieldsProps {
 
 const twoColumnGridClass = "grid grid-cols-1 sm:grid-cols-2 gap-4";
 const selectClassName = "field-dark h-10 rounded-md px-3 text-sm";
+const CM_PER_INCH = 2.54;
+const KG_PER_POUND = 0.45359237;
+const GRAMS_PER_OUNCE = 28.349523125;
 
 function SelectField({
   form,
@@ -85,7 +89,15 @@ function SelectField({
   );
 }
 
-function MeasurementFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
+function MeasurementFields({
+  form,
+}: {
+  form: UseFormReturn<JournalEntryFormValues>;
+}) {
+  const { unitSystem } = useUnitPreference();
+  const lengthUnitLabel = unitSystem === "metric" ? "cm" : "inches";
+  const weightUnitLabel = unitSystem === "metric" ? "kg" : "lbs";
+
   return (
     <div className={twoColumnGridClass}>
       <FormField
@@ -93,18 +105,41 @@ function MeasurementFields({ form }: { form: UseFormReturn<JournalEntryFormValue
         name="length"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-white">Length (inches)</FormLabel>
+            <FormLabel className="text-white">
+              Length ({lengthUnitLabel})
+            </FormLabel>
             <FormControl>
               <Input
                 type="number"
                 step="0.1"
-                placeholder="18.5"
+                placeholder={unitSystem === "metric" ? "47.0" : "18.5"}
                 className="field-dark"
                 {...field}
-                value={field.value || ""}
-                onChange={(event) =>
-                  field.onChange(event.target.value ? Number.parseFloat(event.target.value) : undefined)
+                value={
+                  typeof field.value === "number"
+                    ? unitSystem === "metric"
+                      ? (field.value * CM_PER_INCH).toFixed(1)
+                      : String(field.value)
+                    : ""
                 }
+                onChange={(event) => {
+                  if (!event.target.value) {
+                    field.onChange(undefined);
+                    return;
+                  }
+
+                  const parsedValue = Number.parseFloat(event.target.value);
+                  if (Number.isNaN(parsedValue)) {
+                    field.onChange(undefined);
+                    return;
+                  }
+
+                  const normalizedValue =
+                    unitSystem === "metric"
+                      ? parsedValue / CM_PER_INCH
+                      : parsedValue;
+                  field.onChange(normalizedValue);
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -117,18 +152,41 @@ function MeasurementFields({ form }: { form: UseFormReturn<JournalEntryFormValue
         name="weight"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-white">Weight (lbs)</FormLabel>
+            <FormLabel className="text-white">
+              Weight ({weightUnitLabel})
+            </FormLabel>
             <FormControl>
               <Input
                 type="number"
                 step="0.01"
-                placeholder="2.3"
+                placeholder={unitSystem === "metric" ? "1.04" : "2.3"}
                 className="field-dark"
                 {...field}
-                value={field.value || ""}
-                onChange={(event) =>
-                  field.onChange(event.target.value ? Number.parseFloat(event.target.value) : undefined)
+                value={
+                  typeof field.value === "number"
+                    ? unitSystem === "metric"
+                      ? (field.value * KG_PER_POUND).toFixed(2)
+                      : String(field.value)
+                    : ""
                 }
+                onChange={(event) => {
+                  if (!event.target.value) {
+                    field.onChange(undefined);
+                    return;
+                  }
+
+                  const parsedValue = Number.parseFloat(event.target.value);
+                  if (Number.isNaN(parsedValue)) {
+                    field.onChange(undefined);
+                    return;
+                  }
+
+                  const normalizedValue =
+                    unitSystem === "metric"
+                      ? parsedValue / KG_PER_POUND
+                      : parsedValue;
+                  field.onChange(normalizedValue);
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -140,6 +198,8 @@ function MeasurementFields({ form }: { form: UseFormReturn<JournalEntryFormValue
 }
 
 function GearFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
+  const { unitSystem } = useUnitPreference();
+
   return (
     <div className="space-y-4">
       <div className={twoColumnGridClass}>
@@ -173,7 +233,10 @@ function GearFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-white">
-                Drag {typeof field.value === "number" ? `(${field.value.toFixed(2)})` : ""}
+                Drag{" "}
+                {typeof field.value === "number"
+                  ? `(${field.value.toFixed(2)})`
+                  : ""}
               </FormLabel>
               <FormControl>
                 <Input
@@ -183,7 +246,9 @@ function GearFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
                   step="0.01"
                   className="field-dark h-10 px-0"
                   value={field.value ?? 0.5}
-                  onChange={(event) => field.onChange(Number.parseFloat(event.target.value))}
+                  onChange={(event) =>
+                    field.onChange(Number.parseFloat(event.target.value))
+                  }
                 />
               </FormControl>
               <FormMessage />
@@ -222,9 +287,51 @@ function GearFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
           name="weightOz"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Weight (oz)</FormLabel>
+              <FormLabel className="text-white">
+                Weight ({unitSystem === "metric" ? "g" : "oz"})
+              </FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" min="0" className="field-dark" {...field} value={field.value || ""} />
+                <Input
+                  type="number"
+                  step={unitSystem === "metric" ? "0.1" : "0.01"}
+                  min="0"
+                  placeholder={unitSystem === "metric" ? "28.3" : "1.0"}
+                  className="field-dark"
+                  {...field}
+                  value={(() => {
+                    const rawValue = field.value || "";
+                    if (!rawValue || unitSystem !== "metric") {
+                      return rawValue;
+                    }
+
+                    const parsed = Number.parseFloat(rawValue);
+                    if (Number.isNaN(parsed)) {
+                      return rawValue;
+                    }
+
+                    return (parsed * GRAMS_PER_OUNCE).toFixed(1);
+                  })()}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    if (!nextValue) {
+                      field.onChange("");
+                      return;
+                    }
+
+                    const parsed = Number.parseFloat(nextValue);
+                    if (Number.isNaN(parsed)) {
+                      field.onChange("");
+                      return;
+                    }
+
+                    if (unitSystem === "metric") {
+                      field.onChange((parsed / GRAMS_PER_OUNCE).toFixed(3));
+                      return;
+                    }
+
+                    field.onChange(nextValue);
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -252,7 +359,11 @@ function GearFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
   );
 }
 
-function LureAndBaitFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
+function LureAndBaitFields({
+  form,
+}: {
+  form: UseFormReturn<JournalEntryFormValues>;
+}) {
   return (
     <div className={twoColumnGridClass}>
       <FormField
@@ -262,7 +373,12 @@ function LureAndBaitFields({ form }: { form: UseFormReturn<JournalEntryFormValue
           <FormItem>
             <FormLabel className="text-white">Lure</FormLabel>
             <FormControl>
-              <Input placeholder="Spinnerbait, jerkbait, jig..." className="field-dark" {...field} value={field.value || ""} />
+              <Input
+                placeholder="Spinnerbait, jerkbait, jig..."
+                className="field-dark"
+                {...field}
+                value={field.value || ""}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -276,7 +392,12 @@ function LureAndBaitFields({ form }: { form: UseFormReturn<JournalEntryFormValue
           <FormItem>
             <FormLabel className="text-white">Bait</FormLabel>
             <FormControl>
-              <Input placeholder="Minnow, worm, craw..." className="field-dark" {...field} value={field.value || ""} />
+              <Input
+                placeholder="Minnow, worm, craw..."
+                className="field-dark"
+                {...field}
+                value={field.value || ""}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -286,7 +407,11 @@ function LureAndBaitFields({ form }: { form: UseFormReturn<JournalEntryFormValue
   );
 }
 
-function DateAndNotesFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
+function DateAndNotesFields({
+  form,
+}: {
+  form: UseFormReturn<JournalEntryFormValues>;
+}) {
   return (
     <>
       <FormField
@@ -351,7 +476,11 @@ function EntryFieldSection({
               <span className="block text-sm font-medium">{title}</span>
               <span className="block text-xs text-white/60">{description}</span>
             </span>
-            {open ? <FaChevronUp className="h-4 w-4" /> : <FaChevronDown className="h-4 w-4" />}
+            {open ? (
+              <FaChevronUp className="h-4 w-4" />
+            ) : (
+              <FaChevronDown className="h-4 w-4" />
+            )}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="px-4 pb-4 pt-1">

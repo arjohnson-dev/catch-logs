@@ -25,7 +25,10 @@
 
 .app-overlay-layer {
   position: fixed;
-  inset: 0;
+  top: var(--app-header-h);
+  right: 0;
+  bottom: var(--app-footer-h);
+  left: 0;
   z-index: var(--z-app-overlay);
   background: rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(2px);
@@ -40,4 +43,8 @@
   --surface: var(--color-overlay-surface);
   --surface-2: var(--color-overlay-surface-2);
   --surface-3: var(--color-overlay-surface-3);
+}
+
+.app-overlay-panel .page-scroll {
+  height: 100%;
 }

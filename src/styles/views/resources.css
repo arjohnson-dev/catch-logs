@@ -10,7 +10,11 @@
 
 .resources-hero-card {
   background:
-    radial-gradient(circle at top right, rgba(47, 128, 237, 0.16), transparent 36%),
+    radial-gradient(
+      circle at top right,
+      rgba(47, 128, 237, 0.16),
+      transparent 36%
+    ),
     linear-gradient(180deg, rgba(17, 17, 17, 0.98), rgba(10, 10, 10, 0.98));
 }
 
@@ -220,6 +224,12 @@
   color: var(--color-text-inverse);
 }
 
+.resources-section-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+}
+
 .resources-results-title {
   font-size: var(--font-size-base);
   font-weight: 700;
@@ -253,7 +263,11 @@
   overflow: hidden;
   border-bottom: 1px solid #1f2937;
   background:
-    radial-gradient(circle at top right, rgba(92, 153, 232, 0.16), transparent 30%),
+    radial-gradient(
+      circle at top right,
+      rgba(92, 153, 232, 0.16),
+      transparent 30%
+    ),
     linear-gradient(180deg, rgba(15, 22, 34, 0.92), rgba(8, 12, 18, 0.98));
 }
 
@@ -371,6 +385,12 @@
 .resources-detail-list {
   display: grid;
   gap: var(--space-2-5);
+}
+
+.resources-category-sources {
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-border-faint);
 }
 
 .resources-detail-list p {
@@ -622,7 +642,8 @@
   border-top: 1px solid var(--color-border-faint);
 }
 
-.resources-weather-location-row.is-active .resources-weather-location-row-title {
+.resources-weather-location-row.is-active
+  .resources-weather-location-row-title {
   color: var(--color-text-strong);
 }
 
@@ -856,7 +877,11 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.02)
+  );
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -1107,5 +1132,4 @@
   .resources-weather-lunar-forecast-row {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
-
 }

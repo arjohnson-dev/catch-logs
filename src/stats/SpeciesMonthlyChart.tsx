@@ -36,7 +36,7 @@ export default function SpeciesMonthlyChart({ monthly, color }: Props) {
                 );
               }}
             />
-            <Bar dataKey="catches" fill={color} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="catches" fill={color} radius={[0, 0, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

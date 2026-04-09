@@ -17,7 +17,7 @@ import MapInterface from "@/components/map-interface";
 import PinSummary from "@/components/pin-summary";
 import BottomNavigation from "@/components/bottom-navigation";
 import OptionsModal from "@/components/options-modal";
-import { FaGear } from "react-icons/fa6";
+import { FaBars } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { useAuth, useLogout } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,15 +49,16 @@ import WeatherPage from "@/pages/weather";
 
 export default function Dashboard() {
   const currentPath = window.location.pathname;
+  const isInitialMapPath = currentPath === "/" || currentPath === "/map";
   const initialPinIdFromUrl = (() => {
-    if (currentPath !== "/") return null;
+    if (!isInitialMapPath) return null;
     const pinIdParam = new URLSearchParams(window.location.search).get("pinId");
     if (!pinIdParam) return null;
     const parsed = Number.parseInt(pinIdParam, 10);
     return Number.isNaN(parsed) ? null : parsed;
   })();
   const initialMoveEntryIdFromUrl = (() => {
-    if (currentPath !== "/") return null;
+    if (!isInitialMapPath) return null;
     const entryIdParam = new URLSearchParams(window.location.search).get("moveEntryId");
     if (!entryIdParam) return null;
     const parsed = Number.parseInt(entryIdParam, 10);
@@ -94,12 +95,13 @@ export default function Dashboard() {
     const withoutTrailingSlash = pathOnly.replace(/\/+$/, "");
     return withoutTrailingSlash.length > 0 ? withoutTrailingSlash : "/";
   })();
-  const isOverlayOpen = normalizedPath !== "/";
+  const isMapView = normalizedPath === "/" || normalizedPath === "/map";
+  const isOverlayOpen = !isMapView;
 
   // Handle URL parameter for centering on a specific pin
   useEffect(() => {
     if (initialPinIdFromUrl !== null || initialMoveEntryIdFromUrl !== null) {
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", "/map");
     }
   }, [initialPinIdFromUrl, initialMoveEntryIdFromUrl]);
 
@@ -167,6 +169,10 @@ export default function Dashboard() {
 
   const handleJournalClick = () => {
     navigate("/journal");
+  };
+
+  const handleMapClick = () => {
+    navigate("/map");
   };
 
   const handleEntryMove = async (entryId: number, lat: number, lng: number) => {
@@ -262,8 +268,10 @@ export default function Dashboard() {
 
     switch (normalizedPath) {
       case "/":
+      case "/map":
         return null;
       case "/journal":
+      case "/journal/filters":
         return <JournalPage />;
       case "/entries/new":
         return <NewEntryPage />;
@@ -307,7 +315,7 @@ export default function Dashboard() {
                 aria-label="Open settings"
                 title="Settings"
               >
-                <FaGear size={20} />
+                <FaBars size={20} />
               </Button>
             )}
           </div>
@@ -316,25 +324,27 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="dashboard-main">
-        {/* Map Section */}
-        <div className="map-shell">
-          <MapInterface
-            selectedPinId={selectedPinId}
-            onPinSelect={handlePinSelect}
-            isPinDropMode={isPinDropMode}
-            onPinDropModeChange={setIsPinDropMode}
-            moveEntryId={moveEntryId}
-            onEntryMove={handleEntryMove}
-            sessionLure={sessionLure}
-            sessionBait={sessionBait}
-            onSessionLureChange={handleSessionLureChange}
-            onSessionBaitChange={handleSessionBaitChange}
-          />
-        </div>
+        {isMapView && (
+          <div className="map-shell">
+            <MapInterface
+              selectedPinId={selectedPinId}
+              onPinSelect={handlePinSelect}
+              isPinDropMode={isPinDropMode}
+              onPinDropModeChange={setIsPinDropMode}
+              moveEntryId={moveEntryId}
+              onEntryMove={handleEntryMove}
+              sessionLure={sessionLure}
+              sessionBait={sessionBait}
+              onSessionLureChange={handleSessionLureChange}
+              onSessionBaitChange={handleSessionBaitChange}
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom Navigation (Mobile) */}
       <BottomNavigation
+        onMapClick={handleMapClick}
         onJournalClick={handleJournalClick}
       />
 
@@ -359,6 +369,10 @@ export default function Dashboard() {
           onOpenSettings={() => {
             setShowOptionsModal(false);
             navigate("/settings");
+          }}
+          onOpenSupport={() => {
+            setShowOptionsModal(false);
+            navigate("/support");
           }}
           onLogout={handleLogout}
         />

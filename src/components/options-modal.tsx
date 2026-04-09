@@ -18,6 +18,7 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaGear,
+  FaHeadset,
   FaXmark,
 } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
@@ -32,16 +33,6 @@ import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/types/domain";
 import {
-  MAP_BASE_LAYERS,
-  type MapBaseLayerId,
-} from "@/lib/map-layers";
-import {
-  loadMapBaseLayerPreference,
-  loadMapLabelsVisiblePreference,
-  saveMapBaseLayerPreference,
-  saveMapLabelsVisiblePreference,
-} from "@/lib/map-preferences";
-import {
   getProfileGearDefaults,
   saveProfileGearDefaults,
   type ProfileGearDefaults,
@@ -54,6 +45,7 @@ interface OptionsModalProps {
   isLoggingOut: boolean;
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenSupport: () => void;
   onLogout: () => void;
 }
 
@@ -88,6 +80,7 @@ export default function OptionsModal({
   isLoggingOut,
   onClose,
   onOpenSettings,
+  onOpenSupport,
   onLogout,
 }: OptionsModalProps) {
   const currentYear = new Date().getFullYear();
@@ -98,12 +91,6 @@ export default function OptionsModal({
     setWindSpeedDisplay,
   } = useUnitPreference();
   const { toast } = useToast();
-  const [mapBaseLayer, setMapBaseLayer] = useState<MapBaseLayerId>(() =>
-    loadMapBaseLayerPreference(user.id),
-  );
-  const [showMapLabels, setShowMapLabels] = useState(() =>
-    loadMapLabelsVisiblePreference(user.id),
-  );
   const [gearDefaults, setGearDefaults] = useState<ProfileGearDefaults>({
     drag: 0.5,
     rodLength: "",
@@ -120,18 +107,6 @@ export default function OptionsModal({
   const [usesLocalGearFallback, setUsesLocalGearFallback] = useState(false);
   const [isGearOpen, setIsGearOpen] = useState(false);
   const hasShownSaveErrorRef = useRef(false);
-
-  const handleMapBaseLayerChange = (value: string) => {
-    const selectedLayer = MAP_BASE_LAYERS.find((layer) => layer.id === value);
-    if (!selectedLayer) return;
-    setMapBaseLayer(selectedLayer.id);
-    saveMapBaseLayerPreference(user.id, selectedLayer.id);
-  };
-
-  const handleMapLabelsChange = (checked: boolean) => {
-    setShowMapLabels(checked);
-    saveMapLabelsVisiblePreference(user.id, checked);
-  };
 
   const handleGearDefaultsChange = (
     field: keyof ProfileGearDefaults,
@@ -252,42 +227,6 @@ export default function OptionsModal({
                 <span className="options-modal-profile-value">{user.email}</span>
               </p>
             </div>
-          </div>
-          <div className="options-modal-map-section">
-            <p className="options-modal-map-title">Map Layers</p>
-            <div
-              role="radiogroup"
-              aria-label="Map base layer"
-              className="options-modal-map-list"
-            >
-              {MAP_BASE_LAYERS.map((layer) => (
-                <label key={layer.id} className="options-modal-map-option">
-                  <input
-                    type="radio"
-                    name="options-map-base-layer"
-                    value={layer.id}
-                    checked={mapBaseLayer === layer.id}
-                    onChange={(e) => handleMapBaseLayerChange(e.target.value)}
-                    className="h-4 w-4 accent-blue-500"
-                  />
-                  <span className="settings-meta !m-0 leading-none">
-                    {layer.label}
-                  </span>
-                </label>
-              ))}
-            </div>
-            <label className="options-modal-map-option">
-              <Checkbox
-                id="options-map-labels-visible"
-                checked={showMapLabels}
-                onCheckedChange={(checked) =>
-                  handleMapLabelsChange(checked === true)
-                }
-              />
-              <span className="settings-meta !m-0 leading-none">
-                Show Labels
-              </span>
-            </label>
           </div>
           <div className="options-modal-map-section">
             <p className="options-modal-map-title">Units</p>
@@ -548,6 +487,14 @@ export default function OptionsModal({
           >
             <FaGear size={16} />
             Profile Settings
+          </Button>
+          <Button
+            variant="outline"
+            className="btn-outline-muted btn-full options-modal-button"
+            onClick={onOpenSupport}
+          >
+            <FaHeadset size={16} />
+            Contact Support
           </Button>
           <Button
             variant="outline"

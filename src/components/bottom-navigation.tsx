@@ -12,46 +12,67 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import { FaBookOpen, FaChartColumn, FaCloudSun, FaFishFins } from "react-icons/fa6";
+import {
+  FaBookOpen,
+  FaChartColumn,
+  FaCloudSun,
+  FaEllipsisVertical,
+  FaMapLocationDot,
+} from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
 interface BottomNavigationProps {
+  onMapClick: () => void;
   onJournalClick: () => void;
 }
 
-export default function BottomNavigation({ 
-  onJournalClick
+export default function BottomNavigation({
+  onMapClick,
+  onJournalClick,
 }: BottomNavigationProps) {
   return (
     <nav className="mobile-bottom-nav">
       <div className="bottom-nav-grid">
-        <Button
-          variant="ghost"
-          className="touch-target btn-nav"
-          onClick={onJournalClick}
-        >
-          <FaBookOpen size={20} />
-          <span className="btn-nav-label">Journal</span>
-        </Button>
-
         <Link to="/stats">
           <Button
             variant="ghost"
             className="touch-target btn-nav"
+            aria-label="Stats"
+            title="Stats"
           >
             <FaChartColumn size={20} />
-            <span className="btn-nav-label">Stats</span>
           </Button>
         </Link>
+
+        <Button
+          variant="ghost"
+          className="touch-target btn-nav"
+          onClick={onJournalClick}
+          aria-label="Journal"
+          title="Journal"
+        >
+          <FaBookOpen size={20} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="touch-target btn-nav btn-nav-map"
+          onClick={onMapClick}
+          aria-label="Map"
+          title="Map"
+        >
+          <FaMapLocationDot size={26} />
+        </Button>
 
         <Link to="/weather">
           <Button
             variant="ghost"
             className="touch-target btn-nav btn-nav-weather"
+            aria-label="Weather"
+            title="Weather"
           >
             <FaCloudSun size={20} />
-            <span className="btn-nav-label">Weather</span>
           </Button>
         </Link>
 
@@ -59,9 +80,10 @@ export default function BottomNavigation({
           <Button
             variant="ghost"
             className="touch-target btn-nav btn-nav-resources"
+            aria-label="Resources"
+            title="Resources"
           >
-            <FaFishFins size={20} />
-            <span className="btn-nav-label">Resources</span>
+            <FaEllipsisVertical size={20} />
           </Button>
         </Link>
       </div>

@@ -1,6 +1,5 @@
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import {
-  FaArrowLeft,
   FaBookOpen,
   FaChevronRight,
   FaFishFins,
@@ -48,11 +47,6 @@ export default function Resources() {
     <div className="page-scroll">
       <div className="page-content resources-page-content">
         <div className="page-header">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
           <h1 className="page-title">Resources</h1>
         </div>
 

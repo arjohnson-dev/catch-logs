@@ -8,7 +8,6 @@ import {
 import { addDays, format, parseISO, startOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { Link } from "wouter";
 import {
   FaArrowLeft,
   FaBookmark,
@@ -1304,13 +1303,7 @@ export default function WeatherPage() {
             >
               <FaArrowLeft className="w-4 h-4" />
             </Button>
-          ) : (
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="legal-back-button">
-                <FaArrowLeft className="w-4 h-4" />
-              </Button>
-            </Link>
-          )}
+          ) : null}
           <h1 className="page-title">
             {isLocationScreen ? "Change Location" : "Weather & Conditions"}
           </h1>

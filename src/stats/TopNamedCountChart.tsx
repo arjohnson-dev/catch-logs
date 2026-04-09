@@ -50,7 +50,7 @@ export default function TopNamedCountChart({
                   );
                 }}
               />
-              <Bar dataKey="count" radius={[3, 3, 3, 3]}>
+              <Bar dataKey="count" radius={[0, 0, 0, 0]}>
                 {data.map((row, index) => (
                   <Cell key={row.name} fill={index === 0 ? "#3b82f6" : "#2563eb"} fillOpacity={1 - index * 0.06} />
                 ))}

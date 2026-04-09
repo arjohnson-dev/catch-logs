@@ -59,7 +59,7 @@ export default function SpeciesCatchTimeDistribution({ catchTimes, color }: Prop
                   );
                 }}
               />
-              <Bar dataKey="catches" fill={color} radius={[6, 6, 0, 0]} />
+              <Bar dataKey="catches" fill={color} radius={[0, 0, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

@@ -15,7 +15,6 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  FaArrowLeft,
   FaAndroid,
   FaApple,
   FaChevronDown,
@@ -31,7 +30,7 @@ import {
 } from "react-icons/fa6";
 import { IoShareOutline } from "react-icons/io5";
 import { VscDiffAdded } from "react-icons/vsc";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,10 +43,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { deleteCurrentAccount } from "@/lib/account";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  THIRD_PARTY_DISCLAIMER_PARAGRAPHS,
-  THIRD_PARTY_PROVIDERS,
-} from "@/lib/legal/third-party-disclaimer";
+import { THIRD_PARTY_DISCLAIMER_PARAGRAPHS } from "@/lib/legal/third-party-disclaimer";
 import { supabase } from "@/lib/supabase";
 import { sendSupportEmail } from "@/lib/support";
 import { appQueryKeys } from "@/lib/query-keys";
@@ -87,8 +83,6 @@ export default function Settings() {
   const [isPreparingSupport, setIsPreparingSupport] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isThirdPartyDisclaimerOpen, setIsThirdPartyDisclaimerOpen] =
-    useState(false);
-  const [isThirdPartyProvidersOpen, setIsThirdPartyProvidersOpen] =
     useState(false);
   const isDeletePassphraseValid =
     deleteConfirmation.trim() === ACCOUNT_DELETE_PASSPHRASE;
@@ -313,11 +307,6 @@ export default function Settings() {
     <div className="page-scroll settings-scroll">
       <div className="page-content settings-page-content">
         <div className="page-header">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft size={16} />
-            </Button>
-          </Link>
           <h1 className="page-title">Profile Settings</h1>
         </div>
 
@@ -573,74 +562,20 @@ export default function Settings() {
                   </CollapsibleContent>
                 </Collapsible>
 
-                <Collapsible
-                  open={isThirdPartyProvidersOpen}
-                  onOpenChange={setIsThirdPartyProvidersOpen}
-                >
-                  <CollapsibleTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="btn-outline-muted w-full justify-between"
-                    >
-                      Third-Party Providers
-                      {isThirdPartyProvidersOpen ? (
-                        <FaChevronUp size={14} />
-                      ) : (
-                        <FaChevronDown size={14} />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-3">
-                    <div className="settings-meta space-y-3">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="py-2 pr-3 font-semibold">
-                                Provider
-                              </th>
-                              <th className="py-2 pr-3 font-semibold">Link</th>
-                              <th className="py-2 pr-3 font-semibold">
-                                Service
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {THIRD_PARTY_PROVIDERS.map((provider) => (
-                              <tr
-                                key={provider.name}
-                                className="border-b border-border/60 align-top"
-                              >
-                                <td className="py-2 pr-3 font-medium">
-                                  {provider.name}
-                                </td>
-                                <td className="py-2 pr-3">
-                                  <a
-                                    href={provider.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="underline"
-                                  >
-                                    {provider.url}
-                                  </a>
-                                </td>
-                                <td className="py-2 pr-3">
-                                  {provider.details}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <p>
-                        This list represents the third-party APIs and services
-                        currently used by the application and may be updated as
-                        integrations change.
-                      </p>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                <div className="settings-meta space-y-3">
+                  <p>
+                    Review the current trusted third-party APIs and data sources
+                    used by the application.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="btn-outline-muted w-full justify-start"
+                    onClick={() => navigate("/trusted-sources")}
+                  >
+                    Open Trusted Sources
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
