@@ -449,15 +449,21 @@
 
 .resources-weather-search-form {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-2-5);
   margin-top: var(--space-4);
+}
+
+.resources-weather-search-controls {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .resources-weather-search-caption {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: 0.84rem;
-  line-height: 1.5;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
 }
 
 .resources-weather-card-header {
@@ -574,7 +580,11 @@
 .resources-weather-saved-section {
   display: grid;
   gap: var(--space-3);
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.resources-weather-current-location-section {
+  margin-top: var(--space-4);
 }
 
 .resources-weather-saved-header {
@@ -846,9 +856,21 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #f1d98a;
-  font-size: 1.15rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.resources-weather-lunar-phase-image {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: #f7f0c5;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
 }
 
 .resources-weather-lunar-current-label,
@@ -872,6 +894,17 @@
 .resources-weather-lunar-forecast {
   display: grid;
   gap: var(--space-2);
+}
+
+.resources-weather-lunar-attribution {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.resources-weather-lunar-attribution a {
+  color: var(--color-sky-soft);
 }
 
 .resources-weather-lunar-forecast-label {
@@ -899,8 +932,8 @@
 }
 
 .resources-weather-lunar-forecast-icon {
-  color: #f1d98a;
-  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
   line-height: 1;
 }
 

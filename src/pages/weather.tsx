@@ -13,11 +13,13 @@ import {
   FaArrowLeft,
   FaBookmark,
   FaLocationArrow,
+  FaRegBookmark,
 } from "react-icons/fa6";
 import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -86,7 +88,6 @@ type WeatherMetricConfig = {
 type LunarCycleDay = {
   date: Date;
   phaseLabel: string;
-  phaseIcon: string;
 };
 
 const FARGO_DEFAULT_LOCATION: WeatherLocation = {
@@ -115,49 +116,41 @@ function getMoonPhaseData(date: Date) {
   if (lunarAge < 1.84566) {
     return {
       phaseLabel: "New Moon",
-      phaseIcon: "🌑",
     };
   }
   if (lunarAge < 5.53699) {
     return {
       phaseLabel: "Waxing Crescent",
-      phaseIcon: "🌒",
     };
   }
   if (lunarAge < 9.22831) {
     return {
-      phaseLabel: "Quarter Moon",
-      phaseIcon: "🌓",
+      phaseLabel: "First Quarter",
     };
   }
   if (lunarAge < 12.91963) {
     return {
       phaseLabel: "Waxing Gibbous",
-      phaseIcon: "🌔",
     };
   }
   if (lunarAge < 16.61096) {
     return {
       phaseLabel: "Full Moon",
-      phaseIcon: "🌕",
     };
   }
   if (lunarAge < 20.30228) {
     return {
       phaseLabel: "Waning Gibbous",
-      phaseIcon: "🌖",
     };
   }
   if (lunarAge < 23.99361) {
     return {
-      phaseLabel: "Three-Quarter Moon",
-      phaseIcon: "🌗",
+      phaseLabel: "Last Quarter",
     };
   }
 
   return {
     phaseLabel: "Waning Crescent",
-    phaseIcon: "🌘",
   };
 }
 
@@ -346,6 +339,67 @@ function WeatherDirectionDot(props: {
   );
 }
 
+function TemperatureExtremeDot(props: {
+  cx?: number;
+  cy?: number;
+  visible: boolean;
+}) {
+  const { cx, cy, visible } = props;
+  if (typeof cx !== "number" || typeof cy !== "number") {
+    return null;
+  }
+
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill="rgba(239, 242, 247, 0.88)"
+      stroke="rgba(15, 15, 18, 0.92)"
+      strokeWidth={2}
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: "opacity 220ms ease",
+      }}
+    />
+  );
+}
+
+function TemperatureExtremeLabel(props: {
+  x?: number;
+  y?: number;
+  viewBox?: { x?: number; y?: number };
+  value?: string | number;
+  dx?: number;
+  visible: boolean;
+  textAnchor?: "start" | "middle" | "end";
+}) {
+  const { x: markerX, y: markerY, viewBox, value, dx = 0, visible, textAnchor = "middle" } = props;
+  const x = (markerX ?? viewBox?.x ?? 0) + dx;
+  const y = markerY ?? viewBox?.y ?? 0;
+
+  if (value == null) {
+    return null;
+  }
+
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={textAnchor}
+      fill="rgba(239, 242, 247, 0.88)"
+      fontSize={11}
+      fontWeight={700}
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: "opacity 220ms ease",
+      }}
+    >
+      {value}
+    </text>
+  );
+}
+
 function WeatherMetricChart({
   title,
   unit,
@@ -354,6 +408,7 @@ function WeatherMetricChart({
   formatValue,
   showDirectionArrows = false,
   showHighLow = false,
+  showRangeMarkers = false,
   yAxisWidth = 40,
   xAxisInterval = 0,
   xAxisTicks,
@@ -365,10 +420,107 @@ function WeatherMetricChart({
   formatValue: (value: number | null) => string;
   showDirectionArrows?: boolean;
   showHighLow?: boolean;
+  showRangeMarkers?: boolean;
   yAxisWidth?: number;
   xAxisInterval?: number | "preserveStartEnd";
   xAxisTicks?: string[];
 }) {
+  const markerAnimationDurationMs = 700;
+  const temperatureExtremes = useMemo(() => {
+    if (!showRangeMarkers || data.length === 0) {
+      return [] as Array<{
+        key: string;
+        xValue: string;
+        value: number;
+        label: string;
+        textAnchor: "start" | "middle" | "end";
+        dx: number;
+      }>;
+    }
+
+    let highestPoint: ForecastChartPoint | null = null;
+    let lowestPoint: ForecastChartPoint | null = null;
+
+    data.forEach((point) => {
+      if (point.value == null) {
+        return;
+      }
+
+      if (!highestPoint || point.value > highestPoint.value!) {
+        highestPoint = point;
+      }
+
+      if (!lowestPoint || point.value < lowestPoint.value!) {
+        lowestPoint = point;
+      }
+    });
+
+    const markers = [] as Array<{
+      key: string;
+      xValue: string;
+      value: number;
+      label: string;
+      textAnchor: "start" | "middle" | "end";
+      dx: number;
+    }>;
+
+    const getLabelPlacement = (point: ForecastChartPoint) => {
+      const index = data.findIndex((entry) => entry.xValue === point.xValue);
+      if (index <= 0) {
+        return { textAnchor: "start" as const, dx: 4 };
+      }
+
+      if (index >= data.length - 1) {
+        return { textAnchor: "end" as const, dx: -4 };
+      }
+
+      return { textAnchor: "middle" as const, dx: 0 };
+    };
+
+    if (highestPoint?.value != null) {
+      const placement = getLabelPlacement(highestPoint);
+      markers.push({
+        key: `high-${highestPoint.xValue}`,
+        xValue: highestPoint.xValue,
+        value: highestPoint.value,
+        label: formatValue(highestPoint.value),
+        textAnchor: placement.textAnchor,
+        dx: placement.dx,
+      });
+    }
+
+    if (lowestPoint?.value != null) {
+      const placement = getLabelPlacement(lowestPoint);
+      markers.push({
+        key: `low-${lowestPoint.xValue}`,
+        xValue: lowestPoint.xValue,
+        value: lowestPoint.value,
+        label: formatValue(lowestPoint.value),
+        textAnchor: placement.textAnchor,
+        dx: placement.dx,
+      });
+    }
+
+    return markers;
+  }, [data, showRangeMarkers]);
+  const [showMarkerLabels, setShowMarkerLabels] = useState(!showRangeMarkers);
+
+  useEffect(() => {
+    if (!showRangeMarkers) {
+      setShowMarkerLabels(true);
+      return;
+    }
+
+    setShowMarkerLabels(false);
+    const timer = window.setTimeout(() => {
+      setShowMarkerLabels(true);
+    }, markerAnimationDurationMs);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [data, markerAnimationDurationMs, showRangeMarkers]);
+
   return (
     <Card className="resources-card surface-card">
       <CardHeader className="pb-2">
@@ -380,7 +532,15 @@ function WeatherMetricChart({
       <CardContent className="pt-0">
         <div className="resources-weather-chart-wrap">
           <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+            <LineChart
+              data={data}
+              margin={{
+                top: showRangeMarkers ? 22 : 8,
+                right: showRangeMarkers ? 14 : 8,
+                left: showRangeMarkers ? 0 : -12,
+                bottom: 0,
+              }}
+            >
               <CartesianGrid stroke="rgba(255, 255, 255, 0.06)" vertical={false} />
               <XAxis
                 dataKey="xValue"
@@ -443,7 +603,27 @@ function WeatherMetricChart({
                 activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
                 connectNulls
                 name={showHighLow ? "High" : title}
+                isAnimationActive
+                animationDuration={markerAnimationDurationMs}
+                animationEasing="ease-out"
               />
+              {temperatureExtremes.map((marker) => (
+                <ReferenceDot
+                  key={marker.key}
+                  x={marker.xValue}
+                  y={marker.value}
+                  ifOverflow="extendDomain"
+                  shape={<TemperatureExtremeDot visible={showMarkerLabels} />}
+                  label={(
+                    <TemperatureExtremeLabel
+                      value={marker.label}
+                      dx={marker.dx}
+                      textAnchor={marker.textAnchor}
+                      visible={showMarkerLabels}
+                    />
+                  )}
+                />
+              ))}
               {showHighLow ? (
                 <Line
                   type="monotone"
@@ -454,6 +634,9 @@ function WeatherMetricChart({
                   activeDot={{ r: 4, fill: "var(--chart-2)", strokeWidth: 0 }}
                   connectNulls
                   name="Low"
+                  isAnimationActive
+                  animationDuration={markerAnimationDurationMs}
+                  animationEasing="ease-out"
                 />
               ) : null}
             </LineChart>
@@ -494,7 +677,7 @@ function LunarCycleCard() {
       <CardContent className="pt-0">
         <div className="resources-weather-lunar-current">
           <span className="resources-weather-lunar-current-icon" aria-hidden="true">
-            {currentPhase?.phaseIcon}
+            <LunarPhaseIcon phaseLabel={currentPhase?.phaseLabel} />
           </span>
           <div>
             <p className="resources-weather-lunar-current-label">Current Phase</p>
@@ -513,7 +696,7 @@ function LunarCycleCard() {
                 className="resources-weather-lunar-forecast-day"
               >
                 <span className="resources-weather-lunar-forecast-icon" aria-hidden="true">
-                  {day.phaseIcon}
+                  <LunarPhaseIcon phaseLabel={day.phaseLabel} />
                 </span>
                 <span className="resources-weather-lunar-forecast-date">
                   {format(day.date, "MMM d")}
@@ -525,6 +708,26 @@ function LunarCycleCard() {
             ))}
           </div>
         </div>
+
+        <p className="resources-weather-lunar-attribution">
+          Lunar icons by{" "}
+          <a href="https://www.freepik.com" target="_blank" rel="noreferrer">
+            Freepik
+          </a>{" "}
+          and{" "}
+          <a
+            href="https://www.flaticon.com/authors/ifans28"
+            target="_blank"
+            rel="noreferrer"
+          >
+            ifans28
+          </a>{" "}
+          via{" "}
+          <a href="https://www.flaticon.com/" target="_blank" rel="noreferrer">
+            Flaticon
+          </a>
+          .
+        </p>
       </CardContent>
     </Card>
   );
@@ -627,6 +830,36 @@ function SunArcCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function LunarPhaseIcon({
+  phaseLabel,
+}: {
+  phaseLabel?: string | null;
+}) {
+  const variant = phaseLabel ?? "New Moon";
+  const iconPathMap: Record<string, string> = {
+    "New Moon": "/lunar-phase-icons/008-new-moon.png",
+    "Waxing Crescent": "/lunar-phase-icons/007-waxing-cresent.png",
+    "First Quarter": "/lunar-phase-icons/006-first-quarter.png",
+    "Waxing Gibbous": "/lunar-phase-icons/005-waxing-gibbous.png",
+    "Full Moon": "/lunar-phase-icons/004-full-moon.png",
+    "Waning Gibbous": "/lunar-phase-icons/003-waning-gibbous.png",
+    "Last Quarter": "/lunar-phase-icons/002-last-quarter.png",
+    "Waning Crescent": "/lunar-phase-icons/001-waning-cresnet.png",
+  };
+  const src = iconPathMap[variant] ?? iconPathMap["New Moon"];
+
+  return (
+    <span
+      aria-hidden="true"
+      className="resources-weather-lunar-phase-image"
+      style={{
+        maskImage: `url(${src})`,
+        WebkitMaskImage: `url(${src})`,
+      }}
+    />
   );
 }
 
@@ -1014,7 +1247,9 @@ export default function WeatherPage() {
       ? currentLocationNameQuery.data
         ? `Current Location | ${currentLocationNameQuery.data}`
         : "Current Location"
-      : selectedLocation?.name ?? "Choose Location";
+      : selectedLocation
+        ? [selectedLocation.name, selectedLocation.admin1].filter(Boolean).join(", ")
+        : "Choose Location";
   const savableSelectedLocation = useMemo(() => {
     if (!selectedLocation) {
       return null;
@@ -1099,7 +1334,8 @@ export default function WeatherPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className={isSelectedLocationSaved ? "btn-outline-muted" : "btn-outline-info"}
+                        size="icon"
+                        className={isSelectedLocationSaved ? "resources-save-button" : "btn-outline-muted"}
                         onClick={() => {
                           if (isSelectedLocationSaved) {
                             handleRemoveSavedLocation(savableSelectedLocation);
@@ -1108,8 +1344,10 @@ export default function WeatherPage() {
 
                           handleSaveLocation(savableSelectedLocation);
                         }}
+                        aria-label={isSelectedLocationSaved ? "Unsave location" : "Save location"}
+                        title={isSelectedLocationSaved ? "Saved location" : "Save location"}
                       >
-                        {isSelectedLocationSaved ? "Unsave Location" : "Save Location"}
+                        {isSelectedLocationSaved ? <FaBookmark size={15} /> : <FaRegBookmark size={15} />}
                       </Button>
                     ) : null}
                     <Button
@@ -1288,6 +1526,7 @@ export default function WeatherPage() {
                             formatValue={metric.formatValue}
                             showDirectionArrows={metric.key === "windSpeed"}
                             showHighLow={metric.key === "temperature" && forecastRange === "10d"}
+                            showRangeMarkers={metric.key === "temperature" && forecastRange !== "10d"}
                             yAxisWidth={metric.key === "pressure" ? (unitSystem === "metric" ? 52 : 46) : 40}
                             xAxisInterval={0}
                             xAxisTicks={buildXAxisTicks(
@@ -1303,12 +1542,12 @@ export default function WeatherPage() {
                 </CardContent>
               </Card>
 
+              <LunarCycleCard />
+
               <SunArcCard
                 sunrise={currentWeather?.sunrise}
                 sunset={currentWeather?.sunset}
               />
-
-              <LunarCycleCard />
             </>
           ) : null}
 
@@ -1318,17 +1557,8 @@ export default function WeatherPage() {
                 <CardTitle className="resources-section-title">Location</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="resources-detail-list">
-                  <p>
-                    Search for a place, or jump back into your saved locations below.
-                  </p>
-                </div>
-
                 <div className="resources-weather-search-form">
-                  <label className="resources-search-label" htmlFor="weather-location-search">
-                    Search location
-                  </label>
-                  <div className="resources-weather-location-list">
+                  <div className="resources-weather-search-controls">
                     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                       <WeatherLocationAutocomplete
                         id="weather-location-search"
@@ -1349,9 +1579,38 @@ export default function WeatherPage() {
                       />
                     </APIProvider>
                     <p className="resources-weather-search-caption">
-                      Suggestions update as you type using Google Places.
+                      Powered by Google Places.
                     </p>
                   </div>
+                </div>
+
+                <div className="resources-weather-current-location-section">
+                  <button
+                    type="button"
+                    className={
+                      selectedSource === "device"
+                        ? "resources-weather-location-row is-active"
+                        : "resources-weather-location-row"
+                    }
+                    onClick={() => {
+                      void handleUseMyLocation();
+                    }}
+                    disabled={isRequestingLocation}
+                  >
+                    <span className="resources-weather-location-row-icon">
+                      <FaLocationArrow size={16} />
+                    </span>
+                    <span className="resources-weather-location-row-copy">
+                      <span className="resources-weather-location-row-title">
+                        {isRequestingLocation ? "Finding current location..." : "Use my current location"}
+                      </span>
+                      <span className="resources-weather-location-row-meta">
+                        {locationPermissionState === "denied"
+                          ? "Location access is off in this browser."
+                          : "Default weather location for this device."}
+                      </span>
+                    </span>
+                  </button>
                 </div>
 
                 <div className="resources-weather-saved-section">
@@ -1360,33 +1619,6 @@ export default function WeatherPage() {
                   </div>
 
                   <div className="resources-weather-location-list">
-                    <button
-                      type="button"
-                      className={
-                        selectedSource === "device"
-                          ? "resources-weather-location-row is-active"
-                          : "resources-weather-location-row"
-                      }
-                      onClick={() => {
-                        void handleUseMyLocation();
-                      }}
-                      disabled={isRequestingLocation}
-                    >
-                      <span className="resources-weather-location-row-icon">
-                        <FaLocationArrow size={16} />
-                      </span>
-                      <span className="resources-weather-location-row-copy">
-                        <span className="resources-weather-location-row-title">
-                          {isRequestingLocation ? "Finding current location..." : "Use my current location"}
-                        </span>
-                        <span className="resources-weather-location-row-meta">
-                          {locationPermissionState === "denied"
-                            ? "Location access is off in this browser."
-                            : "Default weather location for this device."}
-                        </span>
-                      </span>
-                    </button>
-
                     {savedLocations.length === 0 ? (
                       <div className="resources-empty-state resources-weather-saved-empty">
                         <FaBookmark size={20} />
