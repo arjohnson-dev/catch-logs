@@ -42,6 +42,7 @@ export interface AiSummarySource {
 export interface GenerateSpeciesSummaryResponse {
   ok: boolean;
   cached?: boolean;
+  model?: string;
   summary?: string;
   sources?: AiSummarySource[];
   species?: {

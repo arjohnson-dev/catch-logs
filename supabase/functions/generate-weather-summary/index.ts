@@ -1,6 +1,7 @@
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Max-Age": "86400",
 };
@@ -65,7 +66,11 @@ function parseWeatherRequest(body: unknown): WeatherRequest {
     throw new Error("invalid longitude");
   }
 
-  if (typeof locationLabel !== "string" || locationLabel.trim().length < 1 || locationLabel.length > 200) {
+  if (
+    typeof locationLabel !== "string" ||
+    locationLabel.trim().length < 1 ||
+    locationLabel.length > 200
+  ) {
     throw new Error("invalid locationLabel");
   }
 
@@ -79,14 +84,17 @@ function parseWeatherRequest(body: unknown): WeatherRequest {
 async function fetchJson(url: string) {
   const res = await fetch(url, {
     headers: {
-      "User-Agent": Deno.env.get("NWS_USER_AGENT") ?? "supabase-weather-summary/1.0",
+      "User-Agent":
+        Deno.env.get("NWS_USER_AGENT") ?? "supabase-weather-summary/1.0",
       Accept: "application/ld+json, application/json",
     },
   });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`NWS fetch failed (${res.status}) ${url} :: ${body.slice(0, 300)}`);
+    throw new Error(
+      `NWS fetch failed (${res.status}) ${url} :: ${body.slice(0, 300)}`,
+    );
   }
 
   return res.json();
@@ -108,7 +116,9 @@ function normalizeTextFromNwsHtml(htmlOrText: unknown): string {
 }
 
 function getObjectRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function getNwsRecord(value: unknown): Record<string, unknown> {
@@ -117,18 +127,27 @@ function getNwsRecord(value: unknown): Record<string, unknown> {
   return Object.keys(props).length > 0 ? props : root;
 }
 
-function getNwsArray(value: unknown, key: string): Array<Record<string, unknown>> {
+function getNwsArray(
+  value: unknown,
+  key: string,
+): Array<Record<string, unknown>> {
   const root = getObjectRecord(value);
   const props = getObjectRecord(root.properties);
   const candidate =
     (Array.isArray(root[key]) ? root[key] : null) ??
     (Array.isArray(props[key]) ? props[key] : null) ??
-    (key === "features" && Array.isArray(root["@graph"]) ? root["@graph"] : null);
+    (key === "features" && Array.isArray(root["@graph"])
+      ? root["@graph"]
+      : null);
 
-  return Array.isArray(candidate) ? (candidate as Array<Record<string, unknown>>) : [];
+  return Array.isArray(candidate)
+    ? (candidate as Array<Record<string, unknown>>)
+    : [];
 }
 
-function pickDiscussionText(forecastPeriods: Array<Record<string, unknown>>): string {
+function pickDiscussionText(
+  forecastPeriods: Array<Record<string, unknown>>,
+): string {
   const discussionish = forecastPeriods
     .map((period) =>
       typeof period?.detailedForecast === "string"
@@ -146,9 +165,12 @@ async function getNwsTrustedInputs(latitude: number, longitude: number) {
   const points = await fetchJson(pointsUrl);
   const pointData = getNwsRecord(points);
 
-  const forecastUrl = typeof pointData.forecast === "string" ? pointData.forecast : undefined;
+  const forecastUrl =
+    typeof pointData.forecast === "string" ? pointData.forecast : undefined;
   const forecastZoneUrl =
-    typeof pointData.forecastZone === "string" ? pointData.forecastZone : undefined;
+    typeof pointData.forecastZone === "string"
+      ? pointData.forecastZone
+      : undefined;
   const forecastZone = forecastZoneUrl?.split("/").pop();
   const alertsApiUrl = forecastZone
     ? `https://api.weather.gov/alerts/active?zone=${encodeURIComponent(forecastZone)}`
@@ -165,7 +187,9 @@ async function getNwsTrustedInputs(latitude: number, longitude: number) {
     .slice(0, 8)
     .map((period) => {
       const name = typeof period.name === "string" ? period.name : "Forecast";
-      const detail = normalizeTextFromNwsHtml(period.detailedForecast ?? period.shortForecast ?? "");
+      const detail = normalizeTextFromNwsHtml(
+        period.detailedForecast ?? period.shortForecast ?? "",
+      );
       return `${name}: ${detail}`.trim();
     })
     .filter(Boolean)
@@ -188,12 +212,20 @@ async function getNwsTrustedInputs(latitude: number, longitude: number) {
         .map((feature) => {
           const properties = getNwsRecord(feature);
 
-          const headline = typeof properties.headline === "string" ? properties.headline : "";
+          const headline =
+            typeof properties.headline === "string" ? properties.headline : "";
           const description = normalizeTextFromNwsHtml(properties.description);
-          const areaDesc = typeof properties.areaDesc === "string" ? properties.areaDesc : "";
-          const effective = typeof properties.effective === "string" ? properties.effective : "";
-          const expires = typeof properties.expires === "string" ? properties.expires : "";
-          const meta = [areaDesc, effective, expires].filter(Boolean).join(" • ");
+          const areaDesc =
+            typeof properties.areaDesc === "string" ? properties.areaDesc : "";
+          const effective =
+            typeof properties.effective === "string"
+              ? properties.effective
+              : "";
+          const expires =
+            typeof properties.expires === "string" ? properties.expires : "";
+          const meta = [areaDesc, effective, expires]
+            .filter(Boolean)
+            .join(" • ");
 
           return [headline, meta, description].filter(Boolean).join("\n");
         })
@@ -233,6 +265,7 @@ Rules:
 - Mention notable changes over time (next several periods).
 - If active alerts exist, summarize them clearly and what they mean for the user.
 - Use the provided location label in the first sentence.
+- Write in plain, everyday language for a casual angler. Avoid meteorological jargon (e.g. "frontal boundary", "synoptic", "isobar"). If a term is unavoidable, explain it simply.
 
 Location: ${locationLabel}
 
@@ -269,7 +302,8 @@ async function createWeatherSummary({
       messages: [
         {
           role: "system",
-          content: "Summarize weather only from the provided NWS text. Output valid JSON only.",
+          content:
+            "Summarize weather only from the provided NWS text. Write in plain, everyday language — avoid meteorological jargon. Output valid JSON only.",
         },
         { role: "user", content: prompt },
       ],
@@ -278,19 +312,29 @@ async function createWeatherSummary({
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`OpenAI request failed (${res.status}): ${body.slice(0, 500)}`);
+    throw new Error(
+      `OpenAI request failed (${res.status}): ${body.slice(0, 500)}`,
+    );
   }
 
   const data = await res.json();
-  const choices = typeof data === "object" && data ? (data as Record<string, unknown>).choices : null;
+  const choices =
+    typeof data === "object" && data
+      ? (data as Record<string, unknown>).choices
+      : null;
   const firstChoice = Array.isArray(choices) ? choices[0] : null;
   const message =
-    firstChoice && typeof firstChoice === "object" ? (firstChoice as Record<string, unknown>).message : null;
-  const content = message && typeof message === "object"
-    ? (message as Record<string, unknown>).content
-    : "{}";
+    firstChoice && typeof firstChoice === "object"
+      ? (firstChoice as Record<string, unknown>).message
+      : null;
+  const content =
+    message && typeof message === "object"
+      ? (message as Record<string, unknown>).content
+      : "{}";
 
-  const parsed = JSON.parse(typeof content === "string" ? content : "{}") as { summary?: string };
+  const parsed = JSON.parse(typeof content === "string" ? content : "{}") as {
+    summary?: string;
+  };
   return String(parsed.summary ?? "").trim();
 }
 
@@ -310,7 +354,8 @@ Deno.serve(async (req: Request) => {
   try {
     payload = parseWeatherRequest(await req.json());
   } catch (error) {
-    const message = error instanceof Error ? error.message : "invalid request body";
+    const message =
+      error instanceof Error ? error.message : "invalid request body";
     return jsonResponse(400, { ok: false, error: message });
   }
 
@@ -376,7 +421,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(200, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const response: GenerateWeatherSummaryResponse = { ok: false, error: message };
+    const response: GenerateWeatherSummaryResponse = {
+      ok: false,
+      error: message,
+    };
     return jsonResponse(500, response);
   }
 });
