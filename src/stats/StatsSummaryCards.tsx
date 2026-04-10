@@ -16,7 +16,7 @@ export default function StatsSummaryCards({ overview }: Props) {
     <div className="stats-grid-summary">
       <Card className="stats-card">
         <CardHeader className="pb-3">
-          <CardTitle className="stats-card-title">
+          <CardTitle as="p" className="stats-card-title">
             <FaChartLine className="h-4 w-4" />
             Total Caught
           </CardTitle>
@@ -29,7 +29,7 @@ export default function StatsSummaryCards({ overview }: Props) {
 
       <Card className="stats-card">
         <CardHeader className="pb-3">
-          <CardTitle className="stats-card-title">
+          <CardTitle as="p" className="stats-card-title">
             <FaTrophy className="h-4 w-4" />
             Personal Best
           </CardTitle>

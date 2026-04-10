@@ -318,13 +318,54 @@ export default function Dashboard() {
   };
 
   const overlayView = renderOverlayView();
+  const overlayLabel = (() => {
+    switch (normalizedPath) {
+      case "/journal":
+      case "/journal/filters":
+        return "Journal";
+      case "/entries/new":
+        return "New Entry";
+      case "/settings":
+        return "Profile Settings";
+      case "/stats":
+        return "Your Stats";
+      case "/support":
+        return "Contact Support";
+      case "/terms":
+        return "Terms of Service";
+      case "/privacy":
+        return "Privacy Policy";
+      case "/resources":
+        return "Resources";
+      case "/resources/trusted-sources":
+        return "Trusted Sources";
+      case "/resources/fishing-reports":
+        return "Fishing Reports";
+      case "/resources/regulations":
+        return "Regulations";
+      case "/weather":
+      case "/resources/weather":
+        return "Weather";
+      default:
+        if (normalizedPath === "/resources/field-guide" || normalizedPath.startsWith("/resources/field-guide/")) {
+          return "Field Guide";
+        }
+        return "Overlay";
+    }
+  })();
 
   return (
     <div className="dashboard-shell">
       {/* Top Navigation */}
       <nav className="dashboard-nav">
         <div className="dashboard-nav-inner">
-          <div className="dashboard-brand">
+          <button
+            type="button"
+            className="dashboard-brand"
+            onClick={handleMapClick}
+            aria-label="Go to map"
+            title="Go to map"
+          >
             <div className="dashboard-brand-icon">
               <img src={catchLogsIcon} alt="CatchLogs" width={32} height={32} />
             </div>
@@ -332,7 +373,7 @@ export default function Dashboard() {
               <h1 className="dashboard-brand-title">CatchLogs</h1>
               {user && user.firstName && <p className="dashboard-brand-subtitle">Welcome, {user.firstName}</p>}
             </div>
-          </div>
+          </button>
           <div>
             {user && (
               <Button
@@ -350,7 +391,7 @@ export default function Dashboard() {
       </nav>
 
       {/* Main Content */}
-      <div className="dashboard-main">
+      <main className="dashboard-main" role="main">
         {isMapView && (
           <div className="map-shell">
             <MapInterface
@@ -367,7 +408,7 @@ export default function Dashboard() {
             />
           </div>
         )}
-      </div>
+      </main>
 
       {/* Bottom Navigation (Mobile) */}
       <BottomNavigation
@@ -407,7 +448,7 @@ export default function Dashboard() {
       )}
 
       {isOverlayOpen && overlayView && (
-        <div className="app-overlay-layer" role="dialog" aria-modal="true">
+        <div className="app-overlay-layer" role="dialog" aria-modal="true" aria-label={overlayLabel}>
           <div className="app-overlay-panel">
             {overlayView}
           </div>

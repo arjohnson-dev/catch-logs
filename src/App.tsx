@@ -30,7 +30,7 @@ import ResetPassword from "@/pages/reset-password";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const AuthFallback = () => (
-    <AuthPage onAuthSuccess={() => window.location.reload()} />
+    <AuthPage onAuthSuccess={() => window.location.replace("/map")} />
   );
 
   if (isLoading) {

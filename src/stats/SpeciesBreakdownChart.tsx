@@ -28,7 +28,7 @@ export default function SpeciesBreakdownChart({
   return (
     <Card className="stats-card">
       <CardHeader>
-        <CardTitle className="stats-card-title">Species Breakdown</CardTitle>
+        <CardTitle as="p" className="stats-card-title">Species Breakdown</CardTitle>
       </CardHeader>
       <CardContent>
         {chartData.length > 0 ? (

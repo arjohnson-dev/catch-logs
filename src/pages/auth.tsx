@@ -54,7 +54,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
   }, [verification]);
 
   return (
-    <div className="page-scroll">
+    <main className="page-scroll" role="main">
       <div className="auth-shell">
         <div className="auth-container">
         {/* Logo */}
@@ -155,6 +155,6 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
         </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

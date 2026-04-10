@@ -72,18 +72,20 @@
   border-radius: 9px;
   transition:
     background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard);
 }
 
 .auth-toggle-button-active.auth-toggle-button-active {
-  background: var(--color-primary);
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
   color: var(--color-text-inverse);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .auth-toggle-button-inactive.auth-toggle-button-inactive {
   background: transparent;
-  color: var(--color-text-dim);
+  color: var(--color-text-soft);
 }
 
 .auth-toggle-button-inactive.auth-toggle-button-inactive:hover {
@@ -120,8 +122,17 @@
 
 .auth-link-button {
   font-size: var(--font-size-sm);
+  color: var(--color-text-soft);
 }
 
 .auth-link-button:hover {
   color: var(--color-text-inverse);
+}
+
+.auth-card .btn-primary.btn-primary {
+  background: var(--color-primary-hover);
+}
+
+.auth-card .btn-primary.btn-primary:hover {
+  background: #1858b5;
 }
