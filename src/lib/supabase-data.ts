@@ -113,8 +113,8 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     fishSpeciesSpecCode: row.fish_species_spec_code ?? 1,
     length: row.length,
     weight: row.weight,
-    lure: row.lure,
-    bait: row.bait,
+    lure: normalizeFishingGearForStorage(row.lure),
+    bait: normalizeFishingGearForStorage(row.bait),
     drag: row.tackle_drag,
     rodLength: row.tackle_rod_length,
     rodPower: row.tackle_rod_power,
@@ -792,6 +792,31 @@ function toSafeNumber(value: unknown): number {
   return Number.isFinite(next) ? next : 0;
 }
 
+function normalizeNamedCountRows(
+  items: unknown[],
+): Array<{ name: string; count: number }> {
+  const counts = new Map<string, number>();
+
+  for (const rawItem of items) {
+    const item = rawItem as Record<string, unknown>;
+    const count = toSafeNumber(item.count);
+    if (count <= 0) {
+      continue;
+    }
+
+    const rawName = typeof item.name === "string" ? item.name : "Unknown";
+    const normalizedName = normalizeFishingGearForStorage(rawName) ?? "Unknown";
+    counts.set(normalizedName, (counts.get(normalizedName) ?? 0) + count);
+  }
+
+  return Array.from(counts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort(
+      (left, right) =>
+        right.count - left.count || left.name.localeCompare(right.name),
+    );
+}
+
 export async function getStatsOverview(): Promise<StatsOverviewData> {
   const { data, error } = await supabase.rpc("get_stats_overview");
 
@@ -849,20 +874,8 @@ export async function getStatsOverview(): Promise<StatsOverviewData> {
         count: toSafeNumber(item.count),
       }))
       .filter((item) => item.count >= 0),
-    topLures: lureRaw
-      .map((item) => item as Record<string, unknown>)
-      .map((item) => ({
-        name: typeof item.name === "string" ? item.name : "Unknown",
-        count: toSafeNumber(item.count),
-      }))
-      .filter((item) => item.count > 0),
-    topBaits: baitRaw
-      .map((item) => item as Record<string, unknown>)
-      .map((item) => ({
-        name: typeof item.name === "string" ? item.name : "Unknown",
-        count: toSafeNumber(item.count),
-      }))
-      .filter((item) => item.count > 0),
+    topLures: normalizeNamedCountRows(lureRaw),
+    topBaits: normalizeNamedCountRows(baitRaw),
   };
 }
 
@@ -893,20 +906,8 @@ export async function getStatsSpeciesDetail(
     species: typeof payload.species === "string" ? payload.species : species,
     totalCatches: toSafeNumber(payload.totalCatches),
     fieldGuideSpecCode: toNumberOrNull(payload.fieldGuideSpecCode),
-    topLures: lureRaw
-      .map((item) => item as Record<string, unknown>)
-      .map((item) => ({
-        name: typeof item.name === "string" ? item.name : "Unknown",
-        count: toSafeNumber(item.count),
-      }))
-      .filter((item) => item.count > 0),
-    topBaits: baitRaw
-      .map((item) => item as Record<string, unknown>)
-      .map((item) => ({
-        name: typeof item.name === "string" ? item.name : "Unknown",
-        count: toSafeNumber(item.count),
-      }))
-      .filter((item) => item.count > 0),
+    topLures: normalizeNamedCountRows(lureRaw),
+    topBaits: normalizeNamedCountRows(baitRaw),
     conditions: conditionsRaw
       ? {
           avgTemp: toNumberOrNull(conditionsRaw.avgTemp),
