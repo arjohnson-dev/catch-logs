@@ -47,6 +47,7 @@ import {
   createPin,
   deletePinIfEmpty,
   getPinsWithEntries,
+  resolvePinNameFromCoordinates,
 } from "@/lib/supabase-data";
 import { getEntries } from "@/lib/supabase-data";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,8 +55,11 @@ import { DEFAULT_MAP_BASE_LAYER, MAP_BASE_LAYERS } from "@/lib/map-layers";
 import {
   loadMapBaseLayerPreference,
   loadMapLabelsVisiblePreference,
+  loadMapViewportPreference,
   saveMapBaseLayerPreference,
   saveMapLabelsVisiblePreference,
+  saveMapViewportPreference,
+  type MapViewportPreference,
 } from "@/lib/map-preferences";
 import { appQueryKeys } from "@/lib/query-keys";
 import "leaflet/dist/leaflet.css";
@@ -84,6 +88,35 @@ const createPinIcon = (className: string) =>
 
 const redPinIcon = createPinIcon("unselected-pin");
 const selectedPinIcon = createPinIcon("selected-pin");
+const HAS_CENTERED_ON_INITIAL_LOCATION_SESSION_KEY =
+  "catchlogs.map.centered-on-initial-location";
+
+function hasCenteredOnInitialLocationThisSession() {
+  if (typeof window === "undefined") return false;
+
+  try {
+    return (
+      window.sessionStorage.getItem(
+        HAS_CENTERED_ON_INITIAL_LOCATION_SESSION_KEY,
+      ) === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function markInitialLocationCenteredForSession() {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(
+      HAS_CENTERED_ON_INITIAL_LOCATION_SESSION_KEY,
+      "1",
+    );
+  } catch {
+    // Ignore storage errors and keep in-memory fallback behavior.
+  }
+}
 
 interface MapInterfaceProps {
   selectedPinId: number | null;
@@ -131,15 +164,44 @@ function MapCenterer({
   pins: Pin[];
 }) {
   const map = useMap();
+  const lastCenteredPinIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (selectedPinId && pins.length > 0) {
+    if (!selectedPinId) {
+      lastCenteredPinIdRef.current = null;
+      return;
+    }
+
+    if (lastCenteredPinIdRef.current === selectedPinId) {
+      return;
+    }
+
+    if (pins.length > 0) {
       const selectedPin = pins.find((pin) => pin.id === selectedPinId);
-      if (selectedPin) {
-        map.setView([selectedPin.latitude, selectedPin.longitude], 16, {
-          animate: true,
-        });
-      }
+      if (!selectedPin) return;
+
+      const targetZoom = 16;
+      const selectedPinLatLng = L.latLng(
+        selectedPin.latitude,
+        selectedPin.longitude,
+      );
+      const mapSize = map.getSize();
+      const isDesktop =
+        typeof window !== "undefined" && window.innerWidth >= 1024;
+      const verticalOffsetPx = mapSize.y * (isDesktop ? 0.12 : 0.22);
+      const projectedPin = map.project(selectedPinLatLng, targetZoom);
+      const projectedCenter = L.point(
+        projectedPin.x,
+        projectedPin.y + verticalOffsetPx,
+      );
+      const targetCenter = map.unproject(projectedCenter, targetZoom);
+
+      map.flyTo(targetCenter, targetZoom, {
+        animate: true,
+        duration: 0.45,
+        easeLinearity: 0.25,
+      });
+      lastCenteredPinIdRef.current = selectedPinId;
     }
   }, [selectedPinId, pins, map]);
 
@@ -157,6 +219,25 @@ function MapRefBridge({ mapRef }: { mapRef: { current: L.Map | null } }) {
       }
     };
   }, [map, mapRef]);
+
+  return null;
+}
+
+function MapViewportPersistence({
+  onViewportChange,
+}: {
+  onViewportChange: (viewport: MapViewportPreference) => void;
+}) {
+  const map = useMapEvents({
+    moveend: () => {
+      const center = map.getCenter();
+      onViewportChange({
+        lat: center.lat,
+        lng: center.lng,
+        zoom: map.getZoom(),
+      });
+    },
+  });
 
   return null;
 }
@@ -180,11 +261,13 @@ function UserLocationCenterer({
       // Consume the one-time auto-center when a pin is already selected
       // so clearing selection later does not unexpectedly jump to user location.
       hasCenteredOnInitialLocationRef.current = true;
+      markInitialLocationCenteredForSession();
       return;
     }
 
     map.setView(userLocation, 15, { animate: false });
     hasCenteredOnInitialLocationRef.current = true;
+    markInitialLocationCenteredForSession();
   }, [map, userLocation, selectedPinId, hasCenteredOnInitialLocationRef]);
 
   return null;
@@ -206,10 +289,20 @@ export default function MapInterface({
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [savedMapViewport, setSavedMapViewport] =
+    useState<MapViewportPreference | null>(() =>
+      user?.id ? loadMapViewportPreference(user.id) : null,
+    );
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null,
   );
-  const hasCenteredOnInitialLocation = useRef(false);
+  const [hasCenteredOnInitialLocationForSession] = useState(
+    () =>
+      hasCenteredOnInitialLocationThisSession() || savedMapViewport !== null,
+  );
+  const hasCenteredOnInitialLocation = useRef(
+    hasCenteredOnInitialLocationForSession,
+  );
   const [showPinMenu, setShowPinMenu] = useState(false);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [isGearPanelVisible, setIsGearPanelVisible] = useState(() =>
@@ -221,7 +314,7 @@ export default function MapInterface({
   const [showMapLabels, setShowMapLabels] = useState(() =>
     user?.id ? loadMapLabelsVisiblePreference(user.id) : true,
   );
-  const initialCenter: [number, number] = [46.8772, -96.7898];
+  const defaultCenter: [number, number] = [46.8772, -96.7898];
 
   const { data: pins = [], isLoading } = useQuery<PinWithEntries[]>({
     queryKey: appQueryKeys.pins(),
@@ -261,7 +354,7 @@ export default function MapInterface({
         userId: user.id,
         latitude: lat,
         longitude: lng,
-        name: `Location ${new Date().toLocaleDateString()}`,
+        name: await resolvePinNameFromCoordinates(lat, lng),
       });
     },
     onSuccess: (newPin) => {
@@ -339,64 +432,67 @@ export default function MapInterface({
     if (userLocation && mapRef.current) {
       mapRef.current.setView(userLocation, 15);
     } else {
-      requestLocation();
+      requestLocation(true);
     }
   };
 
-  const requestLocation = useCallback(() => {
-    if ("geolocation" in navigator) {
-      const usePosition = (position: GeolocationPosition) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const location: [number, number] = [lat, lng];
-        setUserLocation(location);
-        if (mapRef.current) {
-          mapRef.current.setView(location, 15);
-        }
-      };
+  const requestLocation = useCallback(
+    (shouldCenterMap = false) => {
+      if ("geolocation" in navigator) {
+        const usePosition = (position: GeolocationPosition) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const location: [number, number] = [lat, lng];
+          setUserLocation(location);
+          if (shouldCenterMap && mapRef.current) {
+            mapRef.current.setView(location, 15);
+          }
+        };
 
-      const highAccuracyOptions: PositionOptions = {
-        enableHighAccuracy: true,
-        timeout: 20000,
-        maximumAge: 0,
-      };
+        const highAccuracyOptions: PositionOptions = {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 0,
+        };
 
-      const fallbackOptions: PositionOptions = {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 60000,
-      };
+        const fallbackOptions: PositionOptions = {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 60000,
+        };
 
-      navigator.geolocation.getCurrentPosition(
-        usePosition,
-        () => {
-          navigator.geolocation.getCurrentPosition(
-            usePosition,
-            () => {
-              toast({
-                title: "Location error",
-                description:
-                  "Unable to get your location. Please enable location services.",
-                variant: "destructive",
-              });
-            },
-            fallbackOptions,
-          );
-        },
-        highAccuracyOptions,
-      );
-    } else {
-      toast({
-        title: "Location not supported",
-        description: "Your browser doesn't support location services",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
+        navigator.geolocation.getCurrentPosition(
+          usePosition,
+          () => {
+            navigator.geolocation.getCurrentPosition(
+              usePosition,
+              () => {
+                toast({
+                  title: "Location error",
+                  description:
+                    "Unable to get your location. Please enable location services.",
+                  variant: "destructive",
+                });
+              },
+              fallbackOptions,
+            );
+          },
+          highAccuracyOptions,
+        );
+      } else {
+        toast({
+          title: "Location not supported",
+          description: "Your browser doesn't support location services",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast],
+  );
 
   // Request location on component mount
   useEffect(() => {
-    requestLocation();
+    requestLocation(false);
   }, [requestLocation]);
 
   useEffect(() => {
@@ -433,7 +529,9 @@ export default function MapInterface({
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setIsGearPanelVisible(user?.id ? loadSessionGearVisibility(user.id) : true);
+      setIsGearPanelVisible(
+        user?.id ? loadSessionGearVisibility(user.id) : true,
+      );
     }, 0);
 
     return () => {
@@ -443,8 +541,13 @@ export default function MapInterface({
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setMapBaseLayer(user?.id ? loadMapBaseLayerPreference(user.id) : DEFAULT_MAP_BASE_LAYER);
-      setShowMapLabels(user?.id ? loadMapLabelsVisiblePreference(user.id) : true);
+      setMapBaseLayer(
+        user?.id ? loadMapBaseLayerPreference(user.id) : DEFAULT_MAP_BASE_LAYER,
+      );
+      setShowMapLabels(
+        user?.id ? loadMapLabelsVisiblePreference(user.id) : true,
+      );
+      setSavedMapViewport(user?.id ? loadMapViewportPreference(user.id) : null);
     }, 0);
 
     return () => {
@@ -488,6 +591,22 @@ export default function MapInterface({
     });
   };
 
+  const selectedPin = selectedPinId
+    ? (pins.find((pin) => pin.id === selectedPinId) ?? null)
+    : null;
+
+  const initialCenter: [number, number] = selectedPin
+    ? [selectedPin.latitude, selectedPin.longitude]
+    : savedMapViewport
+      ? [savedMapViewport.lat, savedMapViewport.lng]
+      : defaultCenter;
+
+  const initialZoom = selectedPin
+    ? 16
+    : savedMapViewport
+      ? savedMapViewport.zoom
+      : 10;
+
   if (isLoading) {
     return (
       <div className="map-loading">
@@ -503,7 +622,7 @@ export default function MapInterface({
     <div className="map-shell">
       <MapContainer
         center={initialCenter}
-        zoom={userLocation ? 15 : 10}
+        zoom={initialZoom}
         className="map-canvas"
         ref={mapRef}
         zoomControl={false}
@@ -533,6 +652,13 @@ export default function MapInterface({
           onEntryMove={onEntryMove}
         />
         <MapRefBridge mapRef={mapRef} />
+        <MapViewportPersistence
+          onViewportChange={(viewport) => {
+            if (!user?.id) return;
+            setSavedMapViewport(viewport);
+            saveMapViewportPreference(user.id, viewport);
+          }}
+        />
         <UserLocationCenterer
           userLocation={userLocation}
           selectedPinId={selectedPinId}
@@ -599,7 +725,10 @@ export default function MapInterface({
               </div>
 
               <div id="map-gear-panel-body">
-                <label className="map-tackle-label" htmlFor="session-lure-input">
+                <label
+                  className="map-tackle-label"
+                  htmlFor="session-lure-input"
+                >
                   Lure
                 </label>
                 <Input

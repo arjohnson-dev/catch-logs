@@ -30,7 +30,7 @@ import {
 } from "react-icons/fa6";
 import { IoShareOutline } from "react-icons/io5";
 import { VscDiffAdded } from "react-icons/vsc";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -564,17 +564,15 @@ export default function Settings() {
 
                 <div className="settings-meta space-y-3">
                   <p>
-                    Review the current trusted third-party APIs and data sources
+                    Review the current{" "}
+                    <Link
+                      to="/resources/trusted-sources"
+                      className="text-link"
+                    >
+                      trusted third-party APIs and data sources
+                    </Link>{" "}
                     used by the application.
                   </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="btn-outline-muted w-full justify-start"
-                    onClick={() => navigate("/trusted-sources")}
-                  >
-                    Open Trusted Sources
-                  </Button>
                 </div>
               </div>
             </CardContent>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import {
   FaArrowLeft,
   FaBookmark,
@@ -32,14 +32,17 @@ import {
 import { appQueryKeys } from "@/lib/query-keys";
 import type { FishSpeciesListItem } from "@/types/field-guide";
 
-function PageHeader({ backTo }: { backTo: string }) {
+function PageHeader() {
   return (
     <div className="page-header">
-      <Link to={backTo}>
-        <Button variant="ghost" size="sm" className="legal-back-button">
-          <FaArrowLeft className="w-4 h-4" />
-        </Button>
-      </Link>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="legal-back-button"
+        onClick={() => window.history.back()}
+      >
+        <FaArrowLeft className="w-4 h-4" />
+      </Button>
       <h1 className="page-title">Field Guide</h1>
     </div>
   );
@@ -52,10 +55,15 @@ export default function FieldGuide() {
   const [location, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [selectedWaterType, setSelectedWaterType] = useState<string>("all");
-  const { isFavoritesRoute, detailSlug, detailSpecCode } = getFieldGuideRouteParams(location);
+  const { isFavoritesRoute, detailSlug, detailSpecCode } =
+    getFieldGuideRouteParams(location);
   const trimmedSearch = search.trim();
-  const favoriteQueryKey = appQueryKeys.fieldGuideFavoriteSpecCodes(user?.id ?? null);
-  const favoriteSpeciesQueryKey = appQueryKeys.fieldGuideFavoriteSpecies(user?.id ?? null);
+  const favoriteQueryKey = appQueryKeys.fieldGuideFavoriteSpecCodes(
+    user?.id ?? null,
+  );
+  const favoriteSpeciesQueryKey = appQueryKeys.fieldGuideFavoriteSpecies(
+    user?.id ?? null,
+  );
 
   const speciesListQuery = useQuery({
     queryKey: appQueryKeys.fieldGuideSpeciesList(trimmedSearch),
@@ -67,7 +75,9 @@ export default function FieldGuide() {
   });
 
   const speciesDetailQuery = useQuery({
-    queryKey: appQueryKeys.fieldGuideSpeciesDetail(detailSlug ?? detailSpecCode),
+    queryKey: appQueryKeys.fieldGuideSpeciesDetail(
+      detailSlug ?? detailSpecCode,
+    ),
     queryFn: () =>
       getFieldGuideSpeciesDetail({
         slug: detailSlug,
@@ -93,8 +103,14 @@ export default function FieldGuide() {
     () => favoriteSpecCodesQuery.data ?? [],
     [favoriteSpecCodesQuery.data],
   );
-  const favoriteSet = useMemo(() => new Set(favoriteSpecCodes), [favoriteSpecCodes]);
-  const species = useMemo(() => speciesListQuery.data ?? [], [speciesListQuery.data]);
+  const favoriteSet = useMemo(
+    () => new Set(favoriteSpecCodes),
+    [favoriteSpecCodes],
+  );
+  const species = useMemo(
+    () => speciesListQuery.data ?? [],
+    [speciesListQuery.data],
+  );
 
   const toggleBookmarkMutation = useMutation({
     mutationFn: async (input: { specCode: number; isBookmarked: boolean }) => {
@@ -108,9 +124,12 @@ export default function FieldGuide() {
       await queryClient.cancelQueries({ queryKey: favoriteQueryKey });
       await queryClient.cancelQueries({ queryKey: favoriteSpeciesQueryKey });
 
-      const previousCodes = queryClient.getQueryData<number[]>(favoriteQueryKey) ?? [];
+      const previousCodes =
+        queryClient.getQueryData<number[]>(favoriteQueryKey) ?? [];
       const previousSpecies =
-        queryClient.getQueryData<FishSpeciesListItem[]>(favoriteSpeciesQueryKey) ?? [];
+        queryClient.getQueryData<FishSpeciesListItem[]>(
+          favoriteSpeciesQueryKey,
+        ) ?? [];
 
       const nextCodes = input.isBookmarked
         ? previousCodes.filter((value) => value !== input.specCode)
@@ -126,13 +145,20 @@ export default function FieldGuide() {
       } else {
         const speciesToInsert =
           species.find((item) => item.specCode === input.specCode) ??
-          (speciesDetailQuery.data?.specCode === input.specCode ? speciesDetailQuery.data : null);
+          (speciesDetailQuery.data?.specCode === input.specCode
+            ? speciesDetailQuery.data
+            : null);
 
-        if (speciesToInsert && !previousSpecies.some((item) => item.specCode === input.specCode)) {
+        if (
+          speciesToInsert &&
+          !previousSpecies.some((item) => item.specCode === input.specCode)
+        ) {
           queryClient.setQueryData(
             favoriteSpeciesQueryKey,
             [...previousSpecies, speciesToInsert].sort((left, right) =>
-              getSpeciesSortTitle(left).localeCompare(getSpeciesSortTitle(right)),
+              getSpeciesSortTitle(left).localeCompare(
+                getSpeciesSortTitle(right),
+              ),
             ),
           );
         }
@@ -145,7 +171,10 @@ export default function FieldGuide() {
         queryClient.setQueryData(favoriteQueryKey, context.previousCodes);
       }
       if (context?.previousSpecies) {
-        queryClient.setQueryData(favoriteSpeciesQueryKey, context.previousSpecies);
+        queryClient.setQueryData(
+          favoriteSpeciesQueryKey,
+          context.previousSpecies,
+        );
       }
       toast({
         title: "Bookmark update failed",
@@ -245,7 +274,9 @@ export default function FieldGuide() {
       <FieldGuideDetailPage
         species={speciesDetailQuery.data}
         isFavorite={favoriteSet.has(speciesDetailQuery.data.specCode)}
-        onToggleFavorite={() => toggleFavorite(speciesDetailQuery.data.specCode)}
+        onToggleFavorite={() =>
+          toggleFavorite(speciesDetailQuery.data.specCode)
+        }
         onBack={() => {
           if (typeof window !== "undefined" && window.history.length > 1) {
             window.history.back();
@@ -258,16 +289,19 @@ export default function FieldGuide() {
     );
   }
 
-  const displayedSpecies = isFavoritesRoute ? displayedFavoriteSpecies : filteredSpecies;
-  const resultsCopy = !user?.id && isFavoritesRoute
-    ? "Sign in to access bookmarks"
-    : isFavoritesRoute && favoriteSpeciesListQuery.isLoading
-      ? "Loading bookmarks..."
-      : speciesListQuery.isLoading && !isFavoritesRoute
-        ? "Loading active species..."
-        : !isFavoritesRoute && trimmedSearch.length === 0
-          ? "Start typing to search the field guide"
-          : `${displayedSpecies.length} species ready to browse`;
+  const displayedSpecies = isFavoritesRoute
+    ? displayedFavoriteSpecies
+    : filteredSpecies;
+  const resultsCopy =
+    !user?.id && isFavoritesRoute
+      ? "Sign in to access bookmarks"
+      : isFavoritesRoute && favoriteSpeciesListQuery.isLoading
+        ? "Loading bookmarks..."
+        : speciesListQuery.isLoading && !isFavoritesRoute
+          ? "Loading active species..."
+          : !isFavoritesRoute && trimmedSearch.length === 0
+            ? "Start typing to search the field guide"
+            : `${displayedSpecies.length} species ready to browse`;
 
   return (
     <div className="page-scroll">
@@ -277,7 +311,11 @@ export default function FieldGuide() {
         <div className="resources-stack">
           <Card className="resources-card surface-card">
             <CardContent className="resources-controls">
-              <div className="resources-tabs" role="tablist" aria-label="Field guide views">
+              <div
+                className="resources-tabs"
+                role="tablist"
+                aria-label="Field guide views"
+              >
                 <button
                   type="button"
                   role="tab"
@@ -285,7 +323,11 @@ export default function FieldGuide() {
                   aria-controls="field-guide-panel-all-species"
                   id="field-guide-tab-all-species"
                   tabIndex={!isFavoritesRoute ? 0 : -1}
-                  className={!isFavoritesRoute ? "resources-tab resources-tab-active" : "resources-tab"}
+                  className={
+                    !isFavoritesRoute
+                      ? "resources-tab resources-tab-active"
+                      : "resources-tab"
+                  }
                   onClick={() => navigate("/resources/field-guide")}
                 >
                   All Species
@@ -297,14 +339,21 @@ export default function FieldGuide() {
                   aria-controls="field-guide-panel-bookmarks"
                   id="field-guide-tab-bookmarks"
                   tabIndex={isFavoritesRoute ? 0 : -1}
-                  className={isFavoritesRoute ? "resources-tab resources-tab-active" : "resources-tab"}
+                  className={
+                    isFavoritesRoute
+                      ? "resources-tab resources-tab-active"
+                      : "resources-tab"
+                  }
                   onClick={() => navigate("/resources/field-guide/favorites")}
                 >
                   Bookmarks
                 </button>
               </div>
 
-              <label className="resources-search-label" htmlFor="field-guide-search">
+              <label
+                className="resources-search-label"
+                htmlFor="field-guide-search"
+              >
                 {isFavoritesRoute ? "Search bookmarks" : "Search species"}
               </label>
               <div className="icon-field">
@@ -324,13 +373,18 @@ export default function FieldGuide() {
 
               <div className="resources-toolbar">
                 <div className="resources-filter-group">
-                  <label className="resources-search-label" htmlFor="field-guide-water-type">
+                  <label
+                    className="resources-search-label"
+                    htmlFor="field-guide-water-type"
+                  >
                     Water type
                   </label>
                   <select
                     id="field-guide-water-type"
                     value={selectedWaterType}
-                    onChange={(event) => setSelectedWaterType(event.target.value)}
+                    onChange={(event) =>
+                      setSelectedWaterType(event.target.value)
+                    }
                     className="field-dark resources-select"
                   >
                     {WATER_TYPE_OPTIONS.map((option) => (
@@ -345,9 +399,17 @@ export default function FieldGuide() {
           </Card>
 
           <div
-            id={isFavoritesRoute ? "field-guide-panel-bookmarks" : "field-guide-panel-all-species"}
+            id={
+              isFavoritesRoute
+                ? "field-guide-panel-bookmarks"
+                : "field-guide-panel-all-species"
+            }
             role="tabpanel"
-            aria-labelledby={isFavoritesRoute ? "field-guide-tab-bookmarks" : "field-guide-tab-all-species"}
+            aria-labelledby={
+              isFavoritesRoute
+                ? "field-guide-tab-bookmarks"
+                : "field-guide-tab-all-species"
+            }
             className="resources-tab-panel"
           >
             <div className="resources-results-header">
@@ -377,10 +439,18 @@ export default function FieldGuide() {
                 title="Loading field guide"
                 description="Fetching active species from Supabase."
               />
-            ) : (isFavoritesRoute ? favoriteSpeciesListQuery.isError : speciesListQuery.isError) ? (
+            ) : (
+                isFavoritesRoute
+                  ? favoriteSpeciesListQuery.isError
+                  : speciesListQuery.isError
+              ) ? (
               <FieldGuideStatusCard
                 icon={<FaTriangleExclamation size={20} />}
-                title={isFavoritesRoute ? "Couldn't load bookmarks" : "Couldn't load species"}
+                title={
+                  isFavoritesRoute
+                    ? "Couldn't load bookmarks"
+                    : "Couldn't load species"
+                }
                 description={
                   isFavoritesRoute
                     ? "Your saved species aren't available right now."
@@ -400,8 +470,12 @@ export default function FieldGuide() {
                     key={speciesItem.specCode}
                     species={speciesItem}
                     isFavorite={favoriteSet.has(speciesItem.specCode)}
-                    onOpen={() => navigate(`/resources/field-guide/${speciesItem.slug}`)}
-                    onToggleFavorite={() => toggleFavorite(speciesItem.specCode)}
+                    onOpen={() =>
+                      navigate(`/resources/field-guide/${speciesItem.slug}`)
+                    }
+                    onToggleFavorite={() =>
+                      toggleFavorite(speciesItem.specCode)
+                    }
                   />
                 ))}
               </div>

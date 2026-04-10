@@ -20,6 +20,13 @@ import {
 
 const MAP_BASE_LAYER_KEY_PREFIX = "catchlogs:map-base-layer:";
 const MAP_LABELS_VISIBLE_KEY_PREFIX = "catchlogs:map-labels-visible:";
+const MAP_VIEWPORT_KEY_PREFIX = "catchlogs:map-viewport:";
+
+export interface MapViewportPreference {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
 
 function getStorage() {
   if (typeof window === "undefined") {
@@ -38,6 +45,10 @@ function mapBaseLayerKeyForUser(userId: string) {
 
 function mapLabelsVisibleKeyForUser(userId: string) {
   return `${MAP_LABELS_VISIBLE_KEY_PREFIX}${userId}`;
+}
+
+function mapViewportKeyForUser(userId: string) {
+  return `${MAP_VIEWPORT_KEY_PREFIX}${userId}`;
 }
 
 function isMapBaseLayerId(value: string): value is MapBaseLayerId {
@@ -69,8 +80,52 @@ export function loadMapLabelsVisiblePreference(userId: string): boolean {
   return raw === "1";
 }
 
-export function saveMapLabelsVisiblePreference(userId: string, visible: boolean) {
+export function saveMapLabelsVisiblePreference(
+  userId: string,
+  visible: boolean,
+) {
   const storage = getStorage();
   if (!storage) return;
   storage.setItem(mapLabelsVisibleKeyForUser(userId), visible ? "1" : "0");
+}
+
+export function loadMapViewportPreference(
+  userId: string,
+): MapViewportPreference | null {
+  const storage = getStorage();
+  if (!storage) return null;
+
+  const raw = storage.getItem(mapViewportKeyForUser(userId));
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<MapViewportPreference>;
+    if (
+      typeof parsed.lat !== "number" ||
+      !Number.isFinite(parsed.lat) ||
+      typeof parsed.lng !== "number" ||
+      !Number.isFinite(parsed.lng) ||
+      typeof parsed.zoom !== "number" ||
+      !Number.isFinite(parsed.zoom)
+    ) {
+      return null;
+    }
+
+    return {
+      lat: parsed.lat,
+      lng: parsed.lng,
+      zoom: parsed.zoom,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveMapViewportPreference(
+  userId: string,
+  viewport: MapViewportPreference,
+) {
+  const storage = getStorage();
+  if (!storage) return;
+  storage.setItem(mapViewportKeyForUser(userId), JSON.stringify(viewport));
 }

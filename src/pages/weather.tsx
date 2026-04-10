@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { APIProvider } from "@vis.gl/react-google-maps";
@@ -57,7 +51,10 @@ import {
   getWindSpeedUnitLabel,
   type UnitSystem,
 } from "@/lib/unit-preferences";
-import type { LunarPhaseData, LunarPhaseFunctionResponse } from "@/types/weather";
+import type {
+  LunarPhaseData,
+  LunarPhaseFunctionResponse,
+} from "@/types/weather";
 
 type SelectedLocationSource = "device" | "search" | "saved";
 type WeatherScreen = "overview" | "location";
@@ -86,7 +83,8 @@ type WeatherMetricConfig = {
   yAxisUnit: string;
 };
 
-const LUNAR_PHASE_UNAVAILABLE_MESSAGE = "Lunar phase data is unavailable right now.";
+const LUNAR_PHASE_UNAVAILABLE_MESSAGE =
+  "Lunar phase data is unavailable right now.";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const lunarPhaseUrl = supabaseUrl
   ? `${supabaseUrl}/functions/v1/lunar-phase`
@@ -101,13 +99,16 @@ const FARGO_DEFAULT_LOCATION: WeatherLocation = {
   country: "United States",
   timezone: "America/Chicago",
 };
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
+const GOOGLE_MAPS_API_KEY =
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
 
 function getStoredLocationState(userId?: string | null) {
   const savedLocations = loadSavedWeatherLocations(userId);
   const activeLocation = loadActiveWeatherLocation(userId);
   const selectedSource = activeLocation
-    ? savedLocations.some((location) => areWeatherLocationsEqual(location, activeLocation))
+    ? savedLocations.some((location) =>
+        areWeatherLocationsEqual(location, activeLocation),
+      )
       ? "saved"
       : "search"
     : null;
@@ -127,7 +128,10 @@ function formatTemperatureValue(value: number | null, unitSystem: UnitSystem) {
   return `${Math.round(value)}°${unitSystem === "metric" ? "C" : "F"}`;
 }
 
-function convertPressureForDisplay(value: number | null, unitSystem: UnitSystem) {
+function convertPressureForDisplay(
+  value: number | null,
+  unitSystem: UnitSystem,
+) {
   if (value == null) {
     return null;
   }
@@ -151,7 +155,11 @@ function formatWindSpeedValue(
   unitSystem: UnitSystem,
   windSpeedDisplay: "knots" | "system",
 ) {
-  const converted = convertWindSpeedForDisplay(value, unitSystem, windSpeedDisplay);
+  const converted = convertWindSpeedForDisplay(
+    value,
+    unitSystem,
+    windSpeedDisplay,
+  );
   if (converted == null) {
     return "--";
   }
@@ -196,7 +204,8 @@ function getForecastMetrics(
       key: "windSpeed",
       label: "Wind Speed",
       color: "var(--chart-4)",
-      formatValue: (value) => formatWindSpeedValue(value, unitSystem, windSpeedDisplay),
+      formatValue: (value) =>
+        formatWindSpeedValue(value, unitSystem, windSpeedDisplay),
       yAxisUnit: getWindSpeedUnitLabel(unitSystem, windSpeedDisplay),
     },
   ];
@@ -216,12 +225,13 @@ function buildHourlyChartData(
       metric === "pressure"
         ? convertPressureForDisplay(point.pressure, unitSystem)
         : metric === "windSpeed"
-          ? convertWindSpeedForDisplay(point.windSpeed, unitSystem, windSpeedDisplay)
-        : point[metric],
-    secondaryValue:
-      metric === "temperature"
-        ? point.temperatureLow
-        : null,
+          ? convertWindSpeedForDisplay(
+              point.windSpeed,
+              unitSystem,
+              windSpeedDisplay,
+            )
+          : point[metric],
+    secondaryValue: metric === "temperature" ? point.temperatureLow : null,
     windDirection: point.windDirection,
   }));
 }
@@ -242,8 +252,12 @@ function buildDailyChartData(
         : metric === "pressure"
           ? convertPressureForDisplay(point.pressure, unitSystem)
           : metric === "windSpeed"
-            ? convertWindSpeedForDisplay(point.windSpeed, unitSystem, windSpeedDisplay)
-          : point[metric],
+            ? convertWindSpeedForDisplay(
+                point.windSpeed,
+                unitSystem,
+                windSpeedDisplay,
+              )
+            : point[metric],
     secondaryValue: metric === "temperature" ? point.temperatureLow : null,
     windDirection: point.windDirection,
   }));
@@ -313,7 +327,15 @@ function TemperatureExtremeLabel(props: {
   visible: boolean;
   textAnchor?: "start" | "middle" | "end";
 }) {
-  const { x: markerX, y: markerY, viewBox, value, dx = 0, visible, textAnchor = "middle" } = props;
+  const {
+    x: markerX,
+    y: markerY,
+    viewBox,
+    value,
+    dx = 0,
+    visible,
+    textAnchor = "middle",
+  } = props;
   const x = (markerX ?? viewBox?.x ?? 0) + dx;
   const y = markerY ?? viewBox?.y ?? 0;
 
@@ -480,7 +502,10 @@ function WeatherMetricChart({
                 bottom: 0,
               }}
             >
-              <CartesianGrid stroke="rgba(255, 255, 255, 0.06)" vertical={false} />
+              <CartesianGrid
+                stroke="rgba(255, 255, 255, 0.06)"
+                vertical={false}
+              />
               <XAxis
                 dataKey="xValue"
                 ticks={xAxisTicks}
@@ -538,7 +563,13 @@ function WeatherMetricChart({
                 dataKey="value"
                 stroke={color}
                 strokeWidth={2}
-                dot={showDirectionArrows ? <WeatherDirectionDot stroke={color} /> : false}
+                dot={
+                  showDirectionArrows ? (
+                    <WeatherDirectionDot stroke={color} />
+                  ) : (
+                    false
+                  )
+                }
                 activeDot={{ r: 4, fill: color, strokeWidth: 0 }}
                 connectNulls
                 name={showHighLow ? "High" : title}
@@ -553,14 +584,14 @@ function WeatherMetricChart({
                   y={marker.value}
                   ifOverflow="extendDomain"
                   shape={<TemperatureExtremeDot visible={showMarkerLabels} />}
-                  label={(
+                  label={
                     <TemperatureExtremeLabel
                       value={marker.label}
                       dx={marker.dx}
                       textAnchor={marker.textAnchor}
                       visible={showMarkerLabels}
                     />
-                  )}
+                  }
                 />
               ))}
               {showHighLow ? (
@@ -604,7 +635,11 @@ function WeatherMetricChart({
   );
 }
 
-async function getLunarPhaseForecast(latitude: number, longitude: number, days = 5) {
+async function getLunarPhaseForecast(
+  latitude: number,
+  longitude: number,
+  days = 5,
+) {
   if (!lunarPhaseUrl) {
     throw new Error("Missing VITE_SUPABASE_URL");
   }
@@ -640,13 +675,14 @@ async function getLunarPhaseForecast(latitude: number, longitude: number, days =
     throw new Error(payload?.error ?? LUNAR_PHASE_UNAVAILABLE_MESSAGE);
   }
 
-  return payload.phases.filter((phase): phase is LunarPhaseData => (
-    Boolean(phase) &&
-    typeof phase.date === "string" &&
-    typeof phase.phaseName === "string" &&
-    typeof phase.value === "number" &&
-    typeof phase.illuminationPercent === "number"
-  ));
+  return payload.phases.filter(
+    (phase): phase is LunarPhaseData =>
+      Boolean(phase) &&
+      typeof phase.date === "string" &&
+      typeof phase.phaseName === "string" &&
+      typeof phase.value === "number" &&
+      typeof phase.illuminationPercent === "number",
+  );
 }
 
 function LunarCycleCard({
@@ -668,7 +704,9 @@ function LunarCycleCard({
   return (
     <Card className="resources-card surface-card">
       <CardHeader className="pb-3">
-        <CardTitle className="resources-section-title">Lunar Calendar</CardTitle>
+        <CardTitle className="resources-section-title">
+          Lunar Calendar
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         {lunarForecastQuery.isLoading ? (
@@ -682,11 +720,16 @@ function LunarCycleCard({
         ) : (
           <>
             <div className="resources-weather-lunar-current">
-              <span className="resources-weather-lunar-current-icon" aria-hidden="true">
+              <span
+                className="resources-weather-lunar-current-icon"
+                aria-hidden="true"
+              >
                 <LunarPhaseIcon phaseLabel={currentPhase.phaseName} />
               </span>
               <div>
-                <p className="resources-weather-lunar-current-label">Current Phase</p>
+                <p className="resources-weather-lunar-current-label">
+                  Current Phase
+                </p>
                 <p className="resources-weather-lunar-current-value">
                   {currentPhase.phaseName}
                 </p>
@@ -696,8 +739,13 @@ function LunarCycleCard({
               </div>
             </div>
 
-            <div className="resources-weather-lunar-forecast" aria-label="Upcoming lunar forecast">
-              <p className="resources-weather-lunar-forecast-label">Lunar Forecast</p>
+            <div
+              className="resources-weather-lunar-forecast"
+              aria-label="Upcoming lunar forecast"
+            >
+              <p className="resources-weather-lunar-forecast-label">
+                Lunar Forecast
+              </p>
               <div className="resources-weather-lunar-forecast-row">
                 {lunarForecast.map((day) => (
                   <LunarForecastDay key={day.date} day={day} />
@@ -731,14 +779,13 @@ function LunarCycleCard({
   );
 }
 
-function LunarForecastDay({
-  day,
-}: {
-  day: LunarPhaseData;
-}) {
+function LunarForecastDay({ day }: { day: LunarPhaseData }) {
   return (
     <div className="resources-weather-lunar-forecast-day">
-      <span className="resources-weather-lunar-forecast-icon" aria-hidden="true">
+      <span
+        className="resources-weather-lunar-forecast-icon"
+        aria-hidden="true"
+      >
         <LunarPhaseIcon phaseLabel={day.phaseName} />
       </span>
       <span className="resources-weather-lunar-forecast-date">
@@ -779,7 +826,10 @@ function getSunArcProgress(
   const rise = parseISO(sunrise).getTime();
   const set = parseISO(sunset).getTime();
 
-  if ([observed, rise, set].some((value) => Number.isNaN(value)) || set <= rise) {
+  if (
+    [observed, rise, set].some((value) => Number.isNaN(value)) ||
+    set <= rise
+  ) {
     return null;
   }
 
@@ -805,55 +855,78 @@ function SunArcCard({
   return (
     <Card className="resources-card surface-card">
       <CardHeader className="pb-3">
-        <CardTitle className="resources-section-title">Sunrise & Sunset</CardTitle>
+        <CardTitle className="resources-section-title">
+          Sunrise & Sunset
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         {hasSunData ? (
-        <div className="resources-weather-sun-card">
-          <div className="resources-weather-sun-graphic" aria-hidden="true">
-            <svg viewBox="0 0 240 108" className="resources-weather-sun-svg">
-              <defs>
-                <linearGradient id="resources-weather-sun-arc-gradient" x1="38" y1="92" x2="202" y2="92" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#8b5cf6" />
-                  <stop offset="100%" stopColor="#ef4444" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M38 92 A82 82 0 0 1 202 92"
-                className="resources-weather-sun-arc"
-              />
-              <path
-                d="M38 92 A82 82 0 0 1 202 92"
-                pathLength={100}
-                strokeDasharray={progress == null ? 0 : `${progress * 100} 100`}
-                className="resources-weather-sun-arc-fill"
-              />
-              <circle cx="38" cy="92" r="3" className="resources-weather-sun-horizon-dot" />
-              <circle cx="202" cy="92" r="3" className="resources-weather-sun-horizon-dot" />
-              <circle
-                cx={progress == null ? 38 : sunX}
-                cy={progress == null ? 92 : sunY}
-                r="8"
-                className="resources-weather-sun-marker"
-              />
-            </svg>
-          </div>
+          <div className="resources-weather-sun-card">
+            <div className="resources-weather-sun-graphic" aria-hidden="true">
+              <svg viewBox="0 0 240 108" className="resources-weather-sun-svg">
+                <defs>
+                  <linearGradient
+                    id="resources-weather-sun-arc-gradient"
+                    x1="38"
+                    y1="92"
+                    x2="202"
+                    y2="92"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#ef4444" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M38 92 A82 82 0 0 1 202 92"
+                  className="resources-weather-sun-arc"
+                />
+                <path
+                  d="M38 92 A82 82 0 0 1 202 92"
+                  pathLength={100}
+                  strokeDasharray={
+                    progress == null ? 0 : `${progress * 100} 100`
+                  }
+                  className="resources-weather-sun-arc-fill"
+                />
+                <circle
+                  cx="38"
+                  cy="92"
+                  r="3"
+                  className="resources-weather-sun-horizon-dot"
+                />
+                <circle
+                  cx="202"
+                  cy="92"
+                  r="3"
+                  className="resources-weather-sun-horizon-dot"
+                />
+                <circle
+                  cx={progress == null ? 38 : sunX}
+                  cy={progress == null ? 92 : sunY}
+                  r="8"
+                  className="resources-weather-sun-marker"
+                />
+              </svg>
+            </div>
 
-          <div className="resources-weather-sun-times">
-            <div className="resources-weather-sun-time">
-              <span className="resources-weather-sun-time-label">Sunrise</span>
-              <strong className="resources-weather-sun-time-value resources-weather-sun-time-value-sunrise">
-                {formatSunTime(sunrise)}
-              </strong>
-            </div>
-            <div className="resources-weather-sun-time resources-weather-sun-time-end">
-              <span className="resources-weather-sun-time-label">Sunset</span>
-              <strong className="resources-weather-sun-time-value resources-weather-sun-time-value-sunset">
-                {formatSunTime(sunset)}
-              </strong>
+            <div className="resources-weather-sun-times">
+              <div className="resources-weather-sun-time">
+                <span className="resources-weather-sun-time-label">
+                  Sunrise
+                </span>
+                <strong className="resources-weather-sun-time-value resources-weather-sun-time-value-sunrise">
+                  {formatSunTime(sunrise)}
+                </strong>
+              </div>
+              <div className="resources-weather-sun-time resources-weather-sun-time-end">
+                <span className="resources-weather-sun-time-label">Sunset</span>
+                <strong className="resources-weather-sun-time-value resources-weather-sun-time-value-sunset">
+                  {formatSunTime(sunset)}
+                </strong>
+              </div>
             </div>
           </div>
-        </div>
         ) : (
           <p className="resources-weather-status-copy">
             Sunrise and sunset data are unavailable right now.
@@ -864,11 +937,7 @@ function SunArcCard({
   );
 }
 
-function LunarPhaseIcon({
-  phaseLabel,
-}: {
-  phaseLabel?: string | null;
-}) {
+function LunarPhaseIcon({ phaseLabel }: { phaseLabel?: string | null }) {
   const variant = phaseLabel ?? "New Moon";
   const iconPathMap: Record<string, string> = {
     "New Moon": "/lunar-phase-icons/008-new-moon.png",
@@ -935,21 +1004,24 @@ export default function WeatherPage() {
   const { unitSystem, windSpeedDisplay } = useUnitPreference();
   const { toast } = useToast();
   const userId = user?.id ?? null;
-  const storedLocationState = useMemo(() => getStoredLocationState(userId), [userId]);
+  const storedLocationState = useMemo(
+    () => getStoredLocationState(userId),
+    [userId],
+  );
   const [savedLocations, setSavedLocations] = useState<WeatherLocation[]>(
     storedLocationState.savedLocations,
   );
-  const [selectedLocation, setSelectedLocation] = useState<WeatherLocation | null>(
-    storedLocationState.activeLocation,
-  );
-  const [selectedSource, setSelectedSource] = useState<SelectedLocationSource | null>(
-    storedLocationState.selectedSource,
-  );
+  const [selectedLocation, setSelectedLocation] =
+    useState<WeatherLocation | null>(storedLocationState.activeLocation);
+  const [selectedSource, setSelectedSource] =
+    useState<SelectedLocationSource | null>(storedLocationState.selectedSource);
   const [searchInput, setSearchInput] = useState("");
   const [locationPermissionState, setLocationPermissionState] = useState<
     PermissionState | "unsupported" | "unknown"
   >("unknown");
-  const [locationStatusMessage, setLocationStatusMessage] = useState<string | null>(null);
+  const [locationStatusMessage, setLocationStatusMessage] = useState<
+    string | null
+  >(null);
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
   const [screen, setScreen] = useState<WeatherScreen>("overview");
   const [forecastRange, setForecastRange] = useState<ForecastRange>("12h");
@@ -957,7 +1029,9 @@ export default function WeatherPage() {
     () => typeof window !== "undefined" && window.innerWidth < 640,
   );
   const manualSelectionRef = useRef(false);
-  const selectedLocationRef = useRef<WeatherLocation | null>(storedLocationState.activeLocation);
+  const selectedLocationRef = useRef<WeatherLocation | null>(
+    storedLocationState.activeLocation,
+  );
 
   useEffect(() => {
     const handleResize = () => {
@@ -1016,7 +1090,9 @@ export default function WeatherPage() {
     async (options?: { manual?: boolean }) => {
       if (!("geolocation" in navigator)) {
         setLocationPermissionState("unsupported");
-        setLocationStatusMessage("Location services are not supported in this browser.");
+        setLocationStatusMessage(
+          "Location services are not supported in this browser.",
+        );
         return false;
       }
 
@@ -1120,17 +1196,23 @@ export default function WeatherPage() {
     const detectPermissionAndLocation = async () => {
       if (!("geolocation" in navigator)) {
         setLocationPermissionState("unsupported");
-        setLocationStatusMessage("Location services are not supported in this browser.");
+        setLocationStatusMessage(
+          "Location services are not supported in this browser.",
+        );
         return;
       }
 
       if (!("permissions" in navigator) || !navigator.permissions?.query) {
-        await requestDeviceLocation();
+        if (!selectedLocationRef.current) {
+          await requestDeviceLocation();
+        }
         return;
       }
 
       try {
-        permissionStatus = await navigator.permissions.query({ name: "geolocation" });
+        permissionStatus = await navigator.permissions.query({
+          name: "geolocation",
+        });
         if (isCancelled) {
           return;
         }
@@ -1147,12 +1229,17 @@ export default function WeatherPage() {
           return;
         }
 
-        await requestDeviceLocation();
+        if (!selectedLocationRef.current) {
+          await requestDeviceLocation();
+        }
 
         permissionStatus.onchange = () => {
           setLocationPermissionState(permissionStatus?.state ?? "unknown");
 
-          if (permissionStatus?.state === "granted") {
+          if (
+            permissionStatus?.state === "granted" &&
+            !selectedLocationRef.current
+          ) {
             void requestDeviceLocation();
           }
 
@@ -1167,7 +1254,9 @@ export default function WeatherPage() {
         };
       } catch {
         if (!isCancelled) {
-          await requestDeviceLocation();
+          if (!selectedLocationRef.current) {
+            await requestDeviceLocation();
+          }
         }
       }
     };
@@ -1192,7 +1281,11 @@ export default function WeatherPage() {
       unitSystem,
     ],
     queryFn: () =>
-      getCurrentWeatherForLocation(selectedLocation!.latitude, selectedLocation!.longitude, unitSystem),
+      getCurrentWeatherForLocation(
+        selectedLocation!.latitude,
+        selectedLocation!.longitude,
+        unitSystem,
+      ),
     enabled: !isLocationScreen && Boolean(selectedLocation),
     staleTime: 1000 * 60 * 10,
     retry: false,
@@ -1205,7 +1298,10 @@ export default function WeatherPage() {
       selectedLocation?.longitude,
     ],
     queryFn: () =>
-      reverseGeocodeWeatherLocation(selectedLocation!.latitude, selectedLocation!.longitude),
+      reverseGeocodeWeatherLocation(
+        selectedLocation!.latitude,
+        selectedLocation!.longitude,
+      ),
     enabled: selectedSource === "device" && Boolean(selectedLocation),
     staleTime: 1000 * 60 * 30,
     retry: false,
@@ -1218,7 +1314,12 @@ export default function WeatherPage() {
       selectedLocation?.longitude,
       unitSystem,
     ],
-    queryFn: () => getWeatherForecastForLocation(selectedLocation!.latitude, selectedLocation!.longitude, unitSystem),
+    queryFn: () =>
+      getWeatherForecastForLocation(
+        selectedLocation!.latitude,
+        selectedLocation!.longitude,
+        unitSystem,
+      ),
     enabled: !isLocationScreen && Boolean(selectedLocation),
     staleTime: 1000 * 60 * 10,
     retry: false,
@@ -1243,7 +1344,9 @@ export default function WeatherPage() {
 
   const handleRemoveSavedLocation = (locationToRemove: WeatherLocation) => {
     setSavedLocations((currentLocations) =>
-      currentLocations.filter((location) => !areWeatherLocationsEqual(location, locationToRemove)),
+      currentLocations.filter(
+        (location) => !areWeatherLocationsEqual(location, locationToRemove),
+      ),
     );
 
     toast({
@@ -1270,7 +1373,9 @@ export default function WeatherPage() {
   };
   const currentWeather = currentWeatherQuery.data;
   const currentWeatherVisual = getWeatherVisual(
-    currentWeather?.weatherCondition ?? currentWeather?.weatherDescription ?? null,
+    currentWeather?.weatherCondition ??
+      currentWeather?.weatherDescription ??
+      null,
   );
   const CurrentWeatherIcon = currentWeatherVisual.Icon;
   const selectedLocationTitle =
@@ -1279,7 +1384,9 @@ export default function WeatherPage() {
         ? `Current Location | ${currentLocationNameQuery.data}`
         : "Current Location"
       : selectedLocation
-        ? [selectedLocation.name, selectedLocation.admin1].filter(Boolean).join(", ")
+        ? [selectedLocation.name, selectedLocation.admin1]
+            .filter(Boolean)
+            .join(", ")
         : "Choose Location";
   const savableSelectedLocation = useMemo(() => {
     if (!selectedLocation) {
@@ -1312,14 +1419,33 @@ export default function WeatherPage() {
       ...metric,
       data: (() => {
         if (forecastRange === "10d") {
-          return buildDailyChartData(forecast.daily, metric.key, unitSystem, windSpeedDisplay);
+          return buildDailyChartData(
+            forecast.daily,
+            metric.key,
+            unitSystem,
+            windSpeedDisplay,
+          );
         }
 
-        const hourlyPoints = forecastRange === "24h" ? forecast.hourly : forecast.hourly.slice(0, 12);
-        return buildHourlyChartData(hourlyPoints, metric.key, unitSystem, windSpeedDisplay);
+        const hourlyPoints =
+          forecastRange === "24h"
+            ? forecast.hourly
+            : forecast.hourly.slice(0, 12);
+        return buildHourlyChartData(
+          hourlyPoints,
+          metric.key,
+          unitSystem,
+          windSpeedDisplay,
+        );
       })(),
     }));
-  }, [forecastMetrics, forecastRange, unitSystem, weatherForecastQuery.data, windSpeedDisplay]);
+  }, [
+    forecastMetrics,
+    forecastRange,
+    unitSystem,
+    weatherForecastQuery.data,
+    windSpeedDisplay,
+  ]);
 
   return (
     <div className="page-scroll">
@@ -1351,7 +1477,11 @@ export default function WeatherPage() {
                   <div className="resources-weather-card-header-copy">
                     <CardTitle className="resources-section-title resources-weather-current-title">
                       <FaLocationArrow size={12} />
-                      <span>{selectedLocation ? selectedLocationTitle : "Choose Location"}</span>
+                      <span>
+                        {selectedLocation
+                          ? selectedLocationTitle
+                          : "Choose Location"}
+                      </span>
                     </CardTitle>
                   </div>
                   <div className="resources-weather-location-card-actions">
@@ -1360,7 +1490,11 @@ export default function WeatherPage() {
                         type="button"
                         variant="outline"
                         size="icon"
-                        className={isSelectedLocationSaved ? "resources-save-button" : "btn-outline-muted"}
+                        className={
+                          isSelectedLocationSaved
+                            ? "resources-save-button"
+                            : "btn-outline-muted"
+                        }
                         onClick={() => {
                           if (isSelectedLocationSaved) {
                             handleRemoveSavedLocation(savableSelectedLocation);
@@ -1369,10 +1503,22 @@ export default function WeatherPage() {
 
                           handleSaveLocation(savableSelectedLocation);
                         }}
-                        aria-label={isSelectedLocationSaved ? "Unsave location" : "Save location"}
-                        title={isSelectedLocationSaved ? "Saved location" : "Save location"}
+                        aria-label={
+                          isSelectedLocationSaved
+                            ? "Unsave location"
+                            : "Save location"
+                        }
+                        title={
+                          isSelectedLocationSaved
+                            ? "Saved location"
+                            : "Save location"
+                        }
                       >
-                        {isSelectedLocationSaved ? <FaBookmark size={15} /> : <FaRegBookmark size={15} />}
+                        {isSelectedLocationSaved ? (
+                          <FaBookmark size={15} />
+                        ) : (
+                          <FaRegBookmark size={15} />
+                        )}
                       </Button>
                     ) : null}
                     <Button
@@ -1391,10 +1537,12 @@ export default function WeatherPage() {
                   <div className="resources-empty-state">
                     <FaLocationArrow size={20} />
                     <div>
-                      <h2 className="resources-empty-title">No location selected</h2>
+                      <h2 className="resources-empty-title">
+                        No location selected
+                      </h2>
                       <p className="resources-empty-copy">
-                        Use your current location, search for a place, or choose a saved location
-                        to get started.
+                        Use your current location, search for a place, or choose
+                        a saved location to get started.
                       </p>
                     </div>
                   </div>
@@ -1416,10 +1564,15 @@ export default function WeatherPage() {
                   <div className="resources-weather-snapshot-header">
                     <div className="resources-weather-snapshot-heading">
                       <div className="resources-weather-snapshot-icon">
-                        <CurrentWeatherIcon className={currentWeatherVisual.colorClass} size={20} />
+                        <CurrentWeatherIcon
+                          className={currentWeatherVisual.colorClass}
+                          size={20}
+                        />
                       </div>
                       <div>
-                        <CardTitle className="resources-section-title">Current Weather</CardTitle>
+                        <CardTitle className="resources-section-title">
+                          Current Weather
+                        </CardTitle>
                         {currentWeather?.weatherDescription ? (
                           <p className="resources-weather-snapshot-summary">
                             {currentWeather.weatherDescription}
@@ -1441,19 +1594,31 @@ export default function WeatherPage() {
                   ) : (
                     <div className="resources-weather-snapshot-grid">
                       <div className="resources-weather-snapshot-item">
-                        <span className="resources-weather-snapshot-label">Temp</span>
+                        <span className="resources-weather-snapshot-label">
+                          Temp
+                        </span>
                         <strong className="resources-weather-snapshot-value">
-                          {formatTemperatureValue(currentWeather.temperature ?? null, unitSystem)}
+                          {formatTemperatureValue(
+                            currentWeather.temperature ?? null,
+                            unitSystem,
+                          )}
                         </strong>
                       </div>
                       <div className="resources-weather-snapshot-item">
-                        <span className="resources-weather-snapshot-label">Pressure</span>
+                        <span className="resources-weather-snapshot-label">
+                          Pressure
+                        </span>
                         <strong className="resources-weather-snapshot-value">
-                          {formatPressureValue(currentWeather.pressure ?? null, unitSystem)}
+                          {formatPressureValue(
+                            currentWeather.pressure ?? null,
+                            unitSystem,
+                          )}
                         </strong>
                       </div>
                       <div className="resources-weather-snapshot-item">
-                        <span className="resources-weather-snapshot-label">Cloud Cover</span>
+                        <span className="resources-weather-snapshot-label">
+                          Cloud Cover
+                        </span>
                         <strong className="resources-weather-snapshot-value">
                           {currentWeather.cloudCoverage != null
                             ? `${Math.round(currentWeather.cloudCoverage)}%`
@@ -1461,7 +1626,9 @@ export default function WeatherPage() {
                         </strong>
                       </div>
                       <div className="resources-weather-snapshot-item">
-                        <span className="resources-weather-snapshot-label">Precip Chance</span>
+                        <span className="resources-weather-snapshot-label">
+                          Precip Chance
+                        </span>
                         <strong className="resources-weather-snapshot-value">
                           {currentWeather.precipitationProbability != null
                             ? `${Math.round(currentWeather.precipitationProbability)}%`
@@ -1469,7 +1636,9 @@ export default function WeatherPage() {
                         </strong>
                       </div>
                       <div className="resources-weather-snapshot-item">
-                        <span className="resources-weather-snapshot-label">Wind Speed</span>
+                        <span className="resources-weather-snapshot-label">
+                          Wind Speed
+                        </span>
                         <strong className="resources-weather-snapshot-value">
                           {formatWindSpeedValue(
                             currentWeather.windSpeed ?? null,
@@ -1479,7 +1648,9 @@ export default function WeatherPage() {
                         </strong>
                       </div>
                       <div className="resources-weather-snapshot-item">
-                        <span className="resources-weather-snapshot-label">Wind Dir</span>
+                        <span className="resources-weather-snapshot-label">
+                          Wind Dir
+                        </span>
                         <strong className="resources-weather-snapshot-value">
                           {currentWeather.windDirection != null
                             ? getWindDirection(currentWeather.windDirection)
@@ -1500,12 +1671,22 @@ export default function WeatherPage() {
               <Card className="resources-card surface-card">
                 <CardHeader className="pb-3">
                   <div className="resources-weather-card-header">
-                    <CardTitle className="resources-section-title">Forecast Trends</CardTitle>
-                    <div className="resources-weather-range-toggle" role="tablist" aria-label="Forecast range">
+                    <CardTitle className="resources-section-title">
+                      Forecast Trends
+                    </CardTitle>
+                    <div
+                      className="resources-weather-range-toggle"
+                      role="tablist"
+                      aria-label="Forecast range"
+                    >
                       <Button
                         type="button"
                         variant="ghost"
-                        className={forecastRange === "12h" ? "resources-weather-range-button is-active" : "resources-weather-range-button"}
+                        className={
+                          forecastRange === "12h"
+                            ? "resources-weather-range-button is-active"
+                            : "resources-weather-range-button"
+                        }
                         onClick={() => setForecastRange("12h")}
                       >
                         12h
@@ -1513,7 +1694,11 @@ export default function WeatherPage() {
                       <Button
                         type="button"
                         variant="ghost"
-                        className={forecastRange === "24h" ? "resources-weather-range-button is-active" : "resources-weather-range-button"}
+                        className={
+                          forecastRange === "24h"
+                            ? "resources-weather-range-button is-active"
+                            : "resources-weather-range-button"
+                        }
                         onClick={() => setForecastRange("24h")}
                       >
                         24h
@@ -1521,7 +1706,11 @@ export default function WeatherPage() {
                       <Button
                         type="button"
                         variant="ghost"
-                        className={forecastRange === "10d" ? "resources-weather-range-button is-active" : "resources-weather-range-button"}
+                        className={
+                          forecastRange === "10d"
+                            ? "resources-weather-range-button is-active"
+                            : "resources-weather-range-button"
+                        }
                         onClick={() => setForecastRange("10d")}
                       >
                         10 day
@@ -1535,7 +1724,8 @@ export default function WeatherPage() {
                       <p className="resources-weather-status-copy">
                         Loading forecast trends for this location...
                       </p>
-                    ) : weatherForecastQuery.isError || forecastChartData.length === 0 ? (
+                    ) : weatherForecastQuery.isError ||
+                      forecastChartData.length === 0 ? (
                       <p className="resources-weather-status-copy">
                         Forecast trends are unavailable right now.
                       </p>
@@ -1550,9 +1740,21 @@ export default function WeatherPage() {
                             data={metric.data}
                             formatValue={metric.formatValue}
                             showDirectionArrows={metric.key === "windSpeed"}
-                            showHighLow={metric.key === "temperature" && forecastRange === "10d"}
-                            showRangeMarkers={metric.key === "temperature" && forecastRange !== "10d"}
-                            yAxisWidth={metric.key === "pressure" ? (unitSystem === "metric" ? 52 : 46) : 40}
+                            showHighLow={
+                              metric.key === "temperature" &&
+                              forecastRange === "10d"
+                            }
+                            showRangeMarkers={
+                              metric.key === "temperature" &&
+                              forecastRange !== "10d"
+                            }
+                            yAxisWidth={
+                              metric.key === "pressure"
+                                ? unitSystem === "metric"
+                                  ? 52
+                                  : 46
+                                : 40
+                            }
                             xAxisInterval={0}
                             xAxisTicks={buildXAxisTicks(
                               metric.data,
@@ -1582,7 +1784,9 @@ export default function WeatherPage() {
           {isLocationScreen ? (
             <Card className="resources-card surface-card">
               <CardHeader className="pb-3">
-                <CardTitle className="resources-section-title">Location</CardTitle>
+                <CardTitle className="resources-section-title">
+                  Location
+                </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="resources-weather-search-form">
@@ -1595,9 +1799,13 @@ export default function WeatherPage() {
                           setSearchInput(event.target.value);
                         }}
                         onPlaceSelect={(location) => {
-                          applySelectedLocation(location, "search", { manual: true });
+                          applySelectedLocation(location, "search", {
+                            manual: true,
+                          });
                           setSearchInput(
-                            [location.name, location.admin1].filter(Boolean).join(", "),
+                            [location.name, location.admin1]
+                              .filter(Boolean)
+                              .join(", "),
                           );
                           setScreen("overview");
                         }}
@@ -1630,7 +1838,9 @@ export default function WeatherPage() {
                     </span>
                     <span className="resources-weather-location-row-copy">
                       <span className="resources-weather-location-row-title">
-                        {isRequestingLocation ? "Finding current location..." : "Use my current location"}
+                        {isRequestingLocation
+                          ? "Finding current location..."
+                          : "Use my current location"}
                       </span>
                       <span className="resources-weather-location-row-meta">
                         {locationPermissionState === "denied"
@@ -1651,23 +1861,34 @@ export default function WeatherPage() {
                       <div className="resources-empty-state resources-weather-saved-empty">
                         <FaBookmark size={20} />
                         <div>
-                          <h2 className="resources-empty-title">No saved locations yet</h2>
+                          <h2 className="resources-empty-title">
+                            No saved locations yet
+                          </h2>
                           <p className="resources-empty-copy">
-                            Pick a place from search and it will be ready here next time.
+                            Pick a place from search and it will be ready here
+                            next time.
                           </p>
                         </div>
                       </div>
                     ) : (
                       savedLocations.map((location) => (
-                        <div key={location.id} className="resources-weather-location-row-shell">
+                        <div
+                          key={location.id}
+                          className="resources-weather-location-row-shell"
+                        >
                           <button
                             type="button"
                             className={
-                              areWeatherLocationsEqual(selectedLocation, location)
+                              areWeatherLocationsEqual(
+                                selectedLocation,
+                                location,
+                              )
                                 ? "resources-weather-location-row is-active"
                                 : "resources-weather-location-row"
                             }
-                            onClick={() => handleSelectLocationFromMenu(location, "saved")}
+                            onClick={() =>
+                              handleSelectLocationFromMenu(location, "saved")
+                            }
                           >
                             <span className="resources-weather-location-row-icon">
                               <FaBookmark size={16} />

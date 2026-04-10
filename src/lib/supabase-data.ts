@@ -12,9 +12,18 @@
  * via any medium, is strictly prohibited without explicit written permission
  * from CatchLogs LLC.
  */
-import { getFieldGuideSpeciesPhotoUrlMap, UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE } from "@/lib/field-guide";
+import {
+  getFieldGuideSpeciesPhotoUrlMap,
+  UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE,
+} from "@/lib/field-guide";
+import { reverseGeocodeWeatherLocation } from "@/lib/weather-locations";
 import { supabase } from "@/lib/supabase";
-import { deleteCatchPhoto, getCatchPhotoStoragePath, resolveCatchPhotoUrl } from "@/lib/storage";
+import {
+  deleteCatchPhoto,
+  getCatchPhotoStoragePath,
+  resolveCatchPhotoUrl,
+} from "@/lib/storage";
+import { normalizeFishingGearForStorage } from "@/lib/fishing-gear";
 import type { JournalEntry, Pin, PinWithEntries } from "@/types/domain";
 
 type PinRow = {
@@ -72,6 +81,29 @@ function mapPin(row: PinRow): Pin {
   };
 }
 
+export function formatPinNameFromCoordinates(
+  latitude: number,
+  longitude: number,
+): string {
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+}
+
+export async function resolvePinNameFromCoordinates(
+  latitude: number,
+  longitude: number,
+): Promise<string> {
+  const fallbackName = formatPinNameFromCoordinates(latitude, longitude);
+
+  const nearestNamedLocation = await Promise.race([
+    reverseGeocodeWeatherLocation(latitude, longitude),
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), 1500);
+    }),
+  ]);
+
+  return nearestNamedLocation?.trim() || fallbackName;
+}
+
 async function mapEntry(row: EntryRow): Promise<JournalEntry> {
   return {
     id: row.id,
@@ -110,7 +142,9 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
   };
 }
 
-async function attachSpeciesPhotoFallbacks(entries: JournalEntry[]): Promise<JournalEntry[]> {
+async function attachSpeciesPhotoFallbacks(
+  entries: JournalEntry[],
+): Promise<JournalEntry[]> {
   const specCodesNeedingFallback = Array.from(
     new Set(
       entries
@@ -127,14 +161,17 @@ async function attachSpeciesPhotoFallbacks(entries: JournalEntry[]): Promise<Jou
     return entries;
   }
 
-  const speciesPhotoUrlMap = await getFieldGuideSpeciesPhotoUrlMap(specCodesNeedingFallback);
+  const speciesPhotoUrlMap = await getFieldGuideSpeciesPhotoUrlMap(
+    specCodesNeedingFallback,
+  );
 
   return entries.map((entry) => ({
     ...entry,
     speciesPhotoUrl:
-      entry.photoUrl || entry.fishSpeciesSpecCode === UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE
+      entry.photoUrl ||
+      entry.fishSpeciesSpecCode === UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE
         ? null
-        : speciesPhotoUrlMap.get(entry.fishSpeciesSpecCode) ?? null,
+        : (speciesPhotoUrlMap.get(entry.fishSpeciesSpecCode) ?? null),
   }));
 }
 
@@ -232,8 +269,12 @@ export async function getPinById(pinId: number): Promise<Pin | null> {
   return mapPin(data as PinRow);
 }
 
-export async function getPinsByIds(pinIds: number[]): Promise<Map<number, Pin>> {
-  const uniquePinIds = Array.from(new Set(pinIds)).filter((pinId) => Number.isFinite(pinId));
+export async function getPinsByIds(
+  pinIds: number[],
+): Promise<Map<number, Pin>> {
+  const uniquePinIds = Array.from(new Set(pinIds)).filter((pinId) =>
+    Number.isFinite(pinId),
+  );
   if (uniquePinIds.length === 0) {
     return new Map<number, Pin>();
   }
@@ -247,14 +288,19 @@ export async function getPinsByIds(pinIds: number[]): Promise<Map<number, Pin>> 
     throw error;
   }
 
-  return new Map((data as PinRow[]).map((row) => {
-    const pin = mapPin(row);
-    return [pin.id, pin] as const;
-  }));
+  return new Map(
+    (data as PinRow[]).map((row) => {
+      const pin = mapPin(row);
+      return [pin.id, pin] as const;
+    }),
+  );
 }
 
 export async function deletePin(pinId: number): Promise<void> {
-  const { error } = await supabase.from("fishing_pins").delete().eq("id", pinId);
+  const { error } = await supabase
+    .from("fishing_pins")
+    .delete()
+    .eq("id", pinId);
   if (error) {
     throw error;
   }
@@ -364,6 +410,9 @@ export async function createEntry(input: {
   weatherCondition?: string | null;
   weatherDescription?: string | null;
 }): Promise<JournalEntry> {
+  const normalizedLure = normalizeFishingGearForStorage(input.lure);
+  const normalizedBait = normalizeFishingGearForStorage(input.bait);
+
   const payload = {
     pin_id: input.pinId,
     user_id: input.userId,
@@ -371,8 +420,8 @@ export async function createEntry(input: {
     fish_species_spec_code: input.fishSpeciesSpecCode,
     length: input.length ?? null,
     weight: input.weight ?? null,
-    lure: input.lure ?? null,
-    bait: input.bait ?? null,
+    lure: normalizedLure,
+    bait: normalizedBait,
     tackle_drag: input.drag ?? null,
     tackle_rod_length: input.rodLength ?? null,
     tackle_rod_power: input.rodPower ?? null,
@@ -410,10 +459,16 @@ export async function createEntry(input: {
     throw new Error(detailParts || "Failed to create journal entry");
   }
 
-  return (await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)]))[0] ?? null;
+  return (
+    (
+      await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)])
+    )[0] ?? null
+  );
 }
 
-export async function getEntryById(entryId: number): Promise<JournalEntry | null> {
+export async function getEntryById(
+  entryId: number,
+): Promise<JournalEntry | null> {
   const { data, error } = await supabase
     .from("journal_entries")
     .select("*")
@@ -426,7 +481,9 @@ export async function getEntryById(entryId: number): Promise<JournalEntry | null
   if (!data) {
     return null;
   }
-  return (await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)]))[0];
+  return (
+    await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)])
+  )[0];
 }
 
 export async function updateEntry(input: {
@@ -451,13 +508,16 @@ export async function updateEntry(input: {
   photoUrl?: string | null;
   dateTime: string;
 }): Promise<JournalEntry> {
+  const normalizedLure = normalizeFishingGearForStorage(input.lure);
+  const normalizedBait = normalizeFishingGearForStorage(input.bait);
+
   const payload = {
     fish_type: input.fishType,
     fish_species_spec_code: input.fishSpeciesSpecCode,
     length: input.length ?? null,
     weight: input.weight ?? null,
-    lure: input.lure ?? null,
-    bait: input.bait ?? null,
+    lure: normalizedLure,
+    bait: normalizedBait,
     tackle_drag: input.drag ?? null,
     tackle_rod_length: input.rodLength ?? null,
     tackle_rod_power: input.rodPower ?? null,
@@ -483,7 +543,9 @@ export async function updateEntry(input: {
   if (error) {
     throw error;
   }
-  return (await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)]))[0];
+  return (
+    await attachSpeciesPhotoFallbacks([await mapEntry(data as EntryRow)])
+  )[0];
 }
 
 export async function updateEntryWeatherSnapshot(input: {
@@ -529,7 +591,10 @@ export async function deleteEntryWithPhoto(entryId: number): Promise<void> {
     throw fetchError;
   }
 
-  const typedEntryRow = entryRow as { photo_url?: string | null; pin_id?: number | null } | null;
+  const typedEntryRow = entryRow as {
+    photo_url?: string | null;
+    pin_id?: number | null;
+  } | null;
   const photoUrl = typedEntryRow?.photo_url ?? null;
   const pinId = typedEntryRow?.pin_id ?? null;
   if (photoUrl) {
@@ -572,7 +637,7 @@ export async function moveEntryToNewCoordinates(input: {
     userId: input.userId,
     latitude: input.latitude,
     longitude: input.longitude,
-    name: `Location ${new Date().toLocaleDateString()}`,
+    name: await resolvePinNameFromCoordinates(input.latitude, input.longitude),
   });
 
   const { data, error } = await supabase
@@ -639,7 +704,8 @@ export async function replaceEntryPhoto(input: {
     throw fetchError;
   }
 
-  const currentPhoto = (currentRow as { photo_url?: string | null } | null)?.photo_url ?? null;
+  const currentPhoto =
+    (currentRow as { photo_url?: string | null } | null)?.photo_url ?? null;
   const currentPath = getCatchPhotoStoragePath(currentPhoto);
   const nextPath = getCatchPhotoStoragePath(input.nextPhotoUrl);
   const shouldDeleteCurrent = currentPath && currentPath !== nextPath;
@@ -734,9 +800,17 @@ export async function getStatsOverview(): Promise<StatsOverviewData> {
   }
 
   const payload = (data ?? {}) as Record<string, unknown>;
-  const personalBestRaw = (payload.personalBest ?? null) as Record<string, unknown> | null;
-  const bestLocationRaw = (payload.bestLocation ?? null) as Record<string, unknown> | null;
-  const speciesRaw = Array.isArray(payload.speciesBreakdown) ? payload.speciesBreakdown : [];
+  const personalBestRaw = (payload.personalBest ?? null) as Record<
+    string,
+    unknown
+  > | null;
+  const bestLocationRaw = (payload.bestLocation ?? null) as Record<
+    string,
+    unknown
+  > | null;
+  const speciesRaw = Array.isArray(payload.speciesBreakdown)
+    ? payload.speciesBreakdown
+    : [];
   const lureRaw = Array.isArray(payload.topLures) ? payload.topLures : [];
   const baitRaw = Array.isArray(payload.topBaits) ? payload.topBaits : [];
 
@@ -744,17 +818,25 @@ export async function getStatsOverview(): Promise<StatsOverviewData> {
     totalCaught: toSafeNumber(payload.totalCaught),
     personalBest: personalBestRaw
       ? {
-          species: typeof personalBestRaw.species === "string" ? personalBestRaw.species : null,
+          species:
+            typeof personalBestRaw.species === "string"
+              ? personalBestRaw.species
+              : null,
           weight: toNumberOrNull(personalBestRaw.weight),
           length: toNumberOrNull(personalBestRaw.length),
           dateTime:
-            typeof personalBestRaw.dateTime === "string" ? personalBestRaw.dateTime : null,
+            typeof personalBestRaw.dateTime === "string"
+              ? personalBestRaw.dateTime
+              : null,
         }
       : null,
     bestLocation: bestLocationRaw
       ? {
           id: toNumberOrNull(bestLocationRaw.id),
-          name: typeof bestLocationRaw.name === "string" ? bestLocationRaw.name : null,
+          name:
+            typeof bestLocationRaw.name === "string"
+              ? bestLocationRaw.name
+              : null,
           latitude: toNumberOrNull(bestLocationRaw.latitude),
           longitude: toNumberOrNull(bestLocationRaw.longitude),
           catches: toSafeNumber(bestLocationRaw.catches),
@@ -784,19 +866,28 @@ export async function getStatsOverview(): Promise<StatsOverviewData> {
   };
 }
 
-export async function getStatsSpeciesDetail(species: string): Promise<StatsSpeciesDetailData> {
-  const { data, error } = await supabase.rpc("get_species_stats", { p_species: species });
+export async function getStatsSpeciesDetail(
+  species: string,
+): Promise<StatsSpeciesDetailData> {
+  const { data, error } = await supabase.rpc("get_species_stats", {
+    p_species: species,
+  });
 
   if (error) {
     throw error;
   }
 
   const payload = (data ?? {}) as Record<string, unknown>;
-  const conditionsRaw = (payload.conditions ?? null) as Record<string, unknown> | null;
+  const conditionsRaw = (payload.conditions ?? null) as Record<
+    string,
+    unknown
+  > | null;
   const lureRaw = Array.isArray(payload.topLures) ? payload.topLures : [];
   const baitRaw = Array.isArray(payload.topBaits) ? payload.topBaits : [];
   const monthlyRaw = Array.isArray(payload.monthly) ? payload.monthly : [];
-  const catchTimesRaw = Array.isArray(payload.catchTimes) ? payload.catchTimes : [];
+  const catchTimesRaw = Array.isArray(payload.catchTimes)
+    ? payload.catchTimes
+    : [];
 
   return {
     species: typeof payload.species === "string" ? payload.species : species,

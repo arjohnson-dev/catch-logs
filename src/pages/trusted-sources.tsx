@@ -1,4 +1,3 @@
-import { Link } from "wouter";
 import { FaArrowLeft } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 
@@ -119,11 +118,14 @@ export default function TrustedSourcesPage() {
     <div className="page-scroll">
       <div className="page-content resources-page-content">
         <div className="page-header">
-          <Link to="/resources">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="legal-back-button"
+            onClick={() => window.history.back()}
+          >
+            <FaArrowLeft className="w-4 h-4" />
+          </Button>
           <h1 className="page-title">Trusted Sources</h1>
         </div>
 

@@ -1,4 +1,3 @@
-import { Link } from "wouter";
 import { FaArrowLeft, FaScrewdriverWrench } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,11 +13,14 @@ export default function ResourcesPlaceholder({
     <div className="page-scroll">
       <div className="page-content resources-page-content">
         <div className="page-header">
-          <Link to="/resources">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="legal-back-button"
+            onClick={() => window.history.back()}
+          >
+            <FaArrowLeft className="w-4 h-4" />
+          </Button>
           <h1 className="page-title">{title}</h1>
         </div>
 
@@ -42,7 +44,8 @@ export default function ResourcesPlaceholder({
               <div>
                 <h2 className="resources-empty-title">Coming soon</h2>
                 <p className="resources-empty-copy">
-                  This resource now has a dedicated place in the app and will grow from the Resources hub.
+                  This resource now has a dedicated place in the app and will
+                  grow from the Resources hub.
                 </p>
               </div>
             </CardContent>
