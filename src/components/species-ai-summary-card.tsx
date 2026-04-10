@@ -1,11 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnitPreference } from "@/hooks/use-unit-preference";
 import { appQueryKeys } from "@/lib/query-keys";
-import { supabase } from "@/lib/supabase";
 import { formatMeasurementText } from "@/lib/unit-preferences";
+import {
+  formatWeatherLocationSubtitle,
+  loadActiveWeatherLocation,
+  type WeatherLocation,
+} from "@/lib/weather-locations";
+import type { WeatherForecast, WeatherSnapshot } from "@/lib/weather";
 import type {
   AiSummarySource,
   GenerateSpeciesSummaryResponse,
@@ -20,9 +25,14 @@ type SpeciesAiSummaryData = {
   summary: string;
   sources: AiSummarySource[];
   cached?: boolean;
+  model?: string;
 };
 
 const SUMMARY_UNAVAILABLE_MESSAGE = "Summary unavailable right now.";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const speciesSummaryUrl = supabaseUrl
+  ? `${supabaseUrl}/functions/v1/generate-species-summary`
+  : null;
 function isAiSummarySource(value: unknown): value is AiSummarySource {
   if (!value || typeof value !== "object") {
     return false;
@@ -63,6 +73,7 @@ function parseGenerateSpeciesSummaryResponse(payload: unknown): SpeciesAiSummary
     summary,
     sources,
     cached: response.cached,
+    model: typeof response.model === "string" ? response.model.trim() || undefined : undefined,
   };
 }
 
@@ -78,28 +89,73 @@ function getErrorMessage(error: unknown) {
   return SUMMARY_UNAVAILABLE_MESSAGE;
 }
 
-async function getSpeciesAiSummary(slug: string, unitSystem: "metric" | "imperial") {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const { data, error } = await supabase.functions.invoke("generate-species-summary", {
-    body: {
-      slug,
-      unitSystem,
-    },
-    headers: session?.access_token
-      ? {
-          Authorization: `Bearer ${session.access_token}`,
-        }
-      : undefined,
-  });
-
-  if (error) {
-    throw error;
+async function getSpeciesAiSummary(
+  slug: string,
+  unitSystem: "metric" | "imperial",
+  activeWeatherLocation: WeatherLocation | null,
+  cachedWeather: {
+    current?: WeatherSnapshot | null;
+    forecast?: WeatherForecast | null;
+  } | null,
+) {
+  if (!speciesSummaryUrl) {
+    throw new Error("Missing VITE_SUPABASE_URL");
   }
 
-  return parseGenerateSpeciesSummaryResponse(data);
+  const locationLabel = activeWeatherLocation
+    ? [activeWeatherLocation.name, formatWeatherLocationSubtitle(activeWeatherLocation)]
+        .filter(Boolean)
+        .join(", ")
+    : null;
+
+  const response = await fetch(speciesSummaryUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=UTF-8",
+    },
+    body: JSON.stringify({
+      slug,
+      unitSystem,
+      location: activeWeatherLocation
+        ? {
+            latitude: activeWeatherLocation.latitude,
+            longitude: activeWeatherLocation.longitude,
+            label: locationLabel ?? activeWeatherLocation.name,
+            timezone: activeWeatherLocation.timezone ?? null,
+          }
+        : null,
+      weatherContext: cachedWeather
+        ? {
+            current: cachedWeather.current ?? null,
+            forecast: cachedWeather.forecast
+              ? {
+                  hourly: cachedWeather.forecast.hourly.slice(0, 6),
+                  daily: cachedWeather.forecast.daily.slice(0, 2),
+                }
+              : null,
+          }
+        : null,
+    }),
+  });
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    if (!response.ok) {
+      throw new Error(SUMMARY_UNAVAILABLE_MESSAGE);
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      payload && typeof payload === "object" && "error" in (payload as Record<string, unknown>)
+        ? String((payload as Record<string, unknown>).error ?? SUMMARY_UNAVAILABLE_MESSAGE)
+        : SUMMARY_UNAVAILABLE_MESSAGE,
+    );
+  }
+
+  return parseGenerateSpeciesSummaryResponse(payload);
 }
 
 function SummarySources({ sources }: { sources: AiSummarySource[] }) {
@@ -161,16 +217,57 @@ export function SpeciesAiSummaryCard({
   slug,
   fallbackSummary = null,
 }: SpeciesAiSummaryCardProps) {
-  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const { isAuthenticated, user } = useAuth();
   const { unitSystem } = useUnitPreference();
   const summaryUnitSystem: "metric" | "imperial" =
     unitSystem === "imperial" ? "imperial" : "metric";
   const normalizedSlug = slug?.trim() ?? "";
   const hasSlug = normalizedSlug.length > 0;
+  const activeWeatherLocation: WeatherLocation | null = loadActiveWeatherLocation(user?.id);
+  const activeLocationLabel = activeWeatherLocation
+    ? [activeWeatherLocation.name, formatWeatherLocationSubtitle(activeWeatherLocation)]
+        .filter(Boolean)
+        .join(", ")
+    : null;
+  const cachedCurrentWeather = activeWeatherLocation
+    ? queryClient.getQueryData<WeatherSnapshot | null>([
+        "weather",
+        "current-conditions",
+        activeWeatherLocation.latitude,
+        activeWeatherLocation.longitude,
+        summaryUnitSystem,
+      ])
+    : null;
+  const cachedForecast = activeWeatherLocation
+    ? queryClient.getQueryData<WeatherForecast | null>([
+        "weather",
+        "forecast",
+        activeWeatherLocation.latitude,
+        activeWeatherLocation.longitude,
+        summaryUnitSystem,
+      ])
+    : null;
+  const cachedWeather =
+    cachedCurrentWeather || cachedForecast
+      ? {
+          current: cachedCurrentWeather,
+          forecast: cachedForecast,
+        }
+      : null;
 
   const summaryQuery = useQuery({
-    queryKey: appQueryKeys.fieldGuideSpeciesAiSummary(normalizedSlug, summaryUnitSystem),
-    queryFn: () => getSpeciesAiSummary(normalizedSlug, summaryUnitSystem),
+    queryKey: appQueryKeys.fieldGuideSpeciesAiSummary(
+      normalizedSlug,
+      `${summaryUnitSystem}:${activeWeatherLocation?.id ?? "no-location"}:${cachedCurrentWeather?.observedTime ?? "no-current"}:${cachedForecast?.daily?.[0]?.date ?? "no-forecast"}`,
+    ),
+    queryFn: () =>
+      getSpeciesAiSummary(
+        normalizedSlug,
+        summaryUnitSystem,
+        activeWeatherLocation,
+        cachedWeather,
+      ),
     enabled: hasSlug && isAuthenticated,
     staleTime: 1000 * 60 * 30,
     retry: false,
@@ -182,10 +279,12 @@ export function SpeciesAiSummaryCard({
 
   let content = fallbackSummary ?? SUMMARY_UNAVAILABLE_MESSAGE;
   let sources: AiSummarySource[] = [];
+  let modelLabel: string | null = null;
 
   if (summaryQuery.data?.summary) {
     content = summaryQuery.data.summary;
     sources = summaryQuery.data.sources;
+    modelLabel = summaryQuery.data.model ?? null;
   } else if (summaryQuery.isError) {
     content = getErrorMessage(summaryQuery.error);
   } else if (!hasSlug && !fallbackSummary) {
@@ -206,7 +305,8 @@ export function SpeciesAiSummaryCard({
             AI Summary
           </CardTitle>
           <p className="resources-ai-summary-helper">
-            AI-generated from CatchLogs data and trusted references. AI can make mistakes, and summaries may sometimes take a little time to load.
+            AI may make mistakes, double check your results.
+            {modelLabel ? ` Model: ${modelLabel}.` : ""}
           </p>
         </CardHeader>
         <CardContent className="pt-0">

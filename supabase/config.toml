@@ -1,6 +1,10 @@
 [functions.generate-weather-summary]
 verify_jwt = false
 
+[functions.generate-species-summary]
+enabled = true
+verify_jwt = false
+
 [functions.lunar-phase]
 enabled = true
 verify_jwt = false
