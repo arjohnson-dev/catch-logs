@@ -14,7 +14,6 @@
  */
 import { type ReactNode, useRef } from "react";
 import { FaArrowLeft, FaDownload } from "react-icons/fa6";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 interface MarkupPageProps {
@@ -48,11 +47,14 @@ export default function MarkupPage({
     <div className="page-scroll">
       <div className="page-content page-content-prose">
         <div className="page-header">
-          <Link to="/auth">
-            <Button variant="ghost" size="sm" className="legal-back-button">
-              <FaArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="legal-back-button"
+            onClick={() => window.history.back()}
+          >
+            <FaArrowLeft className="w-4 h-4" />
+          </Button>
           <h1 className="page-title">{title}</h1>
         </div>
 
