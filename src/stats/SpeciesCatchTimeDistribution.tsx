@@ -22,7 +22,7 @@ export default function SpeciesCatchTimeDistribution({ catchTimes, color }: Prop
   return (
     <Card className="stats-card">
       <CardHeader>
-        <CardTitle className="stats-card-title">Catch Distribution By Time Of Day</CardTitle>
+        <CardTitle as="p" className="stats-card-title">Catch Distribution By Time Of Day</CardTitle>
       </CardHeader>
       <CardContent>
         {hasCatchTimes ? (

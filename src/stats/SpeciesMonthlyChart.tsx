@@ -11,7 +11,7 @@ export default function SpeciesMonthlyChart({ monthly, color }: Props) {
   return (
     <Card className="stats-card">
       <CardHeader>
-        <CardTitle className="stats-card-title">Catches By Month</CardTitle>
+        <CardTitle as="p" className="stats-card-title">Catches By Month</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={220}>

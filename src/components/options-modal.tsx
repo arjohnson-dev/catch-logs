@@ -201,9 +201,14 @@ export default function OptionsModal({
 
   return (
     <div className="overlay-backdrop overlay-backdrop-dashboard overlay-backdrop-center">
-      <div className="dialog-panel options-modal-panel">
+      <div
+        className="dialog-panel options-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="options-modal-title"
+      >
         <div className="dialog-header dialog-header-corner">
-          <h2 className="dialog-title">Options</h2>
+          <h2 id="options-modal-title" className="dialog-title">Options</h2>
           <Button
             variant="ghost"
             size="sm"

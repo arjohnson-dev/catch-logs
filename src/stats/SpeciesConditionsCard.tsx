@@ -42,7 +42,7 @@ export default function SpeciesConditionsCard({ conditions }: Props) {
   return (
     <Card className="stats-card">
       <CardHeader>
-        <CardTitle className="stats-card-title">Typical Conditions</CardTitle>
+        <CardTitle as="p" className="stats-card-title">Typical Conditions</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="stats-conditions-grid">

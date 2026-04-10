@@ -25,7 +25,7 @@ export default function TopNamedCountChart({
   return (
     <Card className="stats-card">
       <CardHeader>
-        <CardTitle className="stats-card-title">{title}</CardTitle>
+        <CardTitle as="p" className="stats-card-title">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {data.length > 0 ? (
