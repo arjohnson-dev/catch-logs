@@ -15,12 +15,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { FaEnvelope, FaLock, FaUser } from "react-icons/fa6";
+import { FaArrowUpRightFromSquare, FaEnvelope, FaLock, FaUser } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { registerUserSchema, type RegisterUser } from "@/lib/auth-schemas";
+import { STRIPE_REGISTRATION_URL } from "@/lib/external-links";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -291,6 +292,17 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           disabled={registerMutation.isPending}
         >
           {registerMutation.isPending ? "Creating Account..." : "Create Account"}
+        </Button>
+
+        <Button
+          type="button"
+          className="btn-full btn-primary btn-primary-glow"
+          asChild
+        >
+          <a href={STRIPE_REGISTRATION_URL} target="_blank" rel="noreferrer">
+            <FaArrowUpRightFromSquare size={16} />
+            Support CatchLogs
+          </a>
         </Button>
         
         <div className="text-xs text-[#999999] text-center">

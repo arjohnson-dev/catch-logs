@@ -7,6 +7,20 @@
   background: var(--color-primary-hover);
 }
 
+.btn-primary-glow.btn-primary-glow {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 24px rgba(47, 128, 237, 0.35),
+    0 10px 24px rgba(47, 128, 237, 0.22);
+}
+
+.btn-primary-glow.btn-primary-glow:hover {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 28px rgba(47, 128, 237, 0.42),
+    0 12px 28px rgba(47, 128, 237, 0.28);
+}
+
 .btn-ghost-muted.btn-ghost-muted {
   color: var(--color-text-muted);
 }
@@ -27,8 +41,15 @@
   background: var(--color-surface-strong);
 }
 
+.btn-outline-muted-accent.btn-outline-muted-accent {
+  border-color: var(--color-primary-border-soft);
+  color: var(--color-text-inverse);
+  background: var(--color-primary-soft);
+}
+
 .btn-outline-muted-accent.btn-outline-muted-accent:hover {
   border-color: var(--color-primary);
+  background: var(--color-primary-soft-strong);
 }
 
 .btn-outline-info.btn-outline-info {

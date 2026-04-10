@@ -25,8 +25,6 @@ import {
 import L from "leaflet";
 import {
   FaBookBookmark,
-  FaChevronDown,
-  FaChevronUp,
   FaCrosshairs,
   FaLayerGroup,
   FaLocationArrow,
@@ -35,6 +33,7 @@ import {
   FaPlus,
   FaXmark,
 } from "react-icons/fa6";
+import { GiFishingLure } from "react-icons/gi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Pin, type PinWithEntries } from "@/types/domain";
@@ -455,6 +454,9 @@ export default function MapInterface({
 
   const handleGearPanelVisibilityChange = (visible: boolean) => {
     setIsGearPanelVisible(visible);
+    if (visible) {
+      setShowLayerMenu(false);
+    }
     if (!user?.id) return;
     saveSessionGearVisibility(user.id, visible);
   };
@@ -471,6 +473,19 @@ export default function MapInterface({
     setShowMapLabels(visible);
     if (!user?.id) return;
     saveMapLabelsVisiblePreference(user.id, visible);
+  };
+
+  const handleLayerMenuToggle = () => {
+    setShowLayerMenu((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsGearPanelVisible(false);
+        if (user?.id) {
+          saveSessionGearVisibility(user.id, false);
+        }
+      }
+      return next;
+    });
   };
 
   if (isLoading) {
@@ -572,6 +587,69 @@ export default function MapInterface({
       {/* Map Controls - positioned for mobile viewport */}
       <div className="map-controls">
         <div className="map-control-stack">
+          {isGearPanelVisible && (
+            <div className="map-tackle-panel">
+              <div className="map-tackle-header">
+                <div>
+                  <p className="map-tackle-title">Tackle</p>
+                  <p className="map-tackle-subtitle">
+                    Set quick defaults for your next entry
+                  </p>
+                </div>
+              </div>
+
+              <div id="map-gear-panel-body">
+                <label className="map-tackle-label" htmlFor="session-lure-input">
+                  Lure
+                </label>
+                <Input
+                  id="session-lure-input"
+                  list="session-lure-suggestions"
+                  placeholder="What lure are you using?"
+                  value={sessionLure}
+                  onChange={(e) => onSessionLureChange(e.target.value)}
+                  className="map-tackle-input"
+                />
+                <datalist id="session-lure-suggestions">
+                  {lureSuggestions.map((suggestion) => (
+                    <option key={suggestion} value={suggestion} />
+                  ))}
+                </datalist>
+                <label
+                  className="map-tackle-label map-tackle-label-secondary"
+                  htmlFor="session-bait-input"
+                >
+                  Bait
+                </label>
+                <Input
+                  id="session-bait-input"
+                  list="session-bait-suggestions"
+                  placeholder="Optional bait"
+                  value={sessionBait}
+                  onChange={(e) => onSessionBaitChange(e.target.value)}
+                  className="map-tackle-input"
+                />
+                <datalist id="session-bait-suggestions">
+                  {baitSuggestions.map((suggestion) => (
+                    <option key={suggestion} value={suggestion} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+          )}
+          <Button
+            variant="secondary"
+            size="icon"
+            className={`touch-target btn-map-control btn-map-control-tackle ${isGearPanelVisible ? "btn-map-control-active" : ""}`}
+            onClick={() => handleGearPanelVisibilityChange(!isGearPanelVisible)}
+            title="Tackle"
+            aria-label="Tackle"
+            aria-expanded={isGearPanelVisible}
+          >
+            <GiFishingLure size={18} />
+          </Button>
+        </div>
+        <div className="map-control-stack">
           {showLayerMenu && (
             <div className="map-layer-menu">
               <p className="map-layer-menu-title">Map Layers</p>
@@ -612,8 +690,8 @@ export default function MapInterface({
           <Button
             variant="secondary"
             size="icon"
-            className="touch-target btn-map-control"
-            onClick={() => setShowLayerMenu((prev) => !prev)}
+            className={`touch-target btn-map-control ${showLayerMenu ? "btn-map-control-active" : ""}`}
+            onClick={handleLayerMenuToggle}
             title="Map layers"
             aria-label="Map layers"
             aria-expanded={showLayerMenu}
@@ -646,75 +724,6 @@ export default function MapInterface({
         >
           <FaLocationArrow size={16} />
         </Button>
-      </div>
-
-      <div
-        className={`map-tackle-panel ${isGearPanelVisible ? "" : "map-tackle-panel-collapsed"}`}
-      >
-        <div className="map-tackle-header">
-          <div>
-            <p className="map-tackle-title">Tackle</p>
-            {isGearPanelVisible && (
-              <p className="map-tackle-subtitle">
-                Set quick defaults for your next entry
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            className="map-tackle-toggle"
-            onClick={() => handleGearPanelVisibilityChange(!isGearPanelVisible)}
-            aria-expanded={isGearPanelVisible}
-            aria-controls="map-gear-panel-body"
-            aria-label={isGearPanelVisible ? "Collapse tackle panel" : "Expand tackle panel"}
-          >
-            {isGearPanelVisible ? (
-              <FaChevronUp size={12} />
-            ) : (
-              <FaChevronDown size={12} />
-            )}
-          </button>
-        </div>
-
-        {isGearPanelVisible && (
-          <div id="map-gear-panel-body">
-            <label className="map-tackle-label" htmlFor="session-lure-input">
-              Lure
-            </label>
-            <Input
-              id="session-lure-input"
-              list="session-lure-suggestions"
-              placeholder="What lure are you using?"
-              value={sessionLure}
-              onChange={(e) => onSessionLureChange(e.target.value)}
-              className="map-tackle-input"
-            />
-            <datalist id="session-lure-suggestions">
-              {lureSuggestions.map((suggestion) => (
-                <option key={suggestion} value={suggestion} />
-              ))}
-            </datalist>
-            <label
-              className="map-tackle-label map-tackle-label-secondary"
-              htmlFor="session-bait-input"
-            >
-              Bait
-            </label>
-            <Input
-              id="session-bait-input"
-              list="session-bait-suggestions"
-              placeholder="Optional bait"
-              value={sessionBait}
-              onChange={(e) => onSessionBaitChange(e.target.value)}
-              className="map-tackle-input"
-            />
-            <datalist id="session-bait-suggestions">
-              {baitSuggestions.map((suggestion) => (
-                <option key={suggestion} value={suggestion} />
-              ))}
-            </datalist>
-          </div>
-        )}
       </div>
 
       {/* Add Pin Menu - positioned for mobile viewport */}

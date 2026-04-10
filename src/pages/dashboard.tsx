@@ -324,7 +324,13 @@ export default function Dashboard() {
       {/* Top Navigation */}
       <nav className="dashboard-nav">
         <div className="dashboard-nav-inner">
-          <div className="dashboard-brand">
+          <button
+            type="button"
+            className="dashboard-brand"
+            onClick={handleMapClick}
+            aria-label="Go to map"
+            title="Go to map"
+          >
             <div className="dashboard-brand-icon">
               <img src={catchLogsIcon} alt="CatchLogs" width={32} height={32} />
             </div>
@@ -332,7 +338,7 @@ export default function Dashboard() {
               <h1 className="dashboard-brand-title">CatchLogs</h1>
               {user && user.firstName && <p className="dashboard-brand-subtitle">Welcome, {user.firstName}</p>}
             </div>
-          </div>
+          </button>
           <div>
             {user && (
               <Button

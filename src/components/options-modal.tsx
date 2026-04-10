@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   FaArrowRightFromBracket,
+  FaArrowUpRightFromSquare,
   FaChevronDown,
   FaChevronUp,
   FaGear,
@@ -38,6 +39,7 @@ import {
   type ProfileGearDefaults,
 } from "@/lib/profile-gear";
 import { loadTackleDefaults, saveTackleDefaults } from "@/lib/session-gear";
+import { STRIPE_REGISTRATION_URL } from "@/lib/external-links";
 
 interface OptionsModalProps {
   user: User;
@@ -495,6 +497,15 @@ export default function OptionsModal({
           >
             <FaHeadset size={16} />
             Contact Support
+          </Button>
+          <Button
+            className="btn-primary btn-primary-glow btn-full options-modal-button"
+            asChild
+          >
+            <a href={STRIPE_REGISTRATION_URL} target="_blank" rel="noreferrer">
+              <FaArrowUpRightFromSquare size={16} />
+              Support CatchLogs
+            </a>
           </Button>
           <Button
             variant="outline"

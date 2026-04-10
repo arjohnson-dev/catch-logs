@@ -26,9 +26,24 @@
 }
 
 .dashboard-brand {
+  border: 0;
+  padding: 0;
+  background: transparent;
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-brand:hover {
+  opacity: 0.92;
+}
+
+.dashboard-brand:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
 }
 
 .dashboard-brand-icon {
