@@ -229,7 +229,7 @@ export default function FieldGuide() {
       return (
         <div className="page-scroll">
           <div className="page-content resources-page-content">
-            <PageHeader backTo="/resources" />
+            <PageHeader />
             <FieldGuideStatusCard
               icon={<FaFishFins size={20} />}
               title="Loading species profile"
@@ -244,7 +244,7 @@ export default function FieldGuide() {
       return (
         <div className="page-scroll">
           <div className="page-content resources-page-content">
-            <PageHeader backTo="/resources" />
+            <PageHeader />
             <FieldGuideStatusCard
               icon={<FaTriangleExclamation size={20} />}
               title="Species unavailable"
@@ -259,7 +259,7 @@ export default function FieldGuide() {
       return (
         <div className="page-scroll">
           <div className="page-content resources-page-content">
-            <PageHeader backTo="/resources" />
+            <PageHeader />
             <FieldGuideStatusCard
               icon={<FaBookmark size={20} />}
               title="Species not found"
@@ -306,7 +306,7 @@ export default function FieldGuide() {
   return (
     <div className="page-scroll">
       <div className="page-content resources-page-content">
-        <PageHeader backTo="/resources" />
+        <PageHeader />
 
         <div className="resources-stack">
           <Card className="resources-card surface-card">
