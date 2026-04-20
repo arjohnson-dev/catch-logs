@@ -81,7 +81,37 @@ type WeatherMetricConfig = {
   color: string;
   formatValue: (value: number | null) => string;
   yAxisUnit: string;
+  formatAxisValue?: (value: number) => string;
 };
+
+function getPressureYAxisDomain(
+  data: ForecastChartPoint[],
+  unitSystem: UnitSystem,
+): [number, number] | undefined {
+  const values = data
+    .map((point) => point.value)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+  if (values.length === 0) {
+    return undefined;
+  }
+
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const padding = unitSystem === "metric" ? 1 : 0.03;
+  const minimumSpan = unitSystem === "metric" ? 6 : 0.2;
+
+  let lower = minValue - padding;
+  let upper = maxValue + padding;
+
+  if (upper - lower < minimumSpan) {
+    const midpoint = (upper + lower) / 2;
+    lower = midpoint - minimumSpan / 2;
+    upper = midpoint + minimumSpan / 2;
+  }
+
+  return [lower, upper];
+}
 
 const LUNAR_PHASE_UNAVAILABLE_MESSAGE =
   "Lunar phase data is unavailable right now.";
@@ -150,6 +180,19 @@ function formatPressureValue(value: number | null, unitSystem: UnitSystem) {
     : `${converted.toFixed(2)} inHg`;
 }
 
+function formatPressureDisplayValue(
+  value: number | null,
+  unitSystem: UnitSystem,
+) {
+  if (value == null) {
+    return "--";
+  }
+
+  return unitSystem === "metric"
+    ? `${Math.round(value)} hPa`
+    : `${value.toFixed(2)} inHg`;
+}
+
 function formatWindSpeedValue(
   value: number | null,
   unitSystem: UnitSystem,
@@ -182,9 +225,12 @@ function getForecastMetrics(
     {
       key: "pressure",
       label: "Barometric Pressure",
-      color: "var(--chart-2)",
-      formatValue: (value) => formatPressureValue(value, unitSystem),
+      color: "#2db395",
+      // Forecast chart pressure values are already converted for display units.
+      formatValue: (value) => formatPressureDisplayValue(value, unitSystem),
       yAxisUnit: unitSystem === "metric" ? "hPa" : "inHg",
+      formatAxisValue: (value) =>
+        unitSystem === "metric" ? `${Math.round(value)}` : value.toFixed(1),
     },
     {
       key: "cloudCoverage",
@@ -282,7 +328,7 @@ function WeatherDirectionDot(props: {
   return (
     <g transform={`translate(${cx}, ${cy}) rotate(${payload.windDirection})`}>
       <path
-        d="M0 -10 L6 3 L0 0 L-6 3 Z"
+        d="M0 -6 L4 3 L0 1 L-4 3 Z"
         fill={stroke ?? "currentColor"}
         stroke="rgba(15, 15, 18, 0.85)"
         strokeWidth="1"
@@ -371,8 +417,8 @@ function WeatherMetricChart({
   showHighLow = false,
   showRangeMarkers = false,
   yAxisWidth = 40,
-  xAxisInterval = 0,
-  xAxisTicks,
+  yAxisTickFormatter,
+  yAxisDomain,
 }: {
   title: string;
   unit: string;
@@ -383,8 +429,8 @@ function WeatherMetricChart({
   showHighLow?: boolean;
   showRangeMarkers?: boolean;
   yAxisWidth?: number;
-  xAxisInterval?: number | "preserveStartEnd";
-  xAxisTicks?: string[];
+  yAxisTickFormatter?: (value: number) => string;
+  yAxisDomain?: [number, number];
 }) {
   const markerAnimationDurationMs = 700;
   const temperatureExtremes = useMemo(() => {
@@ -497,18 +543,17 @@ function WeatherMetricChart({
               data={data}
               margin={{
                 top: showRangeMarkers ? 22 : 8,
-                right: showRangeMarkers ? 14 : 8,
+                right: showRangeMarkers ? 20 : 16,
                 left: showRangeMarkers ? 0 : -12,
                 bottom: 0,
               }}
             >
               <CartesianGrid
                 stroke="rgba(255, 255, 255, 0.06)"
-                vertical={false}
+                vertical
               />
               <XAxis
                 dataKey="xValue"
-                ticks={xAxisTicks}
                 tickFormatter={(value) => {
                   const match = data.find((point) => point.xValue === value);
                   return match?.xLabel ?? "";
@@ -516,15 +561,19 @@ function WeatherMetricChart({
                 tick={{ fill: "#8a8f98", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
-                interval={xAxisInterval}
-                minTickGap={16}
+                interval={0}
+                minTickGap={0}
+                padding={{ left: 6, right: 16 }}
               />
               <YAxis
                 tick={{ fill: "#8a8f98", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 width={yAxisWidth}
-                tickFormatter={(value) => `${Math.round(value)}`}
+                domain={yAxisDomain}
+                tickFormatter={(value) =>
+                  yAxisTickFormatter ? yAxisTickFormatter(value) : `${Math.round(value)}`
+                }
               />
               <Tooltip
                 cursor={{ stroke: "rgba(255, 255, 255, 0.08)", strokeWidth: 1 }}
@@ -963,42 +1012,6 @@ function LunarPhaseIcon({ phaseLabel }: { phaseLabel?: string | null }) {
   );
 }
 
-function buildXAxisTicks(
-  data: ForecastChartPoint[],
-  forecastRange: ForecastRange,
-  isCompact: boolean,
-) {
-  if (data.length <= 2) {
-    return undefined;
-  }
-
-  let step = 1;
-
-  if (forecastRange === "12h") {
-    step = isCompact ? 3 : 2;
-  } else if (forecastRange === "24h") {
-    step = isCompact ? 6 : 4;
-  } else if (forecastRange === "10d") {
-    step = isCompact ? 3 : 1;
-  }
-
-  const ticks = data
-    .filter((_, index) => index % step === 0)
-    .map((point) => point.xValue);
-  const firstTick = data[0]?.xValue;
-  const lastTick = data.at(-1)?.xValue;
-
-  if (firstTick && !ticks.includes(firstTick)) {
-    ticks.unshift(firstTick);
-  }
-
-  if (lastTick && !ticks.includes(lastTick)) {
-    ticks.push(lastTick);
-  }
-
-  return Array.from(new Set(ticks));
-}
-
 export default function WeatherPage() {
   const { user } = useAuth();
   const { unitSystem, windSpeedDisplay } = useUnitPreference();
@@ -1025,26 +1038,10 @@ export default function WeatherPage() {
   const [isRequestingLocation, setIsRequestingLocation] = useState(false);
   const [screen, setScreen] = useState<WeatherScreen>("overview");
   const [forecastRange, setForecastRange] = useState<ForecastRange>("12h");
-  const [isCompactChartViewport, setIsCompactChartViewport] = useState(
-    () => typeof window !== "undefined" && window.innerWidth < 640,
-  );
   const manualSelectionRef = useRef(false);
   const selectedLocationRef = useRef<WeatherLocation | null>(
     storedLocationState.activeLocation,
   );
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsCompactChartViewport(window.innerWidth < 640);
-    };
-
-    handleResize();
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   useEffect(() => {
     const nextState = getStoredLocationState(userId);
@@ -1420,7 +1417,7 @@ export default function WeatherPage() {
       data: (() => {
         if (forecastRange === "10d") {
           return buildDailyChartData(
-            forecast.daily,
+            forecast.daily.slice(0, 11),
             metric.key,
             unitSystem,
             windSpeedDisplay,
@@ -1429,8 +1426,8 @@ export default function WeatherPage() {
 
         const hourlyPoints =
           forecastRange === "24h"
-            ? forecast.hourly
-            : forecast.hourly.slice(0, 12);
+            ? forecast.hourly.slice(0, 25)
+            : forecast.hourly.slice(0, 13);
         return buildHourlyChartData(
           hourlyPoints,
           metric.key,
@@ -1739,6 +1736,12 @@ export default function WeatherPage() {
                             color={metric.color}
                             data={metric.data}
                             formatValue={metric.formatValue}
+                            yAxisTickFormatter={metric.formatAxisValue}
+                            yAxisDomain={
+                              metric.key === "pressure"
+                                ? getPressureYAxisDomain(metric.data, unitSystem)
+                                : undefined
+                            }
                             showDirectionArrows={metric.key === "windSpeed"}
                             showHighLow={
                               metric.key === "temperature" &&
@@ -1755,12 +1758,6 @@ export default function WeatherPage() {
                                   : 46
                                 : 40
                             }
-                            xAxisInterval={0}
-                            xAxisTicks={buildXAxisTicks(
-                              metric.data,
-                              forecastRange,
-                              isCompactChartViewport,
-                            )}
                           />
                         ))}
                       </>

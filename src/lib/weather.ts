@@ -319,8 +319,12 @@ export async function getWeatherForecastForLocation(
   url.searchParams.set("temperature_unit", unitSystem === "metric" ? "celsius" : "fahrenheit");
   url.searchParams.set("wind_speed_unit", unitSystem === "metric" ? "kmh" : "mph");
   url.searchParams.set("timezone", "auto");
-  url.searchParams.set("forecast_days", "10");
-  url.searchParams.set("forecast_hours", "24");
+  // Inclusive ranges for weather charts:
+  // - 12h view uses 13 points (start hour through +12h)
+  // - 24h view uses 25 points (start hour through +24h)
+  // - 10d view uses 11 days (today through +10 days)
+  url.searchParams.set("forecast_days", "11");
+  url.searchParams.set("forecast_hours", "25");
 
   const weather = await fetchHourlyWeather(url);
   const hourlyTimes = weather?.hourly?.time;

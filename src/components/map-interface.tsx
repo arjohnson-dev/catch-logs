@@ -37,10 +37,17 @@ import { GiFishingLure } from "react-icons/gi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Pin, type PinWithEntries } from "@/types/domain";
+import {
+  getProfileGearDefaults,
+  saveProfileGearDefaults,
+  type ProfileGearDefaults,
+} from "@/lib/profile-gear";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import {
+  loadTackleDefaults,
   loadSessionGearVisibility,
+  saveTackleDefaults,
   saveSessionGearVisibility,
 } from "@/lib/session-gear";
 import {
@@ -116,6 +123,114 @@ function markInitialLocationCenteredForSession() {
   } catch {
     // Ignore storage errors and keep in-memory fallback behavior.
   }
+}
+
+const ROD_LENGTH_OPTIONS = [
+  "",
+  "5'6\"",
+  "6'0\"",
+  "6'6\"",
+  "7'0\"",
+  "7'3\"",
+  "7'6\"",
+  "8'0\"",
+] as const;
+const ROD_POWER_OPTIONS = [
+  "",
+  "Ultralight",
+  "Light",
+  "Medium-Light",
+  "Medium",
+  "Medium-Heavy",
+  "Heavy",
+  "Extra-Heavy",
+] as const;
+const ROD_ACTION_OPTIONS = [
+  "",
+  "Slow",
+  "Moderate",
+  "Moderate-Fast",
+  "Fast",
+  "Extra-Fast",
+] as const;
+const LINE_TYPE_OPTIONS = [
+  "",
+  "Monofilament",
+  "Fluorocarbon",
+  "Braid",
+  "Copolymer",
+] as const;
+const LINE_TEST_OPTIONS = [
+  "",
+  "2 lb",
+  "4 lb",
+  "6 lb",
+  "8 lb",
+  "10 lb",
+  "12 lb",
+  "15 lb",
+  "20 lb",
+  "30 lb",
+  "40 lb",
+  "50 lb",
+  "65 lb",
+] as const;
+const BOBBER_FLOAT_OPTIONS = [
+  "",
+  "None",
+  "Fixed Bobber",
+  "Slip Bobber",
+  "Clip Float",
+  "Pencil Float",
+  "Popping Cork",
+] as const;
+const LEADER_MATERIAL_OPTIONS = [
+  "",
+  "None",
+  "Fluorocarbon",
+  "Monofilament",
+  "Wire",
+  "Braid",
+] as const;
+const LEADER_LENGTH_OPTIONS = [
+  "",
+  "None",
+  "6 in",
+  "12 in",
+  "18 in",
+  "24 in",
+  "36 in",
+  "48 in",
+  "60 in",
+] as const;
+
+const EMPTY_PROFILE_GEAR_DEFAULTS: ProfileGearDefaults = {
+  drag: 0.5,
+  rodLength: "",
+  rodPower: "",
+  rodAction: "",
+  lineType: "",
+  lineTest: "",
+  bobberFloat: "",
+  weight: "",
+  leaderMaterial: "",
+  leaderLength: "",
+};
+
+function loadFallbackGearDefaults(userId: string): ProfileGearDefaults {
+  const local = loadTackleDefaults(userId);
+  return {
+    drag: 0.5,
+    rodLength: local.rodLength,
+    rodPower: local.rodPower,
+    rodAction: local.rodAction,
+    lineType: local.lineType,
+    lineTest: local.lineTest,
+    bobberFloat: local.bobberFloat,
+    weight: local.weight,
+    leaderMaterial: local.leaderMaterial,
+    leaderLength: local.leaderLength,
+  };
 }
 
 interface MapInterfaceProps {
@@ -308,6 +423,15 @@ export default function MapInterface({
   const [isGearPanelVisible, setIsGearPanelVisible] = useState(() =>
     user?.id ? loadSessionGearVisibility(user.id) : true,
   );
+  const [activeTackleTab, setActiveTackleTab] = useState<"tackle" | "gear">(
+    "tackle",
+  );
+  const [gearDefaults, setGearDefaults] = useState<ProfileGearDefaults>(
+    EMPTY_PROFILE_GEAR_DEFAULTS,
+  );
+  const [hasLoadedGearDefaults, setHasLoadedGearDefaults] = useState(false);
+  const [usesLocalGearFallback, setUsesLocalGearFallback] = useState(false);
+  const hasShownGearSaveErrorRef = useRef(false);
   const [mapBaseLayer, setMapBaseLayer] = useState(() =>
     user?.id ? loadMapBaseLayerPreference(user.id) : DEFAULT_MAP_BASE_LAYER,
   );
@@ -555,6 +679,82 @@ export default function MapInterface({
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!user?.id) {
+      setGearDefaults(EMPTY_PROFILE_GEAR_DEFAULTS);
+      setHasLoadedGearDefaults(false);
+      setUsesLocalGearFallback(false);
+      hasShownGearSaveErrorRef.current = false;
+      return;
+    }
+
+    let cancelled = false;
+    setHasLoadedGearDefaults(false);
+    setUsesLocalGearFallback(false);
+    hasShownGearSaveErrorRef.current = false;
+
+    void getProfileGearDefaults(user.id)
+      .then((data) => {
+        if (cancelled) return;
+        setGearDefaults(data);
+        setHasLoadedGearDefaults(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGearDefaults(loadFallbackGearDefaults(user.id));
+        setHasLoadedGearDefaults(true);
+        setUsesLocalGearFallback(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !hasLoadedGearDefaults) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const localDefaults = {
+        rodLength: gearDefaults.rodLength,
+        rodPower: gearDefaults.rodPower,
+        rodAction: gearDefaults.rodAction,
+        lineType: gearDefaults.lineType,
+        lineTest: gearDefaults.lineTest,
+        bobberFloat: gearDefaults.bobberFloat,
+        weight: gearDefaults.weight,
+        leaderMaterial: gearDefaults.leaderMaterial,
+        leaderLength: gearDefaults.leaderLength,
+      };
+
+      if (usesLocalGearFallback) {
+        saveTackleDefaults(user.id, localDefaults);
+        return;
+      }
+
+      void saveProfileGearDefaults(user.id, gearDefaults).catch(() => {
+        saveTackleDefaults(user.id, localDefaults);
+        setUsesLocalGearFallback(true);
+        if (hasShownGearSaveErrorRef.current) {
+          return;
+        }
+        hasShownGearSaveErrorRef.current = true;
+        toast({
+          title: "Using local gear defaults",
+          description:
+            "Backend gear sync is unavailable, so changes are saving on this device for now.",
+          variant: "destructive",
+        });
+      });
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [gearDefaults, hasLoadedGearDefaults, toast, user?.id, usesLocalGearFallback]);
+
   const handleGearPanelVisibilityChange = (visible: boolean) => {
     setIsGearPanelVisible(visible);
     if (visible) {
@@ -589,6 +789,16 @@ export default function MapInterface({
       }
       return next;
     });
+  };
+
+  const handleGearDefaultsChange = (
+    field: keyof ProfileGearDefaults,
+    value: string | number,
+  ) => {
+    setGearDefaults((current) => ({
+      ...current,
+      [field]: value,
+    }));
   };
 
   const selectedPin = selectedPinId
@@ -716,53 +926,261 @@ export default function MapInterface({
           {isGearPanelVisible && (
             <div className="map-tackle-panel">
               <div className="map-tackle-header">
-                <div>
-                  <p className="map-tackle-title">Tackle</p>
-                  <p className="map-tackle-subtitle">
-                    Set quick defaults for your next entry
-                  </p>
+                <div className="map-tackle-tablist" role="tablist" aria-label="Tackle panel tabs">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTackleTab === "tackle"}
+                    className={
+                      activeTackleTab === "tackle"
+                        ? "map-tackle-tab map-tackle-tab-active"
+                        : "map-tackle-tab"
+                    }
+                    onClick={() => setActiveTackleTab("tackle")}
+                  >
+                    Tackle
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTackleTab === "gear"}
+                    className={
+                      activeTackleTab === "gear"
+                        ? "map-tackle-tab map-tackle-tab-active"
+                        : "map-tackle-tab"
+                    }
+                    onClick={() => setActiveTackleTab("gear")}
+                  >
+                    Gear
+                  </button>
                 </div>
               </div>
 
               <div id="map-gear-panel-body">
-                <label
-                  className="map-tackle-label"
-                  htmlFor="session-lure-input"
-                >
-                  Lure
-                </label>
-                <Input
-                  id="session-lure-input"
-                  list="session-lure-suggestions"
-                  placeholder="What lure are you using?"
-                  value={sessionLure}
-                  onChange={(e) => onSessionLureChange(e.target.value)}
-                  className="map-tackle-input"
-                />
-                <datalist id="session-lure-suggestions">
-                  {lureSuggestions.map((suggestion) => (
-                    <option key={suggestion} value={suggestion} />
-                  ))}
-                </datalist>
-                <label
-                  className="map-tackle-label map-tackle-label-secondary"
-                  htmlFor="session-bait-input"
-                >
-                  Bait
-                </label>
-                <Input
-                  id="session-bait-input"
-                  list="session-bait-suggestions"
-                  placeholder="Optional bait"
-                  value={sessionBait}
-                  onChange={(e) => onSessionBaitChange(e.target.value)}
-                  className="map-tackle-input"
-                />
-                <datalist id="session-bait-suggestions">
-                  {baitSuggestions.map((suggestion) => (
-                    <option key={suggestion} value={suggestion} />
-                  ))}
-                </datalist>
+                {activeTackleTab === "tackle" ? (
+                  <div className="map-tackle-tab-body">
+                    <label className="map-tackle-label" htmlFor="session-lure-input">
+                      Lure
+                    </label>
+                    <Input
+                      id="session-lure-input"
+                      list="session-lure-suggestions"
+                      placeholder="What lure are you using?"
+                      value={sessionLure}
+                      onChange={(e) => onSessionLureChange(e.target.value)}
+                      className="map-tackle-input"
+                    />
+                    <datalist id="session-lure-suggestions">
+                      {lureSuggestions.map((suggestion) => (
+                        <option key={suggestion} value={suggestion} />
+                      ))}
+                    </datalist>
+                    <label
+                      className="map-tackle-label map-tackle-label-secondary"
+                      htmlFor="session-bait-input"
+                    >
+                      Bait
+                    </label>
+                    <Input
+                      id="session-bait-input"
+                      list="session-bait-suggestions"
+                      placeholder="Optional bait"
+                      value={sessionBait}
+                      onChange={(e) => onSessionBaitChange(e.target.value)}
+                      className="map-tackle-input"
+                    />
+                    <datalist id="session-bait-suggestions">
+                      {baitSuggestions.map((suggestion) => (
+                        <option key={suggestion} value={suggestion} />
+                      ))}
+                    </datalist>
+                  </div>
+                ) : (
+                  <div className="map-tackle-tab-body map-gear-fields">
+                    <div className="map-gear-grid map-gear-grid-split">
+                      <div className="map-gear-field">
+                        <label className="map-tackle-label" htmlFor="map-gear-rod-length">
+                          Rod Length
+                        </label>
+                        <select
+                          id="map-gear-rod-length"
+                          value={gearDefaults.rodLength}
+                          onChange={(e) =>
+                            handleGearDefaultsChange("rodLength", e.target.value)
+                          }
+                          className="map-tackle-input map-tackle-select"
+                        >
+                          <option value="">Select length</option>
+                          {ROD_LENGTH_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="map-gear-field">
+                        <label className="map-tackle-label" htmlFor="map-gear-rod-power">
+                          Rod Power
+                        </label>
+                        <select
+                          id="map-gear-rod-power"
+                          value={gearDefaults.rodPower}
+                          onChange={(e) =>
+                            handleGearDefaultsChange("rodPower", e.target.value)
+                          }
+                          className="map-tackle-input map-tackle-select"
+                        >
+                          <option value="">Select power</option>
+                          {ROD_POWER_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="map-gear-field">
+                      <label className="map-tackle-label" htmlFor="map-gear-rod-action">
+                        Rod Action
+                      </label>
+                      <select
+                        id="map-gear-rod-action"
+                        value={gearDefaults.rodAction}
+                        onChange={(e) =>
+                          handleGearDefaultsChange("rodAction", e.target.value)
+                        }
+                        className="map-tackle-input map-tackle-select"
+                      >
+                        <option value="">Select action</option>
+                        {ROD_ACTION_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="map-gear-grid map-gear-grid-split">
+                      <div className="map-gear-field">
+                        <label className="map-tackle-label" htmlFor="map-gear-line-type">
+                          Line Type
+                        </label>
+                        <select
+                          id="map-gear-line-type"
+                          value={gearDefaults.lineType}
+                          onChange={(e) =>
+                            handleGearDefaultsChange("lineType", e.target.value)
+                          }
+                          className="map-tackle-input map-tackle-select"
+                        >
+                          <option value="">Select line type</option>
+                          {LINE_TYPE_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="map-gear-field">
+                        <label className="map-tackle-label" htmlFor="map-gear-line-test">
+                          Test Weight
+                        </label>
+                        <select
+                          id="map-gear-line-test"
+                          value={gearDefaults.lineTest}
+                          onChange={(e) =>
+                            handleGearDefaultsChange("lineTest", e.target.value)
+                          }
+                          className="map-tackle-input map-tackle-select"
+                        >
+                          <option value="">Select test</option>
+                          {LINE_TEST_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="map-gear-field">
+                      <label className="map-tackle-label" htmlFor="map-gear-bobber-float">
+                        Bobber/Float
+                      </label>
+                      <select
+                        id="map-gear-bobber-float"
+                        value={gearDefaults.bobberFloat}
+                        onChange={(e) =>
+                          handleGearDefaultsChange("bobberFloat", e.target.value)
+                        }
+                        className="map-tackle-input map-tackle-select"
+                      >
+                        <option value="">Select bobber/float</option>
+                        {BOBBER_FLOAT_OPTIONS.filter(Boolean).map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="map-gear-field">
+                      <label className="map-tackle-label" htmlFor="map-gear-weight">
+                        Weight (oz)
+                      </label>
+                      <Input
+                        id="map-gear-weight"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={gearDefaults.weight}
+                        onChange={(e) => handleGearDefaultsChange("weight", e.target.value)}
+                        className="map-tackle-input"
+                        placeholder="0.125"
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <div className="map-gear-grid map-gear-grid-split">
+                      <div className="map-gear-field">
+                        <label className="map-tackle-label" htmlFor="map-gear-leader-material">
+                          Leader Material
+                        </label>
+                        <select
+                          id="map-gear-leader-material"
+                          value={gearDefaults.leaderMaterial}
+                          onChange={(e) =>
+                            handleGearDefaultsChange("leaderMaterial", e.target.value)
+                          }
+                          className="map-tackle-input map-tackle-select"
+                        >
+                          <option value="">Select material</option>
+                          {LEADER_MATERIAL_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="map-gear-field">
+                        <label className="map-tackle-label" htmlFor="map-gear-leader-length">
+                          Leader Length
+                        </label>
+                        <select
+                          id="map-gear-leader-length"
+                          value={gearDefaults.leaderLength}
+                          onChange={(e) =>
+                            handleGearDefaultsChange("leaderLength", e.target.value)
+                          }
+                          className="map-tackle-input map-tackle-select"
+                        >
+                          <option value="">Select length</option>
+                          {LEADER_LENGTH_OPTIONS.filter(Boolean).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

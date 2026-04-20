@@ -226,6 +226,67 @@
   color: #9ca3af;
 }
 
+.map-tackle-tablist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.map-tackle-tab {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-sm);
+  background: rgba(17, 17, 17, 0.74);
+  color: #d1d5db;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  min-height: 34px;
+  cursor: pointer;
+}
+
+.map-tackle-tab-active {
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  box-shadow: inset 0 0 0 1px rgba(47, 128, 237, 0.45);
+}
+
+.map-tackle-tab-body {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.map-gear-fields {
+  max-height: min(62vh, 540px);
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.map-gear-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.map-gear-grid-split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.map-gear-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.map-tackle-select {
+  width: 100%;
+  min-height: 40px;
+  color: #f3f4f6;
+}
+
+.map-tackle-select option {
+  color: #f3f4f6;
+  background-color: #111214;
+}
+
 .btn-map-control.btn-map-control {
   display: inline-flex;
   align-items: center;
