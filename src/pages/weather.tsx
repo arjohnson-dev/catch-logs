@@ -328,7 +328,7 @@ function WeatherDirectionDot(props: {
   return (
     <g transform={`translate(${cx}, ${cy}) rotate(${payload.windDirection})`}>
       <path
-        d="M0 -6 L4 3 L0 1 L-4 3 Z"
+        d="M0 -9 L6 4.5 L0 1.5 L-6 4.5 Z"
         fill={stroke ?? "currentColor"}
         stroke="rgba(15, 15, 18, 0.85)"
         strokeWidth="1"
