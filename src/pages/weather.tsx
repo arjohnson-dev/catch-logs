@@ -415,7 +415,7 @@ function WeatherMetricChart({
   formatValue,
   showDirectionArrows = false,
   showHighLow = false,
-  showRangeMarkers = false,
+  rangeMarkerMode = "none",
   yAxisWidth = 40,
   yAxisTickFormatter,
   yAxisDomain,
@@ -427,14 +427,14 @@ function WeatherMetricChart({
   formatValue: (value: number | null) => string;
   showDirectionArrows?: boolean;
   showHighLow?: boolean;
-  showRangeMarkers?: boolean;
+  rangeMarkerMode?: "none" | "high" | "high-low";
   yAxisWidth?: number;
   yAxisTickFormatter?: (value: number) => string;
   yAxisDomain?: [number, number];
 }) {
   const markerAnimationDurationMs = 700;
-  const temperatureExtremes = useMemo(() => {
-    if (!showRangeMarkers || data.length === 0) {
+  const rangeMarkers = useMemo(() => {
+    if (rangeMarkerMode === "none" || data.length === 0) {
       return [] as Array<{
         key: string;
         xValue: string;
@@ -496,7 +496,7 @@ function WeatherMetricChart({
       });
     }
 
-    if (lowestPoint?.value != null) {
+    if (rangeMarkerMode === "high-low" && lowestPoint?.value != null) {
       const placement = getLabelPlacement(lowestPoint);
       markers.push({
         key: `low-${lowestPoint.xValue}`,
@@ -509,11 +509,11 @@ function WeatherMetricChart({
     }
 
     return markers;
-  }, [data, showRangeMarkers]);
-  const [showMarkerLabels, setShowMarkerLabels] = useState(!showRangeMarkers);
+  }, [data, formatValue, rangeMarkerMode]);
+  const [showMarkerLabels, setShowMarkerLabels] = useState(rangeMarkerMode === "none");
 
   useEffect(() => {
-    if (!showRangeMarkers) {
+    if (rangeMarkerMode === "none") {
       setShowMarkerLabels(true);
       return;
     }
@@ -526,7 +526,7 @@ function WeatherMetricChart({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [data, markerAnimationDurationMs, showRangeMarkers]);
+  }, [data, markerAnimationDurationMs, rangeMarkerMode]);
 
   return (
     <Card className="resources-card surface-card">
@@ -542,9 +542,9 @@ function WeatherMetricChart({
             <LineChart
               data={data}
               margin={{
-                top: showRangeMarkers ? 22 : 8,
-                right: showRangeMarkers ? 20 : 16,
-                left: showRangeMarkers ? 0 : -12,
+                top: rangeMarkerMode !== "none" ? 22 : 8,
+                right: rangeMarkerMode !== "none" ? 20 : 16,
+                left: rangeMarkerMode !== "none" ? 0 : -12,
                 bottom: 0,
               }}
             >
@@ -563,7 +563,7 @@ function WeatherMetricChart({
                 tickLine={false}
                 interval={0}
                 minTickGap={0}
-                padding={{ left: 6, right: 16 }}
+                padding="no-gap"
               />
               <YAxis
                 tick={{ fill: "#8a8f98", fontSize: 11 }}
@@ -626,7 +626,7 @@ function WeatherMetricChart({
                 animationDuration={markerAnimationDurationMs}
                 animationEasing="ease-out"
               />
-              {temperatureExtremes.map((marker) => (
+              {rangeMarkers.map((marker) => (
                 <ReferenceDot
                   key={marker.key}
                   x={marker.xValue}
@@ -1747,9 +1747,15 @@ export default function WeatherPage() {
                               metric.key === "temperature" &&
                               forecastRange === "10d"
                             }
-                            showRangeMarkers={
+                            rangeMarkerMode={
                               metric.key === "temperature" &&
                               forecastRange !== "10d"
+                                ? "high-low"
+                                : metric.key === "pressure"
+                                  ? "high-low"
+                                  : metric.key === "precipitationProbability"
+                                    ? "high"
+                                    : "none"
                             }
                             yAxisWidth={
                               metric.key === "pressure"
