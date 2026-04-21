@@ -14,6 +14,14 @@ from CatchLogs LLC.
 -->
 # React + TypeScript + Vite
 
+## Local Setup
+
+1. Copy `.env.example` to `.env.local`.
+2. Set:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` (or `VITE_SUPABASE_ANON_KEY`)
+3. Restart the Vite dev server after changing env values.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
