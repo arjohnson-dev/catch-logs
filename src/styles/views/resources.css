@@ -797,8 +797,18 @@
 }
 
 .resources-weather-chart-wrap {
+  box-sizing: border-box;
   width: 100%;
   height: 180px;
+  padding: 0 1rem 0.35rem;
+  overflow: visible;
+}
+
+@media (max-width: 640px) {
+  .resources-weather-chart-wrap {
+    width: 100%;
+    margin-right: 0;
+  }
 }
 
 .resources-weather-chart-header {
@@ -845,6 +855,10 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-2);
+}
+
+.resources-weather-chart-legend-padded {
+  padding-inline: 1.5rem;
 }
 
 .resources-weather-chart-legend-item {

@@ -6,7 +6,6 @@ import {
   FaScaleBalanced,
   FaWaveSquare,
 } from "react-icons/fa6";
-import { Button } from "@/components/ui/button";
 import FeatureBetaBanner from "@/components/feature-beta-banner";
 
 const RESOURCE_ITEMS = [

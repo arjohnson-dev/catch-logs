@@ -225,11 +225,6 @@ export function SpeciesAiSummaryCard({
   const normalizedSlug = slug?.trim() ?? "";
   const hasSlug = normalizedSlug.length > 0;
   const activeWeatherLocation: WeatherLocation | null = loadActiveWeatherLocation(user?.id);
-  const activeLocationLabel = activeWeatherLocation
-    ? [activeWeatherLocation.name, formatWeatherLocationSubtitle(activeWeatherLocation)]
-        .filter(Boolean)
-        .join(", ")
-    : null;
   const cachedCurrentWeather = activeWeatherLocation
     ? queryClient.getQueryData<WeatherSnapshot | null>([
         "weather",

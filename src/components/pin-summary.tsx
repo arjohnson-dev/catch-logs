@@ -51,14 +51,62 @@ export default function PinSummary({
 }: PinSummaryProps) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: pins, isLoading } = useQuery<PinWithEntries[]>({
     queryKey: appQueryKeys.pins(),
     queryFn: getPinsWithEntries,
   });
+  const pin = pins?.find((p) => p.id === pinId);
+
+  if (isLoading) {
+    return (
+      <div className="overlay-backdrop overlay-backdrop-dashboard overlay-backdrop-center">
+        <div className="dialog-panel dialog-panel-loading">
+          <div className="loading-spinner animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pin) {
+    return null;
+  }
+
+  return (
+    <PinSummaryContent
+      key={`${pin.id}:${pin.name}`}
+      pin={pin}
+      pinId={pinId}
+      onClose={onClose}
+      onAddEntry={onAddEntry}
+      userId={user?.id}
+      navigate={navigate}
+      toast={toast}
+    />
+  );
+}
+
+function PinSummaryContent({
+  pin,
+  pinId,
+  onClose,
+  onAddEntry,
+  userId,
+  navigate,
+  toast,
+}: {
+  pin: PinWithEntries;
+  pinId: number;
+  onClose: () => void;
+  onAddEntry: () => void;
+  userId?: string;
+  navigate: (path: string) => void;
+  toast: ReturnType<typeof useToast>["toast"];
+}) {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState("");
+  const [nameDraft, setNameDraft] = useState(pin.name);
+  const queryClient = useQueryClient();
   const [isMobileSheet, setIsMobileSheet] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 1024 : false,
   );
@@ -79,13 +127,6 @@ export default function PinSummary({
   const dragStartTranslateRef = useRef(0);
   const splitTranslateRef = useRef(0);
   const fullHeightRef = useRef(0);
-
-  const pin = pins?.find((p) => p.id === pinId);
-
-  useEffect(() => {
-    if (!pin) return;
-    setNameDraft(pin.name);
-  }, [pin]);
 
   const computeSheetMetrics = useCallback(() => {
     if (typeof window === "undefined") {
@@ -113,12 +154,15 @@ export default function PinSummary({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    let frameId = 0;
     const updateViewportMode = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobileSheet(mobile);
       computeSheetMetrics();
       if (!mobile) {
-        setSheetTranslateY(0);
+        frameId = window.requestAnimationFrame(() => {
+          setSheetTranslateY(0);
+        });
       }
     };
 
@@ -127,6 +171,9 @@ export default function PinSummary({
 
     return () => {
       window.removeEventListener("resize", updateViewportMode);
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
     };
   }, [computeSheetMetrics]);
 
@@ -134,22 +181,37 @@ export default function PinSummary({
     if (!isMobileSheet) return;
     const { fullHeight, splitTranslate } = computeSheetMetrics();
 
+    let startFrameId = 0;
+    let settleFrameId = 0;
+
     if (!hasOpenedAnimationRef.current) {
       hasOpenedAnimationRef.current = true;
-      setSheetTranslateY(fullHeight);
-      const frameId = window.requestAnimationFrame(() => {
-        const settleFrameId = window.requestAnimationFrame(() => {
+      startFrameId = window.requestAnimationFrame(() => {
+        setSheetTranslateY(fullHeight);
+        settleFrameId = window.requestAnimationFrame(() => {
           setSheetTranslateY(splitTranslate);
         });
-        return () => window.cancelAnimationFrame(settleFrameId);
       });
 
       return () => {
-        window.cancelAnimationFrame(frameId);
+        if (startFrameId) {
+          window.cancelAnimationFrame(startFrameId);
+        }
+        if (settleFrameId) {
+          window.cancelAnimationFrame(settleFrameId);
+        }
       };
     }
 
-    setSheetTranslateY(splitTranslate);
+    startFrameId = window.requestAnimationFrame(() => {
+      setSheetTranslateY(splitTranslate);
+    });
+
+    return () => {
+      if (startFrameId) {
+        window.cancelAnimationFrame(startFrameId);
+      }
+    };
   }, [computeSheetMetrics, isMobileSheet, pinId]);
 
   const renamePinMutation = useMutation({
@@ -199,21 +261,6 @@ export default function PinSummary({
     },
   });
 
-  if (isLoading) {
-    return (
-      <div className="overlay-backdrop overlay-backdrop-dashboard overlay-backdrop-center">
-        <div className="dialog-panel dialog-panel-loading">
-          <div className="loading-spinner animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-white">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!pin) {
-    return null;
-  }
-
   const sortedEntries = (
     pin.entries && Array.isArray(pin.entries) ? pin.entries : []
   )
@@ -253,7 +300,7 @@ export default function PinSummary({
         country: null,
         timezone: null,
       },
-      user?.id,
+      userId,
     );
     onClose();
     navigate("/weather");

@@ -94,6 +94,31 @@ export default function JournalEntryForm({
   onComplete,
   fullScreen = false,
 }: JournalEntryFormProps) {
+  const resetKey = `${entry?.id ?? "new"}:${defaultLure}:${defaultBait}:${pinId ?? "no-pin"}`;
+
+  return (
+    <JournalEntryFormContent
+      key={resetKey}
+      pinId={pinId}
+      entry={entry}
+      defaultLure={defaultLure}
+      defaultBait={defaultBait}
+      onClose={onClose}
+      onComplete={onComplete}
+      fullScreen={fullScreen}
+    />
+  );
+}
+
+function JournalEntryFormContent({
+  pinId,
+  entry,
+  defaultLure = "",
+  defaultBait = "",
+  onClose,
+  onComplete,
+  fullScreen = false,
+}: JournalEntryFormProps) {
   const isEditing = Boolean(entry);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -115,21 +140,6 @@ export default function JournalEntryForm({
       defaultBait,
     }),
   });
-
-  useEffect(() => {
-    form.reset(
-      getDefaultValues({
-        entry,
-        defaultLure,
-        defaultBait,
-      }),
-    );
-    setSelectedPhoto(null);
-    setPhotoPreview(entry?.photoUrl ?? null);
-    setRemovePhoto(false);
-    setSelectedFishSpeciesSpecCode(entry?.fishSpeciesSpecCode ?? null);
-    setShowFishTypeSuggestions(false);
-  }, [defaultBait, defaultLure, entry, form]);
 
   useEffect(() => {
     if (!user?.id || isEditing) {
