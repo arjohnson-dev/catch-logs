@@ -149,8 +149,6 @@ function getPressureYAxisDomain(
 
 function getWindYAxisDomain(
   data: ForecastChartPoint[],
-  unitSystem: UnitSystem,
-  windSpeedDisplay: "knots" | "system",
 ): { domain: [number, number]; ticks: number[] } | undefined {
   return buildSteppedAxis(getNumericValues(data, {}), 5);
 }
@@ -581,23 +579,25 @@ function WeatherMetricChart({
 
     return markers;
   }, [data, formatValue, rangeMarkerMode]);
-  const [showMarkerLabels, setShowMarkerLabels] = useState(rangeMarkerMode === "none");
+  const [showMarkerLabelsReady, setShowMarkerLabelsReady] = useState(
+    rangeMarkerMode === "none",
+  );
 
   useEffect(() => {
     if (rangeMarkerMode === "none") {
-      setShowMarkerLabels(true);
       return;
     }
 
-    setShowMarkerLabels(false);
     const timer = window.setTimeout(() => {
-      setShowMarkerLabels(true);
+      setShowMarkerLabelsReady(true);
     }, markerAnimationDurationMs);
 
     return () => {
       window.clearTimeout(timer);
     };
   }, [data, markerAnimationDurationMs, rangeMarkerMode]);
+
+  const showMarkerLabels = rangeMarkerMode === "none" || showMarkerLabelsReady;
 
   return (
     <Card className="resources-card surface-card">
@@ -1107,6 +1107,29 @@ export default function WeatherPage() {
   const { unitSystem, windSpeedDisplay } = useUnitPreference();
   const { toast } = useToast();
   const userId = user?.id ?? null;
+
+  return (
+    <WeatherPageContent
+      key={userId ?? "guest"}
+      userId={userId}
+      unitSystem={unitSystem}
+      windSpeedDisplay={windSpeedDisplay}
+      toast={toast}
+    />
+  );
+}
+
+function WeatherPageContent({
+  userId,
+  unitSystem,
+  windSpeedDisplay,
+  toast,
+}: {
+  userId: string | null;
+  unitSystem: UnitSystem;
+  windSpeedDisplay: "knots" | "system";
+  toast: ReturnType<typeof useToast>["toast"];
+}) {
   const storedLocationState = useMemo(
     () => getStoredLocationState(userId),
     [userId],
@@ -1132,15 +1155,6 @@ export default function WeatherPage() {
   const selectedLocationRef = useRef<WeatherLocation | null>(
     storedLocationState.activeLocation,
   );
-
-  useEffect(() => {
-    const nextState = getStoredLocationState(userId);
-    setSavedLocations(nextState.savedLocations);
-    setSelectedLocation(nextState.activeLocation);
-    setSelectedSource(nextState.selectedSource);
-    setScreen("overview");
-    manualSelectionRef.current = false;
-  }, [userId]);
 
   useEffect(() => {
     saveSavedWeatherLocations(savedLocations, userId);
@@ -1833,14 +1847,12 @@ export default function WeatherPage() {
                                   : metric.key === "windSpeed"
                                     ? getWindYAxisDomain(
                                         metric.data,
-                                        unitSystem,
-                                        windSpeedDisplay,
                                       )
                                     : undefined;
 
                           return (
                             <WeatherMetricChart
-                              key={metric.key}
+                              key={`${metric.key}-${forecastRange}-${metric.data.length}-${metric.data[0]?.xValue ?? "start"}-${metric.data[metric.data.length - 1]?.xValue ?? "end"}`}
                               title={metric.label}
                               unit={metric.yAxisUnit}
                               color={metric.color}

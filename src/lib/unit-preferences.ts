@@ -264,31 +264,6 @@ function convertWindSpeedToMph(value: number, unit: string) {
   return value;
 }
 
-function replaceMeasurementRanges(
-  text: string,
-  pattern: RegExp,
-  formatter: (start: number, end: number, unit: string) => string,
-) {
-  return text.replace(
-    pattern,
-    (
-      match,
-      startValue: string,
-      separator: string,
-      endValue: string,
-      unit: string,
-    ) => {
-      const start = Number.parseFloat(startValue);
-      const end = Number.parseFloat(endValue);
-      if (Number.isNaN(start) || Number.isNaN(end)) {
-        return match;
-      }
-
-      return formatter(start, end, unit) + (separator.trim() === "to" ? "" : "");
-    },
-  );
-}
-
 export function formatWeatherMeasurementText(
   text: string,
   unitSystem: UnitSystem,

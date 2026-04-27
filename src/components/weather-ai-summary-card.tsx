@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,8 @@ type WeatherAiSummaryData = {
 };
 
 const SUMMARY_UNAVAILABLE_MESSAGE = "Written weather summary unavailable right now.";
+const SUMMARY_SOURCE_UNAVAILABLE_MESSAGE =
+  "Official weather reports are temporarily unavailable, so the written summary could not be generated.";
 const SUMMARY_PREVIEW_LENGTH = 220;
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const weatherSummaryUrl = supabaseUrl
@@ -69,13 +71,40 @@ function parseGenerateWeatherSummaryResponse(payload: unknown): WeatherAiSummary
   };
 }
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
+function normalizeSummaryErrorMessage(message: string) {
+  const trimmed = message.trim();
+
+  if (!trimmed) {
+    return SUMMARY_UNAVAILABLE_MESSAGE;
   }
 
-  if (typeof error === "string" && error.trim().length > 0) {
-    return error.trim();
+  if (
+    trimmed.includes("NWS fetch failed") ||
+    trimmed.includes("weather.gov") ||
+    trimmed.includes("api.weather.gov") ||
+    /<[^>]+>/.test(trimmed)
+  ) {
+    return SUMMARY_SOURCE_UNAVAILABLE_MESSAGE;
+  }
+
+  if (
+    trimmed.includes("OpenAI request failed") ||
+    trimmed.includes("Missing OPENAI_API_KEY") ||
+    trimmed.includes("Missing VITE_SUPABASE_URL")
+  ) {
+    return SUMMARY_UNAVAILABLE_MESSAGE;
+  }
+
+  return trimmed;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return normalizeSummaryErrorMessage(error.message);
+  }
+
+  if (typeof error === "string") {
+    return normalizeSummaryErrorMessage(error);
   }
 
   return SUMMARY_UNAVAILABLE_MESSAGE;
@@ -179,27 +208,51 @@ export function WeatherAiSummaryCard({
   locationLabel,
 }: WeatherAiSummaryCardProps) {
   const hasLocation = latitude != null && longitude != null;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const { unitSystem, windSpeedDisplay } = useUnitPreference();
-
-  const summaryQuery = useQuery({
-    queryKey: appQueryKeys.weatherAiSummary(latitude, longitude, locationLabel),
-    queryFn: () => getWeatherAiSummary(latitude!, longitude!, locationLabel),
-    enabled: hasLocation,
-    staleTime: 1000 * 60 * 30,
-    retry: false,
-  });
 
   if (!hasLocation) {
     return null;
   }
 
+  const contentKey = `${latitude}:${longitude}:${locationLabel}`;
+
+  return (
+    <WeatherAiSummaryCardContent
+      key={contentKey}
+      latitude={latitude}
+      longitude={longitude}
+      locationLabel={locationLabel}
+    />
+  );
+}
+
+function WeatherAiSummaryCardContent({
+  latitude,
+  longitude,
+  locationLabel,
+}: {
+  latitude: number;
+  longitude: number;
+  locationLabel: string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { unitSystem, windSpeedDisplay } = useUnitPreference();
+
+  const summaryQuery = useQuery({
+    queryKey: appQueryKeys.weatherAiSummary(latitude, longitude, locationLabel),
+    queryFn: () => getWeatherAiSummary(latitude, longitude, locationLabel),
+    enabled: true,
+    staleTime: 1000 * 60 * 30,
+    retry: false,
+  });
+
   let content = SUMMARY_UNAVAILABLE_MESSAGE;
   let sources: AiSummarySource[] = [];
+  let isFallbackState = true;
 
   if (summaryQuery.data?.summary) {
     content = summaryQuery.data.summary;
     sources = summaryQuery.data.sources;
+    isFallbackState = false;
   } else if (summaryQuery.isError) {
     content = getErrorMessage(summaryQuery.error);
   }
@@ -210,17 +263,13 @@ export function WeatherAiSummaryCard({
     windSpeedDisplay,
   );
 
-  useEffect(() => {
-    setIsExpanded(false);
-  }, [formattedContent, locationLabel]);
-
   const paragraphs =
-    formattedContent === SUMMARY_UNAVAILABLE_MESSAGE
+    isFallbackState
       ? [formattedContent]
       : splitSummaryIntoParagraphs(formattedContent);
   const plainSummary = paragraphs.join(" ").trim();
   const shouldTruncate =
-    formattedContent !== SUMMARY_UNAVAILABLE_MESSAGE && plainSummary.length > SUMMARY_PREVIEW_LENGTH;
+    !isFallbackState && plainSummary.length > SUMMARY_PREVIEW_LENGTH;
   const displayedSummary =
     shouldTruncate && !isExpanded
       ? `${plainSummary.slice(0, SUMMARY_PREVIEW_LENGTH).trimEnd()}...`

@@ -680,17 +680,28 @@ export default function MapInterface({
   }, [user?.id]);
 
   useEffect(() => {
+    let resetTimeoutId: number | null = null;
+
     if (!user?.id) {
-      setGearDefaults(EMPTY_PROFILE_GEAR_DEFAULTS);
-      setHasLoadedGearDefaults(false);
-      setUsesLocalGearFallback(false);
+      resetTimeoutId = window.setTimeout(() => {
+        setGearDefaults(EMPTY_PROFILE_GEAR_DEFAULTS);
+        setHasLoadedGearDefaults(false);
+        setUsesLocalGearFallback(false);
+      }, 0);
       hasShownGearSaveErrorRef.current = false;
-      return;
+      return () => {
+        if (resetTimeoutId !== null) {
+          window.clearTimeout(resetTimeoutId);
+        }
+      };
     }
 
     let cancelled = false;
-    setHasLoadedGearDefaults(false);
-    setUsesLocalGearFallback(false);
+    resetTimeoutId = window.setTimeout(() => {
+      setGearDefaults(EMPTY_PROFILE_GEAR_DEFAULTS);
+      setHasLoadedGearDefaults(false);
+      setUsesLocalGearFallback(false);
+    }, 0);
     hasShownGearSaveErrorRef.current = false;
 
     void getProfileGearDefaults(user.id)
@@ -708,6 +719,9 @@ export default function MapInterface({
 
     return () => {
       cancelled = true;
+      if (resetTimeoutId !== null) {
+        window.clearTimeout(resetTimeoutId);
+      }
     };
   }, [user?.id]);
 

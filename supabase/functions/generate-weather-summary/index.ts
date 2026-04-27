@@ -33,6 +33,10 @@ type WeatherRequest = {
 };
 
 const OpenAIModel = Deno.env.get("OPENAI_MODEL") ?? "gpt-4.1-mini";
+const WEATHER_SUMMARY_UNAVAILABLE_MESSAGE =
+  "Written weather summary unavailable right now.";
+const WEATHER_SUMMARY_NWS_UNAVAILABLE_MESSAGE =
+  "Official weather reports are temporarily unavailable, so the written summary could not be generated.";
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -338,6 +342,26 @@ async function createWeatherSummary({
   return String(parsed.summary ?? "").trim();
 }
 
+function sanitizeWeatherSummaryError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+
+  if (
+    message.includes("NWS fetch failed") ||
+    message.includes("NWS points response missing forecast")
+  ) {
+    return WEATHER_SUMMARY_NWS_UNAVAILABLE_MESSAGE;
+  }
+
+  if (
+    message.includes("OpenAI request failed") ||
+    message.includes("Missing OPENAI_API_KEY")
+  ) {
+    return WEATHER_SUMMARY_UNAVAILABLE_MESSAGE;
+  }
+
+  return WEATHER_SUMMARY_UNAVAILABLE_MESSAGE;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -420,10 +444,9 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse(200, response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     const response: GenerateWeatherSummaryResponse = {
       ok: false,
-      error: message,
+      error: sanitizeWeatherSummaryError(error),
     };
     return jsonResponse(500, response);
   }

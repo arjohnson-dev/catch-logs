@@ -77,7 +77,7 @@ export function WeatherLocationAutocomplete({
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const query = useMemo(() => (typeof value === "string" ? value.trim() : ""), [value]);
 
@@ -93,9 +93,6 @@ export function WeatherLocationAutocomplete({
 
   useEffect(() => {
     if (!autocompleteServiceRef.current || query.length < 2) {
-      setPredictions([]);
-      setIsOpen(false);
-      setActiveIndex(-1);
       return;
     }
 
@@ -117,14 +114,14 @@ export function WeatherLocationAutocomplete({
           status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS
         ) {
           setPredictions([]);
-          setIsOpen(false);
+          setIsDropdownOpen(false);
           setActiveIndex(-1);
           return;
         }
 
         const nextPredictions = results ?? [];
         setPredictions(nextPredictions);
-        setIsOpen(nextPredictions.length > 0);
+        setIsDropdownOpen(nextPredictions.length > 0);
         setActiveIndex(nextPredictions.length > 0 ? 0 : -1);
       },
     );
@@ -137,7 +134,7 @@ export function WeatherLocationAutocomplete({
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       if (!wrapperRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
+        setIsDropdownOpen(false);
       }
     };
 
@@ -169,7 +166,7 @@ export function WeatherLocationAutocomplete({
         }
 
         setPredictions([]);
-        setIsOpen(false);
+        setIsDropdownOpen(false);
         setActiveIndex(-1);
         sessionTokenRef.current = places ? new places.AutocompleteSessionToken() : null;
         onPlaceSelect(location);
@@ -181,10 +178,12 @@ export function WeatherLocationAutocomplete({
     onChange?.(event);
     if (event.target.value.trim().length < 2) {
       setPredictions([]);
-      setIsOpen(false);
+      setIsDropdownOpen(false);
       setActiveIndex(-1);
     }
   };
+
+  const isOpen = isDropdownOpen && query.length >= 2 && predictions.length > 0;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || predictions.length === 0) {
@@ -213,7 +212,7 @@ export function WeatherLocationAutocomplete({
     }
 
     if (event.key === "Escape") {
-      setIsOpen(false);
+      setIsDropdownOpen(false);
       setActiveIndex(-1);
     }
   };
@@ -228,7 +227,7 @@ export function WeatherLocationAutocomplete({
         onChange={handleChange}
         onFocus={() => {
           if (predictions.length > 0) {
-            setIsOpen(true);
+            setIsDropdownOpen(true);
           }
         }}
         onKeyDown={handleKeyDown}
