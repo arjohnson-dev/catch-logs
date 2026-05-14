@@ -17,9 +17,10 @@ export default function TopNamedCountChart({
   title,
   emptyLabel = "No data available yet.",
 }: Props) {
+  const maxLabelChars = 18;
   const data = rows.slice(0, 8).map((row) => ({
     ...row,
-    shortName: row.name.length > 28 ? `${row.name.slice(0, 28)}...` : row.name,
+    shortName: row.name.length > maxLabelChars ? `${row.name.slice(0, maxLabelChars)}...` : row.name,
   }));
 
   return (
@@ -30,12 +31,13 @@ export default function TopNamedCountChart({
       <CardContent>
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(180, data.length * 34)}>
-            <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+            <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, left: -6, bottom: 0 }}>
               <XAxis type="number" allowDecimals={false} tick={{ fill: "#9aa3b2", fontSize: 11 }} />
               <YAxis
                 type="category"
                 dataKey="shortName"
-                width={138}
+                width={88}
+                tickMargin={4}
                 tick={{ fill: "#cbd5e1", fontSize: 11 }}
               />
               <Tooltip
