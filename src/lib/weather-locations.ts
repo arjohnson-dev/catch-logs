@@ -31,6 +31,7 @@ type ReverseGeocodingResponse = {
     municipality?: string;
     county?: string;
     state?: string;
+    country?: string;
     country_code?: string;
   };
 };
@@ -341,6 +342,17 @@ export function formatWeatherLocationCoordinates(location: WeatherLocation) {
 function formatReverseGeocodedLocation(
   address: ReverseGeocodingResponse["address"],
 ): string | null {
+  const location = formatReverseGeocodedWeatherLocation(address);
+  if (!location) {
+    return null;
+  }
+
+  return location.admin1 ? `${location.name}, ${location.admin1}` : location.name;
+}
+
+function formatReverseGeocodedWeatherLocation(
+  address: ReverseGeocodingResponse["address"],
+): Pick<WeatherLocation, "name" | "admin1" | "country"> | null {
   if (!address) {
     return null;
   }
@@ -357,12 +369,18 @@ function formatReverseGeocodedLocation(
     return null;
   }
 
+  const countryCode = address.country_code?.toUpperCase() ?? null;
   const state =
-    address.country_code?.toUpperCase() === "US"
+    countryCode === "US"
       ? (US_STATE_CODES[address.state ?? ""] ?? address.state)
       : address.state;
+  const country = countryCode === "US" ? "United States" : address.country;
 
-  return state ? `${locality}, ${state}` : locality;
+  return {
+    name: locality.trim(),
+    admin1: state?.trim() || null,
+    country: country?.trim() || null,
+  };
 }
 
 function parseWeatherSearchInput(query: string) {
@@ -687,6 +705,41 @@ export async function reverseGeocodeWeatherLocation(
 
     const payload = (await response.json()) as ReverseGeocodingResponse;
     return formatReverseGeocodedLocation(payload.address);
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+export async function reverseGeocodeWeatherLocationDetails(
+  latitude: number,
+  longitude: number,
+): Promise<Pick<WeatherLocation, "name" | "admin1" | "country"> | null> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+    url.searchParams.set("lat", String(latitude));
+    url.searchParams.set("lon", String(longitude));
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("zoom", "10");
+    url.searchParams.set("addressdetails", "1");
+
+    const response = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ReverseGeocodingResponse;
+    return formatReverseGeocodedWeatherLocation(payload.address);
   } catch {
     return null;
   } finally {

@@ -3,7 +3,6 @@ import {
   FaBookOpen,
   FaChevronRight,
   FaFishFins,
-  FaScaleBalanced,
   FaWaveSquare,
 } from "react-icons/fa6";
 import FeatureBetaBanner from "@/components/feature-beta-banner";
@@ -24,18 +23,12 @@ const RESOURCE_ITEMS = [
     isAvailable: true,
   },
   {
-    title: "Fishing Reports",
-    description: "Check current local fishing activity and conditions.",
+    title: "Fishing Reports & Regulations",
+    description:
+      "Find local fishing reports and current official rules for your selected location.",
     icon: FaWaveSquare,
-    to: "/resources/fishing-reports",
-    isAvailable: false,
-  },
-  {
-    title: "Regulations",
-    description: "Access fishing rules and regulatory information.",
-    icon: FaScaleBalanced,
-    to: "/resources/regulations",
-    isAvailable: false,
+    to: "/resources/fishing",
+    isAvailable: true,
   },
 ] as const;
 

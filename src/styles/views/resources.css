@@ -702,6 +702,140 @@
   gap: var(--space-2);
 }
 
+.resources-fishing-location-header {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.resources-fishing-location-subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.resources-fishing-selected-location {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-faint);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+}
+
+.resources-fishing-search-form {
+  margin-top: var(--space-4);
+}
+
+.resources-fishing-saved-section {
+  margin-top: var(--space-5);
+}
+
+.resources-fishing-section-list {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.resources-fishing-source-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.resources-fishing-source-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.resources-fishing-source-icon {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  color: var(--color-sky-soft);
+  border: 1px solid var(--color-border-faint);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+}
+
+.resources-fishing-source-title {
+  margin: 0;
+  color: var(--color-text-inverse);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.resources-fishing-link-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.resources-fishing-link-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: 14px;
+  border: 1px solid var(--color-border-faint);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.resources-fishing-link-card:hover {
+  border-color: var(--color-primary-border-soft);
+  background: var(--color-surface-strong);
+  transform: translateY(-1px);
+}
+
+.resources-fishing-link-card-primary {
+  border-color: var(--color-primary-border-soft);
+  background: var(--color-primary-soft);
+}
+
+.resources-fishing-link-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.9rem;
+  display: grid;
+  place-items: center;
+  color: var(--color-sky-soft);
+  background: rgba(47, 128, 237, 0.12);
+  border: 1px solid rgba(47, 128, 237, 0.24);
+}
+
+.resources-fishing-link-copy {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.resources-fishing-link-meta {
+  color: var(--color-sky-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.resources-fishing-link-title {
+  color: var(--color-text-inverse);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.resources-fishing-link-description {
+  color: var(--color-text-muted);
+  font-family: var(--font-serif);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
 .resources-weather-current-label {
   display: inline-flex;
   align-items: center;
@@ -1157,6 +1291,11 @@
 
   .resources-weather-search-row {
     grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
+
+  .resources-fishing-location-header {
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
   }
 

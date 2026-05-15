@@ -18,32 +18,74 @@ type WeatherLocationAutocompleteProps = Omit<InputProps, "onSelect"> & {
 };
 
 function getAddressComponent(
-  components: google.maps.GeocoderAddressComponent[] | undefined,
+  components:
+    | google.maps.GeocoderAddressComponent[]
+    | google.maps.places.AddressComponent[]
+    | undefined,
   type: string,
 ) {
   return components?.find((component) => component.types.includes(type)) ?? null;
 }
 
-function mapPlaceToWeatherLocation(place: google.maps.places.PlaceResult): WeatherLocation | null {
-  const latitude = place.geometry?.location?.lat();
-  const longitude = place.geometry?.location?.lng();
-  const placeId = place.place_id?.trim();
+function getAddressComponentLongName(
+  component:
+    | google.maps.GeocoderAddressComponent
+    | google.maps.places.AddressComponent
+    | null,
+) {
+  if (!component) {
+    return null;
+  }
+
+  return "longText" in component ? component.longText : component.long_name;
+}
+
+function getAddressComponentShortName(
+  component:
+    | google.maps.GeocoderAddressComponent
+    | google.maps.places.AddressComponent
+    | null,
+) {
+  if (!component) {
+    return null;
+  }
+
+  return "shortText" in component ? component.shortText : component.short_name;
+}
+
+function mapPlaceToWeatherLocation(
+  place: google.maps.places.Place,
+): WeatherLocation | null {
+  const latitude = place.location?.lat();
+  const longitude = place.location?.lng();
+  const placeId = place.id?.trim();
 
   if (latitude == null || longitude == null || !placeId) {
     return null;
   }
 
+  const addressComponents = place.addressComponents;
+  const countryComponent = getAddressComponent(addressComponents, "country");
+  const adminComponent = getAddressComponent(
+    addressComponents,
+    "administrative_area_level_1",
+  );
   const countryCode =
-    getAddressComponent(place.address_components, "country")?.short_name?.toUpperCase() ?? null;
+    getAddressComponentShortName(countryComponent)?.toUpperCase() ?? null;
   const locality =
-    getAddressComponent(place.address_components, "locality")?.long_name ??
-    getAddressComponent(place.address_components, "postal_town")?.long_name ??
-    getAddressComponent(place.address_components, "administrative_area_level_2")?.long_name ??
-    place.name?.trim() ??
-    place.formatted_address?.split(",")[0]?.trim() ??
+    getAddressComponentLongName(
+      getAddressComponent(addressComponents, "locality"),
+    ) ??
+    getAddressComponentLongName(
+      getAddressComponent(addressComponents, "postal_town"),
+    ) ??
+    getAddressComponentLongName(
+      getAddressComponent(addressComponents, "administrative_area_level_2"),
+    ) ??
+    place.displayName?.trim() ??
+    place.formattedAddress?.split(",")[0]?.trim() ??
     "Selected location";
-  const adminComponent = getAddressComponent(place.address_components, "administrative_area_level_1");
-  const country = getAddressComponent(place.address_components, "country")?.long_name ?? null;
+  const country = getAddressComponentLongName(countryComponent);
 
   return {
     id: `google:${placeId}`,
@@ -52,8 +94,8 @@ function mapPlaceToWeatherLocation(place: google.maps.places.PlaceResult): Weath
     longitude,
     admin1:
       countryCode === "US"
-        ? adminComponent?.short_name?.trim() || null
-        : adminComponent?.long_name?.trim() || null,
+        ? getAddressComponentShortName(adminComponent)?.trim() || null
+        : getAddressComponentLongName(adminComponent)?.trim() || null,
     country,
     timezone: null,
   };
@@ -72,64 +114,74 @@ export function WeatherLocationAutocomplete({
   const listboxId = `${inputId}-listbox`;
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const places = useMapsLibrary("places");
-  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
-  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
-  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const sessionTokenRef =
+    useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  const [predictions, setPredictions] = useState<
+    google.maps.places.PlacePrediction[]
+  >([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const query = useMemo(() => (typeof value === "string" ? value.trim() : ""), [value]);
+  const query = useMemo(
+    () => (typeof value === "string" ? value.trim() : ""),
+    [value],
+  );
 
   useEffect(() => {
     if (!places) {
       return;
     }
 
-    autocompleteServiceRef.current = new places.AutocompleteService();
-    placesServiceRef.current = new places.PlacesService(document.createElement("div"));
     sessionTokenRef.current = new places.AutocompleteSessionToken();
   }, [places]);
 
   useEffect(() => {
-    if (!autocompleteServiceRef.current || query.length < 2) {
+    if (!places || query.length < 2) {
       return;
     }
 
     let isCancelled = false;
 
-    autocompleteServiceRef.current.getPlacePredictions(
-      {
-        input: query,
-        sessionToken: sessionTokenRef.current ?? undefined,
-        types: ["(regions)"],
-      },
-      (results, status) => {
+    const fetchPredictions = async () => {
+      try {
+        if (!sessionTokenRef.current) {
+          sessionTokenRef.current = new places.AutocompleteSessionToken();
+        }
+
+        const response =
+          await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: query,
+            sessionToken: sessionTokenRef.current ?? undefined,
+          includedPrimaryTypes: ["(regions)"],
+          });
+
         if (isCancelled) {
           return;
         }
 
-        if (
-          status !== google.maps.places.PlacesServiceStatus.OK &&
-          status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS
-        ) {
-          setPredictions([]);
-          setIsDropdownOpen(false);
-          setActiveIndex(-1);
-          return;
-        }
-
-        const nextPredictions = results ?? [];
+        const nextPredictions = response.suggestions
+          .map((suggestion) => suggestion.placePrediction)
+          .filter((prediction): prediction is google.maps.places.PlacePrediction =>
+            Boolean(prediction),
+          );
         setPredictions(nextPredictions);
         setIsDropdownOpen(nextPredictions.length > 0);
         setActiveIndex(nextPredictions.length > 0 ? 0 : -1);
-      },
-    );
+      } catch {
+        if (!isCancelled) {
+          setPredictions([]);
+          setIsDropdownOpen(false);
+          setActiveIndex(-1);
+        }
+      }
+    };
+
+    void fetchPredictions();
 
     return () => {
       isCancelled = true;
     };
-  }, [query]);
+  }, [places, query]);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -144,34 +196,39 @@ export function WeatherLocationAutocomplete({
     };
   }, []);
 
-  const selectPrediction = (prediction: google.maps.places.AutocompletePrediction) => {
-    if (!placesServiceRef.current) {
+  const selectPrediction = async (
+    prediction: google.maps.places.PlacePrediction,
+  ) => {
+    if (!places) {
       return;
     }
 
-    placesServiceRef.current.getDetails(
-      {
-        placeId: prediction.place_id,
-        fields: ["address_components", "formatted_address", "geometry", "name", "place_id"],
-        sessionToken: sessionTokenRef.current ?? undefined,
-      },
-      (place, status) => {
-        if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
-          return;
-        }
+    try {
+      const place = prediction.toPlace();
+      await place.fetchFields({
+        fields: [
+          "id",
+          "displayName",
+          "formattedAddress",
+          "location",
+          "addressComponents",
+        ],
+      });
+      const location = mapPlaceToWeatherLocation(place);
+      if (!location) {
+        return;
+      }
 
-        const location = mapPlaceToWeatherLocation(place);
-        if (!location) {
-          return;
-        }
-
-        setPredictions([]);
-        setIsDropdownOpen(false);
-        setActiveIndex(-1);
-        sessionTokenRef.current = places ? new places.AutocompleteSessionToken() : null;
-        onPlaceSelect(location);
-      },
-    );
+      setPredictions([]);
+      setIsDropdownOpen(false);
+      setActiveIndex(-1);
+      sessionTokenRef.current = new places.AutocompleteSessionToken();
+      onPlaceSelect(location);
+    } catch {
+      setPredictions([]);
+      setIsDropdownOpen(false);
+      setActiveIndex(-1);
+    }
   };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -206,7 +263,7 @@ export function WeatherLocationAutocomplete({
       event.preventDefault();
       const prediction = predictions[activeIndex] ?? predictions[0];
       if (prediction) {
-        selectPrediction(prediction);
+        void selectPrediction(prediction);
       }
       return;
     }
@@ -245,7 +302,7 @@ export function WeatherLocationAutocomplete({
         <div className="resources-weather-autocomplete-panel">
           <ul id={listboxId} className="resources-weather-autocomplete-list" role="listbox">
             {predictions.map((prediction, index) => (
-              <li key={prediction.place_id} role="presentation">
+              <li key={prediction.placeId} role="presentation">
                 <button
                   type="button"
                   id={`${inputId}-option-${index}`}
@@ -259,7 +316,7 @@ export function WeatherLocationAutocomplete({
                     event.preventDefault();
                   }}
                   onClick={() => {
-                    selectPrediction(prediction);
+                    void selectPrediction(prediction);
                   }}
                 >
                   <span className="resources-weather-autocomplete-item-icon">
@@ -267,10 +324,10 @@ export function WeatherLocationAutocomplete({
                   </span>
                   <span className="resources-weather-autocomplete-item-copy">
                     <span className="resources-weather-autocomplete-item-title">
-                      {prediction.structured_formatting.main_text}
+                      {prediction.mainText?.text ?? prediction.text.text}
                     </span>
                     <span className="resources-weather-autocomplete-item-meta">
-                      {prediction.structured_formatting.secondary_text ?? prediction.description}
+                      {prediction.secondaryText?.text ?? prediction.text.text}
                     </span>
                   </span>
                 </button>

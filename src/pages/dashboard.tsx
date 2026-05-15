@@ -43,9 +43,9 @@ import Privacy from "@/pages/privacy";
 import NotFound from "@/pages/not-found";
 import ResourcesHub from "@/pages/resources";
 import FieldGuide from "@/pages/field-guide";
-import ResourcesPlaceholder from "@/pages/resources-placeholder";
 import TrustedSourcesPage from "@/pages/trusted-sources";
 import WeatherPage from "@/pages/weather";
+import FishingResourcePage from "@/pages/fishing-resource-page";
 
 export default function Dashboard() {
   const currentPath = window.location.pathname;
@@ -271,26 +271,16 @@ export default function Dashboard() {
       return <TrustedSourcesPage />;
     }
 
-    if (normalizedPath === "/resources/fishing-reports") {
-      return (
-        <ResourcesPlaceholder
-          title="Fishing Reports"
-          description="Check current local fishing activity and conditions."
-        />
-      );
+    if (
+      normalizedPath === "/resources/fishing" ||
+      normalizedPath === "/resources/fishing-reports" ||
+      normalizedPath === "/resources/regulations"
+    ) {
+      return <FishingResourcePage />;
     }
 
     if (normalizedPath === "/weather" || normalizedPath === "/resources/weather") {
       return <WeatherPage />;
-    }
-
-    if (normalizedPath === "/resources/regulations") {
-      return (
-        <ResourcesPlaceholder
-          title="Regulations"
-          description="Access fishing rules and regulatory information."
-        />
-      );
     }
 
     switch (normalizedPath) {
@@ -339,10 +329,10 @@ export default function Dashboard() {
         return "Resources";
       case "/resources/trusted-sources":
         return "Trusted Sources";
+      case "/resources/fishing":
       case "/resources/fishing-reports":
-        return "Fishing Reports";
       case "/resources/regulations":
-        return "Regulations";
+        return "Fishing Resources";
       case "/weather":
       case "/resources/weather":
         return "Weather";
