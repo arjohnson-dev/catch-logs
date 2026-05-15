@@ -22,7 +22,16 @@ const TRUSTED_SOURCE_ITEMS = [
     category: "Mapping & Geospatial",
     name: "Google Maps Platform (Places)",
     url: "https://developers.google.com/maps/documentation/places/web-service",
-    details: "Autocomplete and place details used in weather location search.",
+    details:
+      "Autocomplete and place details used in weather and resource location search.",
+  },
+  {
+    key: "state_fish_wildlife_agencies",
+    category: "Reference Data",
+    name: "Official state fish and wildlife agencies",
+    url: "https://www.usa.gov/state-governments",
+    details:
+      "State agency fishing, licensing, and regulation entry points used by resource launchpads.",
   },
   {
     key: "open_meteo",
