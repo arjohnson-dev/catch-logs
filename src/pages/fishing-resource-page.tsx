@@ -571,7 +571,7 @@ function FishingResourcePageContent() {
                     />
                   </APIProvider>
                   <p className="resources-weather-search-caption">
-                    Uses the same saved locations as Weather.
+                    Powered by Google
                   </p>
                 </div>
               </div>
