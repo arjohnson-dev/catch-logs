@@ -205,7 +205,6 @@ const LEADER_LENGTH_OPTIONS = [
 ] as const;
 
 const EMPTY_PROFILE_GEAR_DEFAULTS: ProfileGearDefaults = {
-  drag: 0.5,
   rodLength: "",
   rodPower: "",
   rodAction: "",
@@ -220,7 +219,6 @@ const EMPTY_PROFILE_GEAR_DEFAULTS: ProfileGearDefaults = {
 function loadFallbackGearDefaults(userId: string): ProfileGearDefaults {
   const local = loadTackleDefaults(userId);
   return {
-    drag: 0.5,
     rodLength: local.rodLength,
     rodPower: local.rodPower,
     rodAction: local.rodAction,

@@ -6,7 +6,6 @@ export const journalEntrySchema = z.object({
   weight: z.number().positive("Weight must be greater than 0").optional(),
   lure: z.string().optional(),
   bait: z.string().optional(),
-  drag: z.number().min(0).max(1).optional(),
   rodLength: z.string().optional(),
   rodPower: z.string().optional(),
   rodAction: z.string().optional(),

@@ -1,7 +1,4 @@
-import {
-  normalizeCatchGearDrag,
-  normalizeCatchGearText,
-} from "@/lib/catch-gear";
+import { normalizeCatchGearText } from "@/lib/catch-gear";
 import { normalizeFishingGearValue } from "@/lib/fishing-gear";
 import type { JournalEntryFormValues } from "@/features/journal/entry-form-schema";
 
@@ -17,7 +14,6 @@ export function normalizeJournalEntrySubmission(data: JournalEntryFormValues) {
     weight: data.weight ?? null,
     lure: normalizeFishingGearValue(data.lure),
     bait: normalizeFishingGearValue(data.bait),
-    drag: normalizeCatchGearDrag(data.drag),
     rodLength: normalizeCatchGearText(data.rodLength),
     rodPower: normalizeCatchGearText(data.rodPower),
     rodAction: normalizeCatchGearText(data.rodAction),

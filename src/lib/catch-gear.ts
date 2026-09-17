@@ -1,5 +1,4 @@
 export type CatchGearSnapshot = {
-  drag?: number | null;
   rodLength?: string | null;
   rodPower?: string | null;
   rodAction?: string | null;
@@ -9,6 +8,11 @@ export type CatchGearSnapshot = {
   weightOz?: string | null;
   leaderMaterial?: string | null;
   leaderLength?: string | null;
+};
+
+export type CatchGearSummaryItem = {
+  label: string;
+  value: string;
 };
 
 export const ROD_LENGTH_OPTIONS = ["", "5'6\"", "6'0\"", "6'6\"", "7'0\"", "7'3\"", "7'6\"", "8'0\""] as const;
@@ -25,45 +29,74 @@ export function normalizeCatchGearText(value: string | null | undefined): string
   return normalized.length > 0 ? normalized : null;
 }
 
-export function normalizeCatchGearDrag(value: number | null | undefined): number | null {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return null;
-  }
-
-  return Math.max(0, Math.min(1, value));
+function isNoneValue(value: string | null): value is "None" {
+  return value?.toLowerCase() === "none";
 }
 
-export function formatCatchGearSummary(input: CatchGearSnapshot): string[] {
-  const parts: string[] = [];
+export function formatCatchGearSummary(input: CatchGearSnapshot): CatchGearSummaryItem[] {
+  const parts: CatchGearSummaryItem[] = [];
 
-  const rod = [input.rodLength, input.rodPower, input.rodAction]
-    .map(normalizeCatchGearText)
-    .filter((value): value is string => Boolean(value))
-    .join(" ");
-  if (rod) parts.push(`Rod ${rod}`);
+  const rodLength = normalizeCatchGearText(input.rodLength);
+  const rodPower = normalizeCatchGearText(input.rodPower);
+  const rodAction = normalizeCatchGearText(input.rodAction);
+  const rodDetails = [
+    rodLength,
+    rodPower ? `${rodPower} power` : null,
+    rodAction ? `${rodAction} action` : null,
+  ].filter((value): value is string => Boolean(value));
+  if (rodDetails.length > 0) {
+    parts.push({
+      label: "Rod",
+      value: rodDetails.join(", "),
+    });
+  }
 
-  const drag = normalizeCatchGearDrag(input.drag);
-  if (drag !== null) parts.push(`Drag ${drag.toFixed(2)}`);
-
-  const line = [input.lineType, input.lineTest]
-    .map(normalizeCatchGearText)
-    .filter((value): value is string => Boolean(value))
-    .join(" ");
-  if (line) parts.push(`Line ${line}`);
+  const lineType = normalizeCatchGearText(input.lineType);
+  const lineTest = normalizeCatchGearText(input.lineTest);
+  const lineDetails = [
+    lineTest ? `${lineTest} test` : null,
+    lineType,
+  ].filter((value): value is string => Boolean(value));
+  if (lineDetails.length > 0) {
+    parts.push({
+      label: "Line",
+      value: lineDetails.join(", "),
+    });
+  }
 
   const bobberFloat = normalizeCatchGearText(input.bobberFloat);
-  if (bobberFloat && bobberFloat !== "None") parts.push(`Float ${bobberFloat}`);
+  if (bobberFloat && !isNoneValue(bobberFloat)) {
+    parts.push({
+      label: "Float",
+      value: bobberFloat,
+    });
+  }
 
   const weightOz = normalizeCatchGearText(input.weightOz);
-  if (weightOz && weightOz !== "0") parts.push(`Weight ${weightOz} oz`);
+  if (weightOz && weightOz !== "0") {
+    parts.push({
+      label: "Terminal Weight",
+      value: `${weightOz} oz`,
+    });
+  }
 
   const leaderMaterial = normalizeCatchGearText(input.leaderMaterial);
   const leaderLength = normalizeCatchGearText(input.leaderLength);
-  if (leaderMaterial || leaderLength) {
-    const leader = [leaderMaterial, leaderLength]
-      .filter((value): value is string => Boolean(value))
-      .join(" ");
-    if (leader && leader !== "None") parts.push(`Leader ${leader}`);
+  if (isNoneValue(leaderMaterial) || isNoneValue(leaderLength)) {
+    parts.push({
+      label: "Leader",
+      value: "None",
+    });
+  } else {
+    const leaderDetails = [leaderMaterial, leaderLength].filter(
+      (value): value is string => Boolean(value),
+    );
+    if (leaderDetails.length > 0) {
+      parts.push({
+        label: "Leader",
+        value: leaderDetails.join(", "),
+      });
+    }
   }
 
   return parts;

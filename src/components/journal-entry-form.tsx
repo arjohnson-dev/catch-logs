@@ -154,7 +154,6 @@ function JournalEntryFormContent({
           return;
         }
 
-        form.setValue("drag", gearDefaults.drag);
         form.setValue("rodLength", gearDefaults.rodLength);
         form.setValue("rodPower", gearDefaults.rodPower);
         form.setValue("rodAction", gearDefaults.rodAction);

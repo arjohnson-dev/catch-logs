@@ -466,6 +466,10 @@ function PinSummaryContent({
                   key={entry.id}
                   entry={entry}
                   className="summary-entry"
+                  onViewFieldGuide={(path) => {
+                    onClose();
+                    navigate(path);
+                  }}
                   actions={[
                     {
                       id: "open-in-journal",

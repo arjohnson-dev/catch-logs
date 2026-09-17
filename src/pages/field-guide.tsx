@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -53,7 +53,13 @@ export default function FieldGuide() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [location, navigate] = useLocation();
-  const [search, setSearch] = useState("");
+  const searchParam = useMemo(() => {
+    const queryStart = location.indexOf("?");
+    const searchParams =
+      queryStart >= 0 ? location.slice(queryStart) : window.location.search;
+    return new URLSearchParams(searchParams).get("search") ?? "";
+  }, [location]);
+  const [search, setSearch] = useState(searchParam);
   const [selectedWaterType, setSelectedWaterType] = useState<string>("all");
   const { isFavoritesRoute, detailSlug, detailSpecCode } =
     getFieldGuideRouteParams(location);
@@ -64,6 +70,10 @@ export default function FieldGuide() {
   const favoriteSpeciesQueryKey = appQueryKeys.fieldGuideFavoriteSpecies(
     user?.id ?? null,
   );
+
+  useEffect(() => {
+    setSearch(searchParam);
+  }, [searchParam]);
 
   const speciesListQuery = useQuery({
     queryKey: appQueryKeys.fieldGuideSpeciesList(trimmedSearch),

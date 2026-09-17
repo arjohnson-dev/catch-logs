@@ -227,34 +227,6 @@ function GearFields({ form }: { form: UseFormReturn<JournalEntryFormValues> }) {
           placeholder="Select action"
           options={ROD_ACTION_OPTIONS}
         />
-        <FormField
-          control={form.control}
-          name="drag"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-white">
-                Drag{" "}
-                {typeof field.value === "number"
-                  ? `(${field.value.toFixed(2)})`
-                  : ""}
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  className="field-dark h-10 px-0"
-                  value={field.value ?? 0.5}
-                  onChange={(event) =>
-                    field.onChange(Number.parseFloat(event.target.value))
-                  }
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
       </div>
 
       <div className={twoColumnGridClass}>
@@ -503,7 +475,7 @@ export function JournalEntryFields({
   const gearSection = useCollapsibleSections ? (
     <EntryFieldSection
       title="Gear"
-      description="Rod, line, drag, leader, and terminal setup"
+      description="Rod, line, leader, and terminal setup"
       open={isGearOpen}
       onOpenChange={setIsGearOpen}
     >

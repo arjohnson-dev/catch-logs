@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
 export type ProfileGearDefaults = {
-  drag: number;
   rodLength: string;
   rodPower: string;
   rodAction: string;
@@ -14,7 +13,6 @@ export type ProfileGearDefaults = {
 };
 
 type ProfileGearRow = {
-  tackle_drag: number | null;
   tackle_rod_length: string | null;
   tackle_rod_power: string | null;
   tackle_rod_action: string | null;
@@ -27,7 +25,6 @@ type ProfileGearRow = {
 };
 
 const EMPTY_PROFILE_GEAR_DEFAULTS: ProfileGearDefaults = {
-  drag: 0.5,
   rodLength: "",
   rodPower: "",
   rodAction: "",
@@ -45,10 +42,6 @@ function mapProfileGearRow(row: ProfileGearRow | null): ProfileGearDefaults {
   }
 
   return {
-    drag:
-      typeof row.tackle_drag === "number" && Number.isFinite(row.tackle_drag)
-        ? Math.max(0, Math.min(1, row.tackle_drag))
-        : 0.5,
     rodLength: row.tackle_rod_length ?? "",
     rodPower: row.tackle_rod_power ?? "",
     rodAction: row.tackle_rod_action ?? "",
@@ -65,7 +58,7 @@ export async function getProfileGearDefaults(userId: string): Promise<ProfileGea
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "tackle_drag,tackle_rod_length,tackle_rod_power,tackle_rod_action,tackle_line_type,tackle_line_test,tackle_bobber_float,tackle_weight,tackle_leader_material,tackle_leader_length",
+      "tackle_rod_length,tackle_rod_power,tackle_rod_action,tackle_line_type,tackle_line_test,tackle_bobber_float,tackle_weight,tackle_leader_material,tackle_leader_length",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -84,7 +77,6 @@ export async function saveProfileGearDefaults(
   const { error } = await supabase
     .from("profiles")
     .update({
-      tackle_drag: value.drag,
       tackle_rod_length: value.rodLength,
       tackle_rod_power: value.rodPower,
       tackle_rod_action: value.rodAction,

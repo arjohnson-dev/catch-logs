@@ -127,12 +127,17 @@ export default function JournalEntryCard({
       ? `${(entry.weight * 0.45359237).toFixed(2)} kg`
       : `${entry.weight} lbs`
     : "-";
+  const trimmedFishType = entry.fishType.trim();
+  const hasFieldGuideSpecCode =
+    entry.fishSpeciesSpecCode !== UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE;
   const canViewFieldGuide =
-    entry.fishSpeciesSpecCode !== UNIDENTIFIED_FIELD_GUIDE_SPEC_CODE &&
-    onViewFieldGuide !== null;
+    onViewFieldGuide !== null &&
+    (hasFieldGuideSpecCode || trimmedFishType.length > 0);
   const fieldGuidePath = fieldGuideSpecies?.slug
     ? `/resources/field-guide/${fieldGuideSpecies.slug}`
-    : `/resources/field-guide/${entry.fishSpeciesSpecCode}`;
+    : hasFieldGuideSpecCode
+      ? `/resources/field-guide/${entry.fishSpeciesSpecCode}`
+      : `/resources/field-guide?search=${encodeURIComponent(trimmedFishType)}`;
 
   return (
     <div className={cn("surface-card surface-card-hover p-3", className)}>
@@ -189,7 +194,7 @@ export default function JournalEntryCard({
                 aria-label={
                   canViewFieldGuide
                     ? `View ${entry.fishType} in the field guide`
-                    : `${entry.fishType} is unavailable in the field guide`
+                    : "Field guide unavailable for this entry"
                 }
               >
                 <FaBookOpen className="mr-1.5 h-3.5 w-3.5" />
@@ -278,10 +283,11 @@ export default function JournalEntryCard({
         <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[#b7c0ce]">
           {gearSummary.map((item) => (
             <span
-              key={item}
+              key={`${item.label}-${item.value}`}
               className="rounded-full border border-[#2d3748] bg-[#141922] px-2 py-1"
             >
-              {item}
+              <span className="text-[#8f98a8]">{item.label}:</span>{" "}
+              <span className="font-medium text-[#d8dee9]">{item.value}</span>
             </span>
           ))}
         </div>

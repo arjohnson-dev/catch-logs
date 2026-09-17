@@ -45,7 +45,6 @@ type EntryRow = {
   weight: number | null;
   lure: string | null;
   bait: string | null;
-  tackle_drag: number | null;
   tackle_rod_length: string | null;
   tackle_rod_power: string | null;
   tackle_rod_action: string | null;
@@ -115,7 +114,6 @@ async function mapEntry(row: EntryRow): Promise<JournalEntry> {
     weight: row.weight,
     lure: normalizeFishingGearForStorage(row.lure),
     bait: normalizeFishingGearForStorage(row.bait),
-    drag: row.tackle_drag,
     rodLength: row.tackle_rod_length,
     rodPower: row.tackle_rod_power,
     rodAction: row.tackle_rod_action,
@@ -387,7 +385,6 @@ export async function createEntry(input: {
   weight?: number | null;
   lure?: string | null;
   bait?: string | null;
-  drag?: number | null;
   rodLength?: string | null;
   rodPower?: string | null;
   rodAction?: string | null;
@@ -422,7 +419,6 @@ export async function createEntry(input: {
     weight: input.weight ?? null,
     lure: normalizedLure,
     bait: normalizedBait,
-    tackle_drag: input.drag ?? null,
     tackle_rod_length: input.rodLength ?? null,
     tackle_rod_power: input.rodPower ?? null,
     tackle_rod_action: input.rodAction ?? null,
@@ -494,7 +490,6 @@ export async function updateEntry(input: {
   weight?: number | null;
   lure?: string | null;
   bait?: string | null;
-  drag?: number | null;
   rodLength?: string | null;
   rodPower?: string | null;
   rodAction?: string | null;
@@ -518,7 +513,6 @@ export async function updateEntry(input: {
     weight: input.weight ?? null,
     lure: normalizedLure,
     bait: normalizedBait,
-    tackle_drag: input.drag ?? null,
     tackle_rod_length: input.rodLength ?? null,
     tackle_rod_power: input.rodPower ?? null,
     tackle_rod_action: input.rodAction ?? null,
