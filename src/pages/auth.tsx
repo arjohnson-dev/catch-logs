@@ -15,18 +15,19 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import LoginForm from "@/components/auth/login-form";
 import RegisterForm from "@/components/auth/register-form";
 import catchLogsIcon from "@assets/catchlogs-icon.png";
 import { FaCircleCheck, FaCircleXmark } from "react-icons/fa6";
+import { LandingFooter } from "@/pages/landing";
 
 interface AuthPageProps {
+  mode: "login" | "register";
   onAuthSuccess: () => void;
 }
 
-export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
+export default function AuthPage({ mode, onAuthSuccess }: AuthPageProps) {
   const verification = new URLSearchParams(window.location.search).get("verification");
   const initialVerificationMessage =
     verification === "success"
@@ -41,7 +42,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
           }
         : null;
 
-  const [isLogin, setIsLogin] = useState(true);
+  const isLogin = mode === "login";
   const [verificationMessage, setVerificationMessage] = useState<{
     type: "success" | "error";
     message: string;
@@ -94,40 +95,13 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
 
         <Card className="auth-card surface-card">
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-center mb-4">
-              {/* Toggle Switch */}
-              <div className="auth-toggle">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsLogin(true);
-                    setVerificationMessage(null); // Clear message when switching tabs
-                  }}
-                  className={`auth-toggle-button ${
-                    isLogin 
-                      ? "auth-toggle-button-active" 
-                      : "auth-toggle-button-inactive"
-                  }`}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsLogin(false);
-                    setVerificationMessage(null); // Clear message when switching tabs
-                  }}
-                  className={`auth-toggle-button ${
-                    !isLogin 
-                      ? "auth-toggle-button-active" 
-                      : "auth-toggle-button-inactive"
-                  }`}
-                >Register</Button>
-              </div>
+            <div className="auth-card-heading">
+              <h2>{isLogin ? "Sign in" : "Create your account"}</h2>
+              <p>
+                {isLogin
+                  ? "Log catches, check patterns, and get back to your map."
+                  : "Start a private fishing journal built around your spots, notes, and conditions."}
+              </p>
             </div>
           </CardHeader>
           <CardContent>
@@ -139,21 +113,17 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
           </CardContent>
         </Card>
 
-        {/* Terms and Privacy Links */}
-        <div className="auth-links">
-          <Link to="/terms" className="auth-link-button">
-            Terms of Service
-          </Link>
-          <span className="text-[#64748b]">•</span>
-          <Link to="/privacy" className="auth-link-button">
-            Privacy Policy
-          </Link>
-          <span className="text-[#64748b]">•</span>
-          <Link to="/support" className="auth-link-button">
-            Contact Support
+        <div className="auth-links auth-switch-link">
+          <Link
+            to={isLogin ? "/register" : "/login"}
+            className="auth-link-button"
+            onClick={() => setVerificationMessage(null)}
+          >
+            {isLogin ? "Create account" : "Sign in"}
           </Link>
         </div>
         </div>
+        <LandingFooter />
       </div>
     </main>
   );

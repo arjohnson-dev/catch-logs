@@ -20,6 +20,7 @@
 @import "./components/species-image.css";
 @import "./components/species-ai-summary.css";
 @import "./views/auth.css";
+@import "./views/landing.css";
 @import "./views/dashboard.css";
 @import "./views/legal.css";
 @import "./views/entries.css";
