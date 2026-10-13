@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { UnitPreferenceProvider } from "@/hooks/use-unit-preference";
 import Dashboard from "@/pages/dashboard";
 import AuthPage from "@/pages/auth";
+import LandingPage from "@/pages/landing";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import Support from "@/pages/support";
@@ -29,8 +30,11 @@ import ResetPassword from "@/pages/reset-password";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
-  const AuthFallback = () => (
-    <AuthPage onAuthSuccess={() => window.location.replace("/map")} />
+  const LoginPage = () => (
+    <AuthPage mode="login" onAuthSuccess={() => window.location.replace("/map")} />
+  );
+  const RegisterPage = () => (
+    <AuthPage mode="register" onAuthSuccess={() => window.location.replace("/map")} />
   );
 
   if (isLoading) {
@@ -56,8 +60,11 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/support" component={Support} />
-      <Route path="/auth" component={AuthFallback} />
-      <Route component={AuthFallback} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
+      <Route path="/auth" component={LoginPage} />
+      <Route path="/" component={LandingPage} />
+      <Route component={LandingPage} />
     </Switch>
   );
 }

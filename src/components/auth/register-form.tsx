@@ -62,7 +62,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             age_verified: data.ageVerified,
             terms_accepted: data.termsAccepted,
           },
-          emailRedirectTo: `${window.location.origin}/auth`,
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
